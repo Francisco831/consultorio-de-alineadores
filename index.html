@@ -21,7 +21,6 @@
 <meta property="og:url" content="https://consultoriodealineadores.com/">
 <meta property="og:locale" content="es_AR">
 <meta property="og:site_name" content="Consultorio de Alineadores">
-<!-- REEMPLAZAR: Subir imagen de 1200x630px con foto del consultorio o sonrisa con alineadores -->
 <meta property="og:image" content="https://consultoriodealineadores.com/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -30,7 +29,6 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Alineadores Invisibles en Palermo | Consultorio de Alineadores">
 <meta name="twitter:description" content="Especialistas en alineadores invisibles KeepSmiling en Palermo, Buenos Aires. 4 ortodoncistas, diagnóstico 3D. Reservá tu turno online.">
-<!-- REEMPLAZAR: Misma imagen que og:image, 1200x630px -->
 <meta name="twitter:image" content="https://consultoriodealineadores.com/og-image.jpg">
 <meta name="theme-color" content="#0B1D3A">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -51,7 +49,7 @@
   "description":"Consultorio especializado en ortodoncia con alineadores invisibles KeepSmiling en Palermo, Buenos Aires. 4 ortodoncistas especializados, diagnóstico digital 3D.",
   "url":"https://consultoriodealineadores.com/",
   "telephone":"+5491167407034",
-  "email":"EMAIL_PLACEHOLDER",
+  "email":"info@consultoriodealineadores.com",
   "address":{
     "@type":"PostalAddress",
     "streetAddress":"Av. Scalabrini Ortiz 3183",
@@ -1409,6 +1407,28 @@ document.querySelectorAll('.metric-number[data-target]').forEach(el=>countObs.ob
   });
 })();
 
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('a[href*="wa.me"]').forEach(function(link) {
+    link.addEventListener('click', function() {
+      gtag('event', 'generate_lead', {
+        event_category: 'contacto',
+        event_label: 'whatsapp',
+        value: 1
+      });
+    });
+  });
+  document.querySelectorAll('a[href*="calendico.com"]').forEach(function(link) {
+    link.addEventListener('click', function() {
+      gtag('event', 'generate_lead', {
+        event_category: 'contacto',
+        event_label: 'calendico_turno',
+        value: 1
+      });
+    });
+  });
+});
 </script>
 </body>
 </html>
