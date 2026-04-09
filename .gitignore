@@ -1,0 +1,16 @@
+cache/
+.env
+*.pyc
+__pycache__/
+.DS_Store
+.claude/
+Analisis de periskope.md
+flujo-proceso-type1*.html
+flujo-proceso-type1.pdf
+flujo-proceso-type3*.html
+flujo-proceso-type3.pdf
+generate_pdf*.py
+references/
+reports/
+scripts.zip
+scripts/

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Alineadores Invisibles en Palermo | Consultorio de Alineadores</title>
-<meta name="description" content="Especialistas en alineadores invisibles KeepSmiling en Palermo, Buenos Aires. 3 ortodoncistas, diagnóstico 3D. Reservá tu turno online.">
+<meta name="description" content="Especialistas en alineadores invisibles KeepSmiling en Palermo, Buenos Aires. 4 ortodoncistas, diagnóstico 3D. Reservá tu turno online.">
 <meta name="robots" content="index, follow">
 <meta name="keywords" content="alineadores invisibles palermo, ortodoncista palermo, ortodoncia invisible buenos aires, alineadores dentales palermo, precio alineadores invisibles argentina, tratamiento alineadores invisibles, alineadores keepsmiling, ortodoncia sin brackets buenos aires, alineadores transparentes palermo, consultorio de alineadores palermo, mejor ortodoncista alineadores palermo, alineadores invisibles scalabrini ortiz, ortodoncia invisible cerca de mi">
 <meta name="author" content="Consultorio de Alineadores">
@@ -16,7 +16,7 @@
 <link rel="alternate" hreflang="es-AR" href="https://consultoriodealineadores.com/">
 <!-- Open Graph -->
 <meta property="og:title" content="Alineadores Invisibles en Palermo | Consultorio de Alineadores">
-<meta property="og:description" content="Especialistas en alineadores invisibles KeepSmiling en Palermo, Buenos Aires. 3 ortodoncistas, diagnóstico 3D. Reservá tu turno online.">
+<meta property="og:description" content="Especialistas en alineadores invisibles KeepSmiling en Palermo, Buenos Aires. 4 ortodoncistas, diagnóstico 3D. Reservá tu turno online.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://consultoriodealineadores.com/">
 <meta property="og:locale" content="es_AR">
@@ -29,7 +29,7 @@
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Alineadores Invisibles en Palermo | Consultorio de Alineadores">
-<meta name="twitter:description" content="Especialistas en alineadores invisibles KeepSmiling en Palermo, Buenos Aires. 3 ortodoncistas, diagnóstico 3D. Reservá tu turno online.">
+<meta name="twitter:description" content="Especialistas en alineadores invisibles KeepSmiling en Palermo, Buenos Aires. 4 ortodoncistas, diagnóstico 3D. Reservá tu turno online.">
 <!-- REEMPLAZAR: Misma imagen que og:image, 1200x630px -->
 <meta name="twitter:image" content="https://consultoriodealineadores.com/og-image.jpg">
 <meta name="theme-color" content="#0B1D3A">
@@ -48,7 +48,7 @@
   "@type":["Dentist","LocalBusiness"],
   "name":"Consultorio de Alineadores",
   "alternateName":"Consultorio de Alineadores KeepSmiling",
-  "description":"Consultorio especializado en ortodoncia con alineadores invisibles KeepSmiling en Palermo, Buenos Aires. 3 ortodoncistas especializados, diagnóstico digital 3D.",
+  "description":"Consultorio especializado en ortodoncia con alineadores invisibles KeepSmiling en Palermo, Buenos Aires. 4 ortodoncistas especializados, diagnóstico digital 3D.",
   "url":"https://consultoriodealineadores.com/",
   "telephone":"+5491167407034",
   "email":"EMAIL_PLACEHOLDER",
@@ -82,7 +82,7 @@
   "sameAs":["https://www.instagram.com/consultorio_de_alineadores/"],
   "hasMap":"https://maps.app.goo.gl/76WeZH2eLLzKJaBr5",
   "medicalSpecialty":"Orthodontics",
-  "numberOfEmployees":3,
+  "numberOfEmployees":4,
   "areaServed":[
     {"@type":"City","name":"Buenos Aires"},
     {"@type":"AdministrativeArea","name":"CABA"},
@@ -277,14 +277,12 @@ h3{font-size:clamp(1.15rem,2.5vw,1.5rem);font-weight:600}
 .hero-buttons{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}
 .hero-micro{font-size:.82rem;color:var(--gray-500)}
 .hero-img{position:relative;z-index:1}
-.hero-placeholder{
-  width:100%;aspect-ratio:4/3;
-  background:linear-gradient(135deg,var(--accent) 0%,var(--gray-100) 100%);
-  border-radius:var(--radius-xl);display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:8px;
-  color:var(--primary);font-weight:600;box-shadow:var(--shadow-lg);
+.hero-img-real{
+  width:100%;height:auto;
+  border-radius:var(--radius-xl);
+  box-shadow:var(--shadow-lg);
+  object-fit:cover;
 }
-.hero-placeholder .ph-hint{font-size:.78rem;font-weight:400;opacity:.6}
 
 @media(max-width:768px){
   .hero{padding:32px 0 48px}
@@ -304,24 +302,21 @@ h3{font-size:clamp(1.15rem,2.5vw,1.5rem);font-weight:600}
 
 /* ===== BEFORE AFTER ===== */
 .ba{background:var(--white)}
-.ba-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
-.ba-card{border-radius:var(--radius);overflow:hidden;border:1px solid var(--gray-300);transition:all .3s}
+.ba-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:24px}
+.ba-card{border-radius:var(--radius);overflow:hidden;border:1px solid var(--gray-300);transition:all .3s;grid-column:span 2}
 .ba-card:hover{box-shadow:var(--shadow-md);transform:translateY(-4px)}
+.ba-card:nth-child(4){grid-column:2/4}
+.ba-card:nth-child(5){grid-column:4/6}
 .ba-imgs{display:grid;grid-template-columns:1fr 1fr}
-.ba-ph{
-  aspect-ratio:1;display:flex;align-items:center;justify-content:center;
-  font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gray-500);
-}
-.ba-ph.before{background:var(--gray-100)}
-.ba-ph.after{background:var(--accent)}
-.ba-info{padding:14px 16px;font-size:.85rem;color:var(--gray-800)}
-.ba-info strong{display:block;margin-bottom:2px}
-.ba-info span{font-size:.78rem;color:var(--gray-500)}
+.ba-img-wrap{position:relative;overflow:hidden}
+.ba-img-wrap img{width:100%;height:100%;object-fit:cover;aspect-ratio:4/3;display:block}
+.ba-label{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.6);color:#fff;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:4px;z-index:1}
+.ba-img-wrap.after .ba-label{background:var(--accent);color:var(--primary)}
 .ba-note{text-align:center;font-size:.82rem;color:var(--gray-500);margin-top:24px;font-style:italic}
 .ba-cta{text-align:center;margin-top:32px}
 
-@media(max-width:768px){.ba-grid{grid-template-columns:1fr 1fr}}
-@media(max-width:480px){.ba-grid{grid-template-columns:1fr;max-width:340px;margin:0 auto}}
+@media(max-width:768px){.ba-grid{grid-template-columns:1fr 1fr}.ba-card,.ba-card:nth-child(4),.ba-card:nth-child(5){grid-column:span 1}}
+@media(max-width:480px){.ba-grid{grid-template-columns:1fr;max-width:400px;margin:0 auto}}
 
 /* ===== STEPS ===== */
 .steps{background:var(--gray-50)}
@@ -459,13 +454,12 @@ h3{font-size:clamp(1.15rem,2.5vw,1.5rem);font-weight:600}
 
 /* ===== TEAM ===== */
 .team{background:var(--gray-50)}
-.team-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:900px;margin:0 auto}
+.team-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;max-width:1000px;margin:0 auto}
 .team-card{text-align:center}
 .team-photo{
   width:140px;height:140px;border-radius:50%;margin:0 auto 16px;
-  background:var(--gray-100);display:flex;align-items:center;justify-content:center;
-  color:var(--gray-500);font-size:.72rem;font-weight:600;text-transform:uppercase;
-  letter-spacing:.05em;border:3px solid var(--accent);
+  object-fit:cover;object-position:center top;
+  border:3px solid var(--accent);display:block;
 }
 .team-card h3{font-size:1rem;color:var(--primary);margin-bottom:4px}
 .team-card .team-spec{font-size:.82rem;color:var(--gray-500);margin-bottom:2px}
@@ -487,14 +481,9 @@ h3{font-size:clamp(1.15rem,2.5vw,1.5rem);font-weight:600}
 .ks-chk svg{width:14px;height:14px;stroke:var(--primary);fill:none;stroke-width:2.5}
 .ks-feat p{font-size:.92rem;color:var(--gray-500);line-height:1.6}
 .ks-feat strong{color:var(--primary)}
-.ks-ph{
-  width:100%;aspect-ratio:4/3;
-  background:linear-gradient(135deg,var(--accent) 0%,var(--gray-100) 100%);
-  border-radius:var(--radius-xl);display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:8px;
-  color:var(--primary);font-weight:600;box-shadow:var(--shadow-md);
+.ks-video{
+  width:100%;border-radius:var(--radius-xl);box-shadow:var(--shadow-md);
 }
-.ks-ph .ph-hint{font-size:.78rem;opacity:.6;font-weight:400}
 @media(max-width:768px){.ks-grid{grid-template-columns:1fr}}
 
 /* ===== FAQ ===== */
@@ -573,6 +562,61 @@ h3{font-size:clamp(1.15rem,2.5vw,1.5rem);font-weight:600}
 }
 .wa-float:hover .wa-tooltip{opacity:1}
 @keyframes wa-p{0%,100%{box-shadow:0 4px 20px rgba(37,211,102,.4)}50%{box-shadow:0 4px 30px rgba(37,211,102,.6)}}
+
+/* ===== MOBILE OPTIMIZATIONS ===== */
+@media(max-width:768px){
+  .container{padding:0 16px}
+  .hero{padding:24px 0 40px}
+  .hero-grid{gap:32px}
+  .hero-img-real{max-height:300px;object-fit:cover;border-radius:var(--radius)}
+  .hero-buttons{flex-direction:column;align-items:stretch}
+  .hero-buttons .btn{justify-content:center;width:100%;padding:14px 24px}
+  .metrics{padding:28px 0}
+  .metrics-grid{gap:16px 12px}
+  .metric-number{font-size:1.6rem}
+  .metric-label{font-size:.75rem}
+  .ba-grid{grid-template-columns:1fr !important;max-width:400px;margin:0 auto}
+  .ba-card,.ba-card:nth-child(4),.ba-card:nth-child(5){grid-column:span 1}
+  .ba-img-wrap img{aspect-ratio:3/2}
+  .section-header{margin-bottom:36px}
+  .section-sub{font-size:.95rem}
+  .why-grid{gap:16px}
+  .why-card{padding:24px 20px}
+  .team-grid{grid-template-columns:1fr 1fr !important;gap:28px;max-width:100%}
+  .team-photo{width:120px;height:120px}
+  .ks-grid{gap:32px}
+  .ks-video{border-radius:var(--radius)}
+  .loc-grid{gap:24px}
+  .loc-map{aspect-ratio:16/9}
+  .cta-final{padding:56px 0}
+  .cta-final h2{font-size:1.6rem}
+  .footer-grid{text-align:center}
+  .footer-desc{margin:0 auto}
+  .wa-float{width:54px;height:54px;bottom:16px;right:16px}
+  .wa-float svg{width:26px;height:26px}
+  .wa-tooltip{display:none}
+}
+
+@media(max-width:480px){
+  .hero h1{font-size:1.7rem}
+  .hero-sub{font-size:.95rem}
+  .team-grid{grid-template-columns:1fr 1fr !important;gap:24px;max-width:300px;margin:0 auto}
+  .team-photo{width:100px;height:100px}
+  .team-card h3{font-size:.9rem}
+  .steps-grid{gap:24px}
+  .step-num{width:56px;height:56px;font-size:1.1rem}
+  .compare-header div,.compare-row div{padding:10px 14px;font-size:.82rem}
+  .faq-q{padding:14px 16px;font-size:.88rem}
+  .faq-a-inner{padding:0 16px 14px;font-size:.85rem}
+  .loc-btns{flex-direction:column}
+  .loc-btns .btn{width:100%;justify-content:center}
+}
+
+@media(max-width:360px){
+  .container{padding:0 12px}
+  .hero h1{font-size:1.5rem}
+  .btn{padding:12px 20px;font-size:.9rem}
+}
 </style>
 </head>
 <body>
@@ -580,7 +624,7 @@ h3{font-size:clamp(1.15rem,2.5vw,1.5rem);font-weight:600}
 <noscript>
   <div style="padding:2rem;text-align:center;font-family:sans-serif">
     <h1>Consultorio de Alineadores — Ortodoncia Invisible en Palermo</h1>
-    <p>Especialistas en alineadores invisibles KeepSmiling en Palermo, Buenos Aires. 3 ortodoncistas especializados.</p>
+    <p>Especialistas en alineadores invisibles KeepSmiling en Palermo, Buenos Aires. 4 ortodoncistas especializados.</p>
     <p>Av. Scalabrini Ortiz 3183, Palermo, CABA — Tel: +54 9 11 6740-7034</p>
     <p>Horarios: Lun 10-19 | Mar 9-18 | Mié 10-19 | Jue 8-17 | Vie 9-18</p>
   </div>
@@ -655,11 +699,7 @@ h3{font-size:clamp(1.15rem,2.5vw,1.5rem);font-weight:600}
         <p class="hero-micro">Respondemos en menos de 1 hora</p>
       </div>
       <div class="hero-img fade-up" style="transition-delay:.15s">
-        <!-- REEMPLAZAR: Foto profesional de sonrisa con alineador o del consultorio — Tamaño recomendado: 600x700px, formato WebP o JPG -->
-        <div class="hero-placeholder" role="img" aria-label="Sonrisa con alineadores invisibles en Consultorio de Alineadores, Palermo">
-          <span>FOTO: sonrisa con alineador</span>
-          <span class="ph-hint">Imagen profesional del consultorio o resultado</span>
-        </div>
+        <img class="hero-img-real" src="img/hero.jpg" alt="Caja de alineadores invisibles KeepSmiling - Consultorio de Alineadores en Palermo" width="600" height="400">
       </div>
     </div>
   </div>
@@ -678,7 +718,7 @@ h3{font-size:clamp(1.15rem,2.5vw,1.5rem);font-weight:600}
         <div class="metric-label">sonrisas creadas</div>
       </div>
       <div class="fade-up" style="transition-delay:.2s">
-        <div class="metric-number" data-target="3" data-suffix="">0</div>
+        <div class="metric-number" data-target="4" data-suffix="">0</div>
         <div class="metric-label">ortodoncistas especializados</div>
       </div>
       <div class="fade-up" style="transition-delay:.3s">
@@ -698,34 +738,35 @@ h3{font-size:clamp(1.15rem,2.5vw,1.5rem);font-weight:600}
       <p class="section-sub">Cada sonrisa es única. Mirá lo que lograron nuestros pacientes.</p>
     </div>
     <div class="ba-grid">
-      <!-- REEMPLAZAR: Fotos reales de antes/después — Tamaño recomendado: 400x300px cada una, formato WebP o JPG -->
       <div class="ba-card fade-up">
         <div class="ba-imgs">
-          <div class="ba-ph before" role="img" aria-label="Antes del tratamiento con alineadores invisibles KeepSmiling - caso 1">Antes</div>
-          <div class="ba-ph after" role="img" aria-label="Después del tratamiento con alineadores invisibles KeepSmiling - caso 1">Después</div>
+          <div class="ba-img-wrap before"><span class="ba-label">Antes</span><img src="img/caso4-antes.jpg" alt="Antes del tratamiento con alineadores invisibles" width="400" height="300" loading="lazy"></div>
+          <div class="ba-img-wrap after"><span class="ba-label">Después</span><img src="img/caso4-despues.png" alt="Después del tratamiento con alineadores invisibles" width="400" height="300" loading="lazy"></div>
         </div>
-        <div class="ba-info"><strong>Apiñamiento leve</strong><span>6 meses de tratamiento</span></div>
       </div>
       <div class="ba-card fade-up" style="transition-delay:.1s">
         <div class="ba-imgs">
-          <div class="ba-ph before" role="img" aria-label="Antes del tratamiento con alineadores invisibles KeepSmiling - caso 2">Antes</div>
-          <div class="ba-ph after" role="img" aria-label="Después del tratamiento con alineadores invisibles KeepSmiling - caso 2">Después</div>
+          <div class="ba-img-wrap before"><span class="ba-label">Antes</span><img src="img/caso1-antes.jpg" alt="Antes del tratamiento con alineadores invisibles" width="400" height="300" loading="lazy"></div>
+          <div class="ba-img-wrap after"><span class="ba-label">Después</span><img src="img/caso1-despues.jpg" alt="Después del tratamiento con alineadores invisibles" width="400" height="300" loading="lazy"></div>
         </div>
-        <div class="ba-info"><strong>Mordida abierta</strong><span>12 meses de tratamiento</span></div>
       </div>
       <div class="ba-card fade-up" style="transition-delay:.2s">
         <div class="ba-imgs">
-          <div class="ba-ph before" role="img" aria-label="Antes del tratamiento con alineadores invisibles KeepSmiling - caso 3">Antes</div>
-          <div class="ba-ph after" role="img" aria-label="Después del tratamiento con alineadores invisibles KeepSmiling - caso 3">Después</div>
+          <div class="ba-img-wrap before"><span class="ba-label">Antes</span><img src="img/caso2-antes.jpg" alt="Antes del tratamiento con alineadores invisibles" width="400" height="300" loading="lazy"></div>
+          <div class="ba-img-wrap after"><span class="ba-label">Después</span><img src="img/caso2-despues.jpg" alt="Después del tratamiento con alineadores invisibles" width="400" height="300" loading="lazy"></div>
         </div>
-        <div class="ba-info"><strong>Diastema</strong><span>4 meses de tratamiento</span></div>
       </div>
       <div class="ba-card fade-up" style="transition-delay:.3s">
         <div class="ba-imgs">
-          <div class="ba-ph before" role="img" aria-label="Antes del tratamiento con alineadores invisibles KeepSmiling - caso 4">Antes</div>
-          <div class="ba-ph after" role="img" aria-label="Después del tratamiento con alineadores invisibles KeepSmiling - caso 4">Después</div>
+          <div class="ba-img-wrap before"><span class="ba-label">Antes</span><img src="img/caso5-antes.jpg" alt="Antes del tratamiento con alineadores invisibles - caso 4" width="400" height="300" loading="lazy"></div>
+          <div class="ba-img-wrap after"><span class="ba-label">Después</span><img src="img/caso5-despues.jpg" alt="Después del tratamiento con alineadores invisibles - caso 4" width="400" height="300" loading="lazy"></div>
         </div>
-        <div class="ba-info"><strong>Caso complejo</strong><span>14 meses de tratamiento</span></div>
+      </div>
+      <div class="ba-card fade-up" style="transition-delay:.4s">
+        <div class="ba-imgs">
+          <div class="ba-img-wrap before"><span class="ba-label">Antes</span><img src="img/caso6-antes.jpg" alt="Antes del tratamiento con alineadores invisibles - caso 5" width="400" height="300" loading="lazy"></div>
+          <div class="ba-img-wrap after"><span class="ba-label">Después</span><img src="img/caso6-despues.jpg" alt="Después del tratamiento con alineadores invisibles - caso 5" width="400" height="300" loading="lazy"></div>
+        </div>
       </div>
     </div>
     <p class="ba-note">Cada caso es único. Los resultados dependen de la complejidad del tratamiento.</p>
@@ -792,7 +833,7 @@ h3{font-size:clamp(1.15rem,2.5vw,1.5rem);font-weight:600}
       </div>
       <div class="why-card fade-up" style="transition-delay:.2s">
         <div class="why-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-        <h3>3 ortodoncistas especializados</h3>
+        <h3>4 ortodoncistas especializados</h3>
         <p>Tenés atención profesional con ortodoncistas que solo hacen esto, todos los días.</p>
       </div>
       <div class="why-card fade-up" style="transition-delay:.05s">
@@ -1035,22 +1076,24 @@ h3{font-size:clamp(1.15rem,2.5vw,1.5rem);font-weight:600}
     <!-- REEMPLAZAR: Fotos y datos reales de los profesionales -->
     <div class="team-grid">
       <div class="team-card fade-up">
-        <div class="team-photo" role="img" aria-label="Foto de la Dra. [Nombre]">Foto<br>Dra. [Nombre]</div>
-        <h3>Dra. [Nombre Apellido]</h3>
+        <img class="team-photo" src="img/constanza.jpg" alt="Dra. Constanza Basilico, ortodoncista especialista en alineadores invisibles en Palermo" width="300" height="300" loading="lazy">
+        <h3>Dra. Constanza Basilico</h3>
         <p class="team-spec">Ortodoncista — Esp. en alineadores</p>
-        <p class="team-mat">M.N. XXXXX</p>
       </div>
       <div class="team-card fade-up" style="transition-delay:.1s">
-        <div class="team-photo" role="img" aria-label="Foto del Dr. [Nombre]">Foto<br>Dr. [Nombre]</div>
-        <h3>Dr. [Nombre Apellido]</h3>
+        <img class="team-photo" src="img/mariana-franco.jpg" alt="Dra. Mariana Franco, ortodoncista especialista en alineadores invisibles en Palermo" width="300" height="300" loading="lazy">
+        <h3>Dra. Mariana Franco</h3>
         <p class="team-spec">Ortodoncista — Esp. en alineadores</p>
-        <p class="team-mat">M.N. XXXXX</p>
       </div>
       <div class="team-card fade-up" style="transition-delay:.2s">
-        <div class="team-photo" role="img" aria-label="Foto de la Dra. [Nombre]">Foto<br>Dra. [Nombre]</div>
-        <h3>Dra. [Nombre Apellido]</h3>
+        <img class="team-photo" src="img/mariana.jpg" alt="Dra. Mariana Matelli, ortodoncista especialista en alineadores invisibles en Palermo" width="300" height="300" loading="lazy">
+        <h3>Dra. Mariana Matelli</h3>
         <p class="team-spec">Ortodoncista — Esp. en alineadores</p>
-        <p class="team-mat">M.N. XXXXX</p>
+      </div>
+      <div class="team-card fade-up" style="transition-delay:.3s">
+        <img class="team-photo" src="img/monica.jpg" alt="Dra. Monica Gonzalez, ortodoncista especialista en alineadores invisibles en Palermo" width="300" height="300" loading="lazy">
+        <h3>Dra. Monica Gonzalez</h3>
+        <p class="team-spec">Ortodoncista — Esp. en alineadores</p>
       </div>
     </div>
     <p class="team-note fade-up">Todos nuestros profesionales son ortodoncistas matriculados con formación específica en tratamiento con alineadores.</p>
@@ -1085,11 +1128,11 @@ h3{font-size:clamp(1.15rem,2.5vw,1.5rem);font-weight:600}
         </div>
       </div>
       <div class="fade-up" style="transition-delay:.15s">
-        <!-- REEMPLAZAR: Logo KeepSmiling o imagen del escaneo 3D -->
-        <div class="ks-ph" role="img" aria-label="Tecnología KeepSmiling para alineadores dentales - escaneo 3D">
-          <span>IMAGEN KEEPSMILING</span>
-          <span class="ph-hint">Logo, escaneo 3D o tecnología</span>
-        </div>
+        <video class="ks-video" autoplay loop muted playsinline>
+          <source src="img/keepsmiling-tech.mp4" type="video/mp4">
+          <source src="img/keepsmiling-tech.mov" type="video/quicktime">
+          Tu navegador no soporta video.
+        </video>
       </div>
     </div>
   </div>
@@ -1342,6 +1385,7 @@ document.querySelectorAll('.metric-number[data-target]').forEach(el=>countObs.ob
     });
   });
 })();
+
 </script>
 </body>
 </html>
