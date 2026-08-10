@@ -1,0 +1,166 @@
+import { createClient } from "@/lib/supabase/server";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
+import { todayMX, monthStartMX } from "@/lib/dates";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+export default async function EquipoPage() {
+  const supabase = await createClient();
+  const monthStartISO = monthStartMX();
+  const d30 = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const today = todayMX();
+
+  const [
+    { data: profiles },
+    { data: doctors },
+    { data: monthCases },
+    { data: openOpps },
+    { data: acts30 },
+    { data: overdueTasks },
+    { data: goals },
+  ] = await Promise.all([
+    supabase.from("profiles").select("id, nombre, rol, activo").order("nombre"),
+    // paginado: el mapa doctor→owner cruza los casos del mes. Con 6.4k doctores
+    // un select plano trae 1.000 y desinfla los casos de todo el equipo
+    fetchAllRows<{ id: string; owner_id: string | null }>((from, to) =>
+      supabase.from("doctors").select("id, owner_id").range(from, to)
+    ).then((data) => ({ data })),
+    supabase
+      .from("cases")
+      .select("doctor_id")
+      .eq("is_new_case", true)
+      .gte("fecha_ingreso", monthStartISO),
+    supabase
+      .from("opportunities")
+      .select("owner_id")
+      .not("stage", "in", "(ganada,perdida)"),
+    // actividades y tareas vencidas también se cuentan por persona en JS
+    fetchAllRows<{ created_by: string | null; type: string }>((from, to) =>
+      supabase
+        .from("activities")
+        .select("created_by, type")
+        .gte("occurred_at", d30)
+        .range(from, to)
+    ).then((data) => ({ data })),
+    fetchAllRows<{ assigned_to: string | null }>((from, to) =>
+      supabase
+        .from("tasks")
+        .select("assigned_to")
+        .eq("status", "pendiente")
+        .lt("due_date", today)
+        .range(from, to)
+    ).then((data) => ({ data })),
+    supabase
+      .from("goals")
+      .select("user_id, target")
+      .eq("period", monthStartISO)
+      .eq("metric", "paid_cases"),
+  ]);
+
+  const ownerOf = new Map((doctors ?? []).map((d) => [d.id, d.owner_id]));
+  const stats = new Map<
+    string,
+    { casos: number; opps: number; acts: number; visitas: number; keepdays: number; vencidas: number }
+  >();
+  const ensure = (id: string | null) => {
+    if (!id) return null;
+    if (!stats.has(id))
+      stats.set(id, { casos: 0, opps: 0, acts: 0, visitas: 0, keepdays: 0, vencidas: 0 });
+    return stats.get(id)!;
+  };
+
+  for (const c of monthCases ?? []) {
+    const s = ensure(ownerOf.get(c.doctor_id) ?? null);
+    if (s) s.casos++;
+  }
+  for (const o of openOpps ?? []) {
+    const s = ensure(o.owner_id);
+    if (s) s.opps++;
+  }
+  for (const a of acts30 ?? []) {
+    const s = ensure(a.created_by);
+    if (s) {
+      s.acts++;
+      if (a.type === "visita") s.visitas++;
+      if (a.type === "keepday") s.keepdays++;
+    }
+  }
+  for (const t of overdueTasks ?? []) {
+    const s = ensure(t.assigned_to);
+    if (s) s.vencidas++;
+  }
+  const goalOf = new Map((goals ?? []).map((g) => [g.user_id, g.target]));
+
+  const team = (profiles ?? []).filter((p) => p.activo);
+
+  return (
+    <div className="space-y-4 p-6">
+      <div>
+        <h1 className="text-lg font-semibold tracking-tight">Equipo</h1>
+        <p className="text-sm text-muted-foreground">
+          Mes en curso · actividades de los últimos 30 días
+        </p>
+      </div>
+      <div className="overflow-x-auto rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead>Persona</TableHead>
+              <TableHead className="text-right">Casos del mes</TableHead>
+              <TableHead className="text-right">Objetivo</TableHead>
+              <TableHead className="text-right">Opps abiertas</TableHead>
+              <TableHead className="text-right">Actividades 30d</TableHead>
+              <TableHead className="text-right">Visitas 30d</TableHead>
+              <TableHead className="text-right">KeepDays 30d</TableHead>
+              <TableHead className="text-right">Tareas vencidas</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {team.map((p) => {
+              const s = stats.get(p.id) ?? {
+                casos: 0, opps: 0, acts: 0, visitas: 0, keepdays: 0, vencidas: 0,
+              };
+              const goal = goalOf.get(p.id);
+              return (
+                <TableRow key={p.id}>
+                  <TableCell>
+                    <span className="font-medium">{p.nombre}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">{p.rol}</span>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums font-medium">
+                    {s.casos}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums text-muted-foreground">
+                    {goal ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{s.opps}</TableCell>
+                  <TableCell className="text-right tabular-nums">{s.acts}</TableCell>
+                  <TableCell className="text-right tabular-nums">{s.visitas}</TableCell>
+                  <TableCell className="text-right tabular-nums">{s.keepdays}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {s.vencidas > 0 ? (
+                      <span className="text-red-600 dark:text-red-400">{s.vencidas}</span>
+                    ) : (
+                      "0"
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        “Casos del mes” cuenta los casos nuevos (1ª etapa) de los doctores de los
+        que cada persona es owner. Los objetivos por persona se cargan en la tabla
+        goals (cuotas OKR: Juan 18 · Rocío 4→7 · nuevo/a 2→5).
+      </p>
+    </div>
+  );
+}
