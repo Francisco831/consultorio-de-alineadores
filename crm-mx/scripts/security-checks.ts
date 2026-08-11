@@ -626,8 +626,30 @@ async function correr(n: number, nombre: string, fn: () => Promise<void>) {
   }
 }
 
+/**
+ * Los chequeos usan DOS caminos: conexión directa a Postgres (1, 3, 5, 6, 7, 8) y
+ * HTTP con la clave anónima (2, 3). El primero sale de SUPABASE_PROJECT_REF y el
+ * segundo de NEXT_PUBLIC_SUPABASE_URL. Si apuntan a bases distintas —cosa fácil al
+ * apuntar a producción con una variable suelta— el informe sale mezclado: encabezado
+ * de una base, mitad de los chequeos de la otra, y todo con cara de ser correcto.
+ * Con dos bases que tienen los mismos datos y schemas que pueden diferir, eso es
+ * exactamente el error que más caro sale.
+ */
+function verificarCoherenciaDeDestino(ref: string) {
+  const refDeLaUrl = URL.replace("https://", "").split(".")[0];
+  if (!refDeLaUrl || !ref || refDeLaUrl === ref) return;
+  throw new Error(
+    `Destinos que no coinciden:\n` +
+      `    conexión a Postgres : ${ref}   (SUPABASE_PROJECT_REF)\n` +
+      `    llamadas HTTP       : ${refDeLaUrl}   (NEXT_PUBLIC_SUPABASE_URL)\n` +
+      `  El informe saldría mezclando dos bases. Definí las dos variables para la` +
+      ` misma,\n  incluida NEXT_PUBLIC_SUPABASE_ANON_KEY, que también tiene que ser la de esa base.`
+  );
+}
+
 async function main() {
   const ref = projectRef();
+  verificarCoherenciaDeDestino(ref);
   console.log(`\nChequeos de seguridad — base ${ref}${BASELINE ? "  (modo línea de base)" : ""}\n`);
 
   const db = await connectDb();
