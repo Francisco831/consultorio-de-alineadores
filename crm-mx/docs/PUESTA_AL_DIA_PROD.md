@@ -1,7 +1,27 @@
 # Poner producción al día — procedimiento
 
-**Preparado el 11/8/2026.** Decisión de Pancho: **producción es la base que manda.** Hoy está
-en la migración `0021` y le faltan `0022`–`0028`.
+> ## ✅ EJECUTADO Y VERIFICADO — 11 de agosto de 2026
+>
+> Producción pasó de la `0021` a la `0028`. **Los dos schemas coinciden exactamente**:
+> 26 tablas, 406 columnas, 77 funciones y 62 policies, sin una sola diferencia en ninguna
+> dirección (`npx tsx scripts/diff-entornos.ts` → código 0). **G5 cerrado.**
+>
+> | | antes | ahora |
+> |---|---|---|
+> | Migración | `0021` | `0028` — ledger con 28 filas |
+> | Funciones `SECURITY DEFINER` | 23 | 39 |
+> | Ejecutables por `anon` | **15** | **0** |
+> | RPC que devuelven datos sin sesión | 0 de 12 (no existían) | 0 de 12 (existen y están cerradas) |
+> | Funciones que la app necesita | — | 22 de 22 disponibles: `0027` no cerró de más |
+> | Chequeos de seguridad | — | **4 OK · 1 FALLA · 3 PENDIENTE**, idéntico a desarrollo |
+>
+> La única FALLA es el chequeo 8, y es por diseño: la regla de lectura del CRM es
+> `using (true)` —todos ven todo— por decisión de producto. Con el alta pública cerrada,
+> nadie llega ahí desde afuera.
+>
+> El documento se conserva como registro de cómo se hizo y para repetirlo en otra base.
+
+**Decisión de Pancho:** producción es la base que manda.
 
 Cada comando se corre **desde tu terminal**, parado en `crm-mx/`. El runner exige confirmación
 escrita para producción y eso es a propósito: prod no figura como `desarrollo` en
