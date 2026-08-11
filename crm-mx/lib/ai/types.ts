@@ -200,8 +200,10 @@ export interface DoctorContext {
   city: string | null;
   zona: string | null;
   clinic: string | null;
-  phone: string | null;
-  whatsapp: string | null;
+  /** Si el canal EXISTE, no cuál es. El número no viaja al modelo: se usa al mandar,
+   *  y eso pasa en la pantalla con la sesión del usuario. Ver lib/ai/pii.ts. */
+  has_phone: boolean;
+  has_whatsapp: boolean;
   owner: string | null; // nombre del comercial (profiles.nombre)
   clinical_owner: string | null;
   categoria: DoctorCategoria;
@@ -289,7 +291,9 @@ export interface DoctorContext {
    *  detectados (que no es lo mismo que "no hay problemas"). */
   trust_risk_score: number | null;
   service_summary: string; // una línea es-MX
-  wa_channel: { chat_name: string; unanswered: boolean; activity_bucket: string | null } | null;
+  /** Sin `chat_name`: el nombre del chat suele ser el de una persona. Lo que el
+   *  agente necesita es que el canal exista y si quedó una respuesta pendiente. */
+  wa_channel: { unanswered: boolean; activity_bucket: string | null } | null;
   ai_profile: DoctorAiProfileRow | null;
   open_recommendations: AiRecommendationRow[];
   data_as_of: string; // watermark de sync_runs — frescura de datos
@@ -322,7 +326,9 @@ export interface ServiceIssue {
 
 export interface OpportunitySummary {
   id: string;
-  patient_name: string | null;
+  /** Referencia corta (`OP-3F9A2C`) en lugar del nombre del paciente. La interfaz la
+   *  resuelve al nombre real, que sigue en la base. Ver lib/ai/pii.ts. */
+  ref: string;
   stage: string;
   days_in_stage: number;
   probability: number | null;

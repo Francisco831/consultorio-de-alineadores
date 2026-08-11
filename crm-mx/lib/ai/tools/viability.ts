@@ -16,6 +16,7 @@ import { toStrictJsonSchema } from "@/lib/ai/schemas";
 import { todayMX } from "@/lib/dates";
 import { daysSince } from "@/lib/format";
 import type { AiToolDef, AiToolResult } from "@/lib/ai/types";
+import { refOportunidad } from "@/lib/ai/pii";
 
 const MAX_ROWS = 50;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -54,7 +55,6 @@ const doctorIdArg = z.string().describe("id (uuid) del doctor en el CRM");
 
 interface OppRow {
   id: string;
-  patient_name: string | null;
   stage: string;
   stage_entered_at: string;
   created_at: string;
@@ -67,8 +67,9 @@ interface OppRow {
   viability_follow_up_date: string | null;
 }
 
+// Sin `patient_name`: lo que devuelve una tool va entero al modelo. Ver lib/ai/pii.ts.
 const OPP_COLS =
-  "id, patient_name, stage, stage_entered_at, created_at, viability_requested_at, viability_submitted_at, viability_status, viability_result, viability_completed_at, viability_clinical_owner, viability_follow_up_date";
+  "id, stage, stage_entered_at, created_at, viability_requested_at, viability_submitted_at, viability_status, viability_result, viability_completed_at, viability_clinical_owner, viability_follow_up_date";
 
 const d10 = (iso: string | null): string | null => iso?.slice(0, 10) ?? null;
 
@@ -109,7 +110,9 @@ export const getViabilityStatus = defineTool({
 
     const map = (o: OppRow) => ({
       opportunity_id: o.id,
-      paciente: o.patient_name,
+      // Referencia, no nombre: lo que vuelve de una tool va entero al modelo
+      // (runner.ts serializa `res.data`). Ver lib/ai/pii.ts.
+      ref: refOportunidad(o.id),
       etapa_oportunidad: o.stage,
       dias_en_etapa: daysSince(o.stage_entered_at),
       estado_viabilidad: o.viability_status ?? "sin registro del ciclo de viabilidad",
@@ -162,10 +165,9 @@ export const requestViabilityDraft = defineTool({
       .describe(
         "la duda clínica concreta tal como la planteó el doctor, o el motivo del pedido. Sin interpretación ni pronóstico"
       ),
-    paciente: z
-      .string()
-      .nullish()
-      .describe("referencia del paciente (nombre o iniciales) si se conoce"),
+    // Se quitó el argumento `paciente`. El modelo ya no recibe nombres de paciente,
+    // así que pedírselos solo podía producir uno inventado. La viabilidad se cuelga
+    // de `opportunity_id`, que es el vínculo real; la interfaz muestra el paciente.
     opportunity_id: z
       .string()
       .nullish()
@@ -177,7 +179,7 @@ export const requestViabilityDraft = defineTool({
         "fecha de seguimiento YYYY-MM-DD si el equipo la definió; omitir si no hay fecha acordada (el SLA de respuesta clínica NO está definido: no inventes una)"
       ),
   }),
-  handler: async ({ doctor_id, motivo_clinico, paciente, opportunity_id, fecha_seguimiento }) => {
+  handler: async ({ doctor_id, motivo_clinico, opportunity_id, fecha_seguimiento }) => {
     if (!UUID_RE.test(doctor_id)) bail("doctor_id inválido: se espera un uuid");
     const motivo = motivo_clinico.trim();
     if (!motivo) bail("motivo_clinico no puede estar vacío");
@@ -203,27 +205,24 @@ export const requestViabilityDraft = defineTool({
     // La viabilidad se cuelga de una oportunidad real: si el modelo pasa un id,
     // se verifica que exista y sea de ESTE doctor (si no, el pedido quedaría
     // registrado sobre el paciente de otro).
-    let oportunidad: { id: string; paciente: string | null; etapa: string } | null = null;
+    let oportunidad: { id: string; etapa: string } | null = null;
     if (opportunity_id) {
       const { data: oppRaw, error: oppErr } = await supabase
         .from("opportunities")
-        .select("id, doctor_id, patient_name, stage")
+        .select("id, doctor_id, stage")
         .eq("id", opportunity_id)
         .maybeSingle();
       if (oppErr) bail(`Error leyendo la oportunidad: ${oppErr.message}`);
       if (!oppRaw) bail(`Oportunidad ${opportunity_id} no encontrada`);
-      const opp = oppRaw as {
-        id: string;
-        doctor_id: string;
-        patient_name: string | null;
-        stage: string;
-      };
+      const opp = oppRaw as { id: string; doctor_id: string; stage: string };
       if (opp.doctor_id !== doctor_id)
         bail("La oportunidad indicada es de otro doctor: no se arma el borrador");
-      oportunidad = { id: opp.id, paciente: opp.patient_name, etapa: opp.stage };
+      oportunidad = { id: opp.id, etapa: opp.stage };
     }
 
-    const pacienteRef = paciente?.trim() || oportunidad?.paciente || null;
+    // El título lleva la referencia, no el nombre. La tarea guarda `opportunity_id`,
+    // así que la pantalla muestra de qué paciente se trata cuando Rocío la abre.
+    const pacienteRef = oportunidad ? refOportunidad(oportunidad.id) : null;
     const titulo = `Pedir viabilidad al equipo clínico${pacienteRef ? ` — ${pacienteRef}` : ""}`;
 
     return {

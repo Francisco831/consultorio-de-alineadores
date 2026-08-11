@@ -353,7 +353,7 @@ export function runRegressionChecks(): RegressionCheck[] {
       open_opportunities: [
         {
           id: "44444444-4444-4444-8444-444444444444",
-          patient_name: "Paciente V.",
+          ref: "OP-444444",
           stage: "viabilidad",
           days_in_stage: 4,
           probability: 25,

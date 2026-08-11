@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test \"scripts/**/*.test.ts\"",
+    "test": "tsx --test \"scripts/**/*.test.ts\" \"lib/**/*.test.ts\"",
     "test:seguridad": "tsx scripts/security-checks.ts"
   },
   "dependencies": {

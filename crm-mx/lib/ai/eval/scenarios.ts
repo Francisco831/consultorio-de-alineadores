@@ -124,8 +124,8 @@ function baseContext(): EvalDoctorContext {
     city: "Guadalajara",
     zona: "Occidente",
     clinic: "Clínica Base",
-    phone: "+52 33 0000 0000",
-    whatsapp: "+52 33 0000 0000",
+    has_phone: true,
+    has_whatsapp: true,
     owner: "Juan",
     clinical_owner: null,
     categoria: "SIN_CATEGORIA",
@@ -521,7 +521,7 @@ export const SCENARIOS: EvalScenario[] = [
       open_opportunities: [
         {
           id: "11111111-1111-4111-8111-111111111111",
-          patient_name: "Paciente M.",
+          ref: "OP-111111",
           stage: "viabilidad",
           days_in_stage: 6,
           probability: 30,
@@ -951,7 +951,7 @@ export const SCENARIOS: EvalScenario[] = [
       open_opportunities: [
         {
           id: "33333333-3333-4333-8333-333333333333",
-          patient_name: "Paciente R.",
+          ref: "OP-333333",
           stage: "decision",
           days_in_stage: 23,
           probability: 60,

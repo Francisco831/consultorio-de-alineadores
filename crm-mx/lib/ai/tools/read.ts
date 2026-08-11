@@ -20,6 +20,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { toStrictJsonSchema } from "@/lib/ai/schemas";
 import { buildDoctorContext, contextToPromptBlock } from "@/lib/ai/context";
+import { refOportunidad } from "@/lib/ai/pii";
 import {
   cappedListLimitation,
   complete,
@@ -529,7 +530,10 @@ const getDoctorCases = defineTool({
     const { data, error, count } = await supabase
       .from("cases")
       .select(
-        "id, id_externo, noloco_case_id, paciente, etapa, tipo_tratamiento, tipo_caso, is_new_case, case_subject_type, case_subject_source, fecha_ingreso, fecha_aprobacion, fecha_video, fecha_aprobacion_video, fecha_impresion, fecha_finalizado",
+        // Sin `paciente`: el caso se identifica por su referencia de negocio
+        // (id_externo / noloco_case_id), que es la que usa el equipo y no nombra a
+        // nadie. Ver lib/ai/pii.ts.
+        "id, id_externo, noloco_case_id, etapa, tipo_tratamiento, tipo_caso, is_new_case, case_subject_type, case_subject_source, fecha_ingreso, fecha_aprobacion, fecha_video, fecha_aprobacion_video, fecha_impresion, fecha_finalizado",
         { count: "exact" }
       )
       .eq("doctor_id", doctor_id)
@@ -541,7 +545,6 @@ const getDoctorCases = defineTool({
     interface Row {
       id_externo: string | null;
       noloco_case_id: string;
-      paciente: string | null;
       etapa: string | null;
       tipo_tratamiento: string | null;
       tipo_caso: string | null;
@@ -559,7 +562,6 @@ const getDoctorCases = defineTool({
     const d = (iso: string | null) => iso?.slice(0, 10) ?? null;
     const items = rows.map((c) => ({
       caso: c.id_externo ?? c.noloco_case_id,
-      paciente: c.paciente,
       etapa: formatEtapa(c.etapa),
       tipo: c.tipo_caso ?? c.tipo_tratamiento,
       caso_nuevo: c.is_new_case,
@@ -592,7 +594,8 @@ const getDoctorCases = defineTool({
 const getDoctorOpportunities = defineTool({
   name: "getDoctorOpportunities",
   description:
-    "Oportunidades (pacientes potenciales) del doctor con etapa, días en etapa, probabilidad, monto y el ciclo de viabilidad (solicitada/enviada/respondida y su resultado). Por default solo las abiertas. Usala para saber qué pacientes concretos están en juego. " +
+    "Oportunidades (pacientes potenciales) del doctor con etapa, días en etapa, probabilidad, monto y el ciclo de viabilidad (solicitada/enviada/respondida y su resultado). Por default solo las abiertas. Usala para saber cuántas y en qué estado están las oportunidades en juego. " +
+    "Cada una viene con una referencia corta (`ref`, tipo OP-3F9A2C) en lugar del nombre del paciente: nómbrala así, que la interfaz la resuelve. No pidas ni inventes nombres de paciente. " +
     META_NOTE,
   schema: z.strictObject({
     doctor_id: doctorIdArg,
@@ -603,7 +606,8 @@ const getDoctorOpportunities = defineTool({
     let q = supabase
       .from("opportunities")
       .select(
-        "id, patient_name, stage, stage_entered_at, probability, amount_mxn, forecast_category, expected_close_date, lost_reason, viability_status, viability_result, viability_requested_at, viability_follow_up_date, created_at",
+        // Sin `patient_name`: se devuelve una referencia corta (lib/ai/pii.ts).
+        "id, stage, stage_entered_at, probability, amount_mxn, forecast_category, expected_close_date, lost_reason, viability_status, viability_result, viability_requested_at, viability_follow_up_date, created_at",
         { count: "exact" }
       )
       .eq("doctor_id", doctor_id)
@@ -616,7 +620,6 @@ const getDoctorOpportunities = defineTool({
 
     interface Row {
       id: string;
-      patient_name: string | null;
       stage: string;
       stage_entered_at: string;
       probability: number | null;
@@ -632,7 +635,7 @@ const getDoctorOpportunities = defineTool({
     const rows = (data ?? []) as Row[];
     const items = rows.map((o) => ({
       id: o.id,
-      paciente: o.patient_name,
+      ref: refOportunidad(o.id),
       etapa: o.stage,
       dias_en_etapa: daysSince(o.stage_entered_at),
       probabilidad: o.probability,

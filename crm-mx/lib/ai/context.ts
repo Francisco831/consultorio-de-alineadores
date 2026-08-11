@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { todayMX } from "@/lib/dates";
 import { daysSince } from "@/lib/format";
+import { refOportunidad } from "@/lib/ai/pii";
 import type { Case, Doctor, TaskType } from "@/lib/types";
 import type {
   ActivitySummary,
@@ -119,8 +120,6 @@ interface OppRow {
 }
 
 interface WaRow {
-  chat_name: string | null;
-  phone: string | null;
   unanswered: boolean;
   activity_bucket: string | null;
 }
@@ -540,7 +539,9 @@ export async function buildDoctorContext(
       .eq("engagement_quality", "MEANINGFUL"),
     supabase
       .from("wa_conversations")
-      .select("chat_name, phone, unanswered, activity_bucket")
+      // Sin chat_name ni phone: no se usan y traerlos solo invita a que vuelvan al
+      // prompt de un descuido. Ver lib/ai/pii.ts.
+      .select("unanswered, activity_bucket")
       .eq("doctor_id", doctorId),
     supabase
       .from("contacts")
@@ -980,7 +981,8 @@ export async function buildDoctorContext(
   // ---------- oportunidades abiertas ----------
   const openOpportunities: OpportunitySummary[] = opps.slice(0, 10).map((o) => ({
     id: o.id,
-    patient_name: o.patient_name,
+    // El nombre del paciente NO viaja: referencia corta y estable (lib/ai/pii.ts).
+    ref: refOportunidad(o.id),
     stage: o.stage,
     days_in_stage: daysSince(o.stage_entered_at) ?? 0,
     probability: o.probability,
@@ -1005,8 +1007,10 @@ export async function buildDoctorContext(
     city: doctor.city ?? doctor.state,
     zona: doctor.zona,
     clinic: doctor.clinic_name,
-    phone: doctor.phone ?? principal?.phone ?? null,
-    whatsapp: doctor.whatsapp ?? principal?.whatsapp ?? null,
+    // Solo si el canal existe. El número se usa al mandar, y eso pasa en la pantalla
+    // con la sesión del usuario, no acá. Ver lib/ai/pii.ts.
+    has_phone: Boolean(doctor.phone ?? principal?.phone),
+    has_whatsapp: Boolean(doctor.whatsapp ?? principal?.whatsapp),
     owner: doctor.owner_id ? (profileName.get(doctor.owner_id) ?? null) : null,
     clinical_owner: doctor.clinical_owner_id
       ? (profileName.get(doctor.clinical_owner_id) ?? null)
@@ -1087,12 +1091,10 @@ export async function buildDoctorContext(
     service_issues: serviceIssues,
     trust_risk_score: trustRisk,
     service_summary: serviceSummary,
+    // Sin chat_name ni phone: el nombre del chat suele ser el de una persona, y el
+    // número no hace falta para razonar. Queda lo que el agente sí usa.
     wa_channel: wa
-      ? {
-          chat_name: wa.chat_name ?? wa.phone ?? "chat sin nombre",
-          unanswered: wa.unanswered,
-          activity_bucket: wa.activity_bucket,
-        }
+      ? { unanswered: wa.unanswered, activity_bucket: wa.activity_bucket }
       : null,
     ai_profile: aiProfile,
     open_recommendations: openRecommendations,
@@ -1263,10 +1265,18 @@ export function contextToPromptBlock(ctx: DoctorContext): string {
   }
   if (ctx.next_action)
     L.push(`- Próxima acción (motor determinístico): ${ctx.next_action.label}`);
-  L.push(`- Canales: tel ${ctx.phone ?? "—"} · WhatsApp ${ctx.whatsapp ?? "—"}`);
+  // Qué canales HAY, no cuáles son: los números no viajan al modelo (lib/ai/pii.ts).
+  // El agente necesita esto para no proponer un WhatsApp a quien no tiene WhatsApp.
+  const canales = [ctx.has_phone ? "teléfono" : null, ctx.has_whatsapp ? "WhatsApp" : null]
+    .filter(Boolean)
+    .join(" · ");
+  L.push(
+    `- Canales disponibles: ${canales || "ninguno cargado — no propongas contacto directo"}` +
+      " (el número lo agrega el CRM al enviar; no forma parte de este contexto)"
+  );
   if (ctx.wa_channel) {
     L.push(
-      `- Chat Periskope: ${ctx.wa_channel.chat_name}${
+      `- Chat de WhatsApp: abierto${
         ctx.wa_channel.unanswered ? " · ESPERANDO RESPUESTA (el doctor habló último)" : ""
       }${ctx.wa_channel.activity_bucket ? ` · actividad ${ctx.wa_channel.activity_bucket}` : ""}`
     );
@@ -1308,7 +1318,8 @@ export function contextToPromptBlock(ctx: DoctorContext): string {
     L.push(`### Oportunidades abiertas (${ctx.open_opportunities.length})`);
     for (const o of ctx.open_opportunities.slice(0, 5)) {
       L.push(
-        `- ${o.patient_name ?? "Paciente s/n"} · ${o.stage} · ${o.days_in_stage}d en etapa${
+        // Referencia, no nombre. La interfaz la resuelve al paciente real.
+        `- ${o.ref} · ${o.stage} · ${o.days_in_stage}d en etapa${
           o.probability != null ? ` · ${o.probability}%` : ""
         }`
       );
