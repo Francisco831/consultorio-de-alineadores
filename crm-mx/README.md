@@ -12,8 +12,18 @@ Next.js 16 · TypeScript · Tailwind 4 · shadcn/ui (Base UI) · Supabase (Postg
 1. **Crear proyectos en supabase.com** (gratis): uno `crm-mx-dev` y uno `crm-mx-prod`.
    En Settings → API copiar URL, anon key y service_role key.
 2. **Configurar env**: `cp .env.local.example .env.local` y completar las 3 claves (empezar con dev).
-3. **Aplicar migraciones** (en orden 0001→0006): en el SQL Editor del dashboard de Supabase,
-   pegar y correr cada archivo de `supabase/migrations/`. (O `supabase db push` si está el CLI linkeado.)
+   Además hace falta `SUPABASE_DB_PASSWORD` —la contraseña de Postgres, en Settings → Database
+   → *Database password*— que es la que usan `db-migrate.ts` y `security-checks.ts`.
+   `chmod 600 .env.local`: el archivo tiene las claves de una base con datos reales.
+3. **Aplicar migraciones** con el runner, siempre en tres pasos. Detalle en
+   [`docs/OPERACION.md`](docs/OPERACION.md).
+   ```
+   npx tsx scripts/db-migrate.ts --print-target   # a qué base apuntaría (no conecta)
+   npx tsx scripts/db-migrate.ts --dry-run        # corre y revierte: verifica sin escribir
+   npx tsx scripts/db-migrate.ts --apply          # recién esto escribe
+   ```
+   Sin `--apply` el runner **nunca** escribe. Registra lo aplicado en `ops.schema_migrations`,
+   así que re-correrlo es seguro: saltea lo que ya está.
    - Si `pg_cron` no está habilitado: Dashboard → Database → Extensions → habilitar `pg_cron`,
      y re-correr el bloque final de `0006_automations.sql`.
 4. **Crear usuarios**: `npx tsx scripts/create-users.ts` (imprime contraseñas iniciales una sola vez).
@@ -51,8 +61,21 @@ Next.js 16 · TypeScript · Tailwind 4 · shadcn/ui (Base UI) · Supabase (Postg
 app/(app)/          hoy · dashboard · doctores(/[id]) · pipeline · casos · tareas · reportes · equipo · ajustes
 lib/actions/        server actions (todas las escrituras)
 lib/supabase/       clients server/browser
-supabase/migrations 0001 enums · 0002 tablas · 0003 triggers+audit · 0004 RLS · 0005 scores · 0006 automatizaciones
-scripts/            create-users · import-noloco · seed-demo · parse_enrichment.py · import-enrichment
+lib/ai/             capa multi-agente (ver docs/AI_ARCHITECTURE.md)
+supabase/migrations 0001 enums · 0002 tablas · 0003 triggers+audit · 0004 RLS · 0005 scores ·
+                    0006 automatizaciones · … · 0027 permisos de funciones · 0028 ledger
+supabase/rollbacks/ el rollback de cada migración que tiene uno. NO son migraciones:
+                    vivían mezclados y una corrida sin argumentos los aplicaba.
+scripts/            db-migrate (runner) · security-checks (8 chequeos) · create-users ·
+                    import-noloco · seed-demo · parse_enrichment.py · import-enrichment
+docs/               OPERACION.md (migrar/verificar/recuperar) · SMOKE_TEST_permisos.md · AI_ARCHITECTURE.md
+```
+
+## Verificar
+
+```
+npm run typecheck && npm test && npm run build   # no tocan ninguna base; corren en CI
+npm run test:seguridad                            # 8 chequeos contra la base (a mano)
 ```
 
 ## Decisiones de diseño (resumen)

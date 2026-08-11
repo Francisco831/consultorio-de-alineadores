@@ -1,0 +1,46 @@
+name: CRM MX — CI
+
+# Solo corre si cambió el CRM: el repo tiene muchas otras cosas al lado.
+on:
+  push:
+    paths: ["crm-mx/**", ".github/workflows/crm-mx-ci.yml"]
+  pull_request:
+    paths: ["crm-mx/**", ".github/workflows/crm-mx-ci.yml"]
+
+# NINGÚN paso de este workflow toca una base de datos. No hay secretos acá y no
+# debe haberlos: los chequeos que necesitan Postgres (scripts/security-checks.ts)
+# se corren a mano contra desarrollo. Ver crm-mx/docs/OPERACION.md.
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crm-mx
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: crm-mx/package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # Bloqueante recién cuando se cierre la Etapa 4: hoy hay 19 errores
+      # preexistentes (react-hooks/purity por Date.now() en componentes server, y
+      # `any` en los scripts de import). Dejarlo bloqueante ahora pinta el CI de
+      # rojo desde el primer commit y deja de significar algo.
+      - name: Lint (informativo)
+        run: npm run lint
+        continue-on-error: true
