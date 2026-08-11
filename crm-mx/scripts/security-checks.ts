@@ -491,10 +491,17 @@ async function chequeo8(db: Client) {
         .slice(0, 8)
         .map((v) => `  ${v.tabla.padEnd(22)} ${v.filas} filas  ← LEE`),
       ...(conDatos.length > 8 ? [`  … y ${conDatos.length - 8} tablas más`] : []),
+      // El cierre depende del chequeo 3, que ya corrió: con el alta abierta esto es una
+      // ruta de entrada real; con el alta cerrada es el radio de daño de una cuenta que
+      // alguien tendría que conseguir de otra forma. Decirlo mal en cualquiera de los dos
+      // sentidos desinforma, así que se lee el resultado en vez de asumirlo.
       conDatos.length === 0
         ? "un alta espontánea no ve nada"
-        : "con el chequeo 3 en FALLA, cualquiera con la clave anónima llega hasta acá:" +
-          " se registra, handle_new_user() le arma el perfil VIEWER y lee todo esto",
+        : resultados.find((r) => r.n === 3)?.estado === "OK"
+          ? "el alta pública está cerrada, así que hoy nadie llega acá desde afuera; esto es el" +
+            " radio de daño de UNA cuenta cualquiera, porque la policy de lectura es `using (true)`"
+          : "con el chequeo 3 en FALLA, cualquiera con la clave anónima llega hasta acá:" +
+            " se registra, handle_new_user() le arma el perfil VIEWER y lee todo esto",
     ]
   );
 }
