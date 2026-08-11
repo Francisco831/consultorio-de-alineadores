@@ -1,5 +1,7 @@
 {
-  "_leeme": "Qué project_ref de Supabase es cada entorno. Lo lee scripts/db-migrate.ts para saber contra qué base está por escribir. El host del pooler es idéntico para dev y prod (los dos proyectos viven en ca-central-1), así que el ref es el ÚNICO discriminante. Un ref que no figure acá se trata como desconocido y exige confirmación escrita, aunque se pase --yes. El ref no es un secreto: es la parte visible de NEXT_PUBLIC_SUPABASE_URL. Las claves nunca van en este archivo.",
+  "_leeme": "Qué project_ref de Supabase es cada entorno. Lo lee scripts/db-migrate.ts para saber contra qué base está por escribir. Un ref que no figure acá se trata como desconocido y exige confirmación escrita, aunque se pase --yes. El ref no es un secreto: es la parte visible de NEXT_PUBLIC_SUPABASE_URL. Las claves nunca van en este archivo.",
+
+  "_regiones": "NO están en la misma región, aunque una versión anterior de este archivo decía que sí: dev vive en ca-central-1 y prod en us-east-2 (verificado 11/8/2026). El runner autodetecta probando regiones, así que contra prod hace cuatro intentos fallidos antes de acertar. Para ahorrárselos: SUPABASE_DB_HOST=aws-0-us-east-2.pooler.supabase.com. Quien discrimina el proyecto es el usuario (postgres.<ref>), no el host.",
   "_ojo": "Las dos bases tienen los MISMOS datos reales (7.034 doctores) y schemas DISTINTOS: prod está en ~0022 y le faltan 0023, 0025, 0026 y 0028. Ver docs/V1_PRODUCCION.md. No se aplica 0027 en prod: sus 39 firmas salen del pg_proc de dev y prod tiene 23 funciones SECURITY DEFINER.",
 
   "klujlknadykmsgatqtks": "desarrollo",

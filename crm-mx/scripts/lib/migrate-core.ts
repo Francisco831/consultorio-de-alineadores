@@ -14,11 +14,18 @@ import { createHash } from "node:crypto";
 // Modos
 // ---------------------------------------------------------------------------
 
-export type Modo = "print-target" | "check-connection" | "dry-run" | "apply" | "sembrar";
+export type Modo =
+  | "print-target"
+  | "check-connection"
+  | "dry-run"
+  | "ensayo"
+  | "apply"
+  | "sembrar";
 export const MODOS: readonly Modo[] = [
   "print-target",
   "check-connection",
   "dry-run",
+  "ensayo",
   "apply",
   "sembrar",
 ] as const;
@@ -27,9 +34,18 @@ export const QUE_HACE: Record<Modo, string> = {
   "print-target": "solo imprime el destino, no se conecta",
   "check-connection": "se conecta e informa, no corre SQL",
   "dry-run": "corre el SQL en una transacción y SIEMPRE hace rollback",
+  ensayo: "corre TODAS las pendientes en UNA transacción y la revierte al final",
   apply: "APLICA los cambios de forma permanente",
   sembrar: "MARCA migraciones como aplicadas SIN ejecutarlas",
 };
+
+/** Los modos que no dejan nada escrito. Sirve para no tener que enumerarlos a mano. */
+export const MODOS_SIN_ESCRITURA: readonly Modo[] = [
+  "print-target",
+  "check-connection",
+  "dry-run",
+  "ensayo",
+] as const;
 
 /**
  * El modo por defecto es --dry-run: correr el runner "a ver qué hace" no puede

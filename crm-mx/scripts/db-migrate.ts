@@ -6,8 +6,12 @@
  * MODOS (elegir uno; sin ninguno, el modo es --dry-run)
  *   --print-target      Imprime a qué base apuntaría y termina. NO se conecta.
  *   --check-connection  Se conecta, informa servidor/base/ledger y termina. NO corre SQL.
- *   --dry-run           Corre las migraciones pendientes dentro de una transacción y
- *                       SIEMPRE hace rollback. Nada queda escrito.
+ *   --dry-run           Corre cada migración pendiente en su propia transacción y
+ *                       SIEMPRE hace rollback. Nada queda escrito. Valida archivos
+ *                       SUELTOS: una que dependa de la anterior falla acá.
+ *   --ensayo            Corre TODAS las pendientes en UNA transacción y la revierte al
+ *                       final. Es el que valida la CADENA — el modo a usar antes de
+ *                       poner al día una base atrasada. Nada queda escrito.
  *   --apply             Aplica de verdad. Es la ÚNICA forma de escribir schema.
  *   --sembrar --hasta N Marca como aplicadas, SIN ejecutarlas, las migraciones hasta
  *                       el prefijo N. Es para bases que ya tenían migraciones aplicadas
@@ -234,6 +238,73 @@ async function aplicarArchivo(
   }
 }
 
+/**
+ * Corre TODAS las migraciones pendientes dentro de UNA transacción, y la revierte.
+ *
+ * POR QUÉ HACE FALTA UN MODO APARTE. `--dry-run` revierte cada archivo antes de
+ * pasar al siguiente, así que valida archivos sueltos y no cadenas: una migración
+ * que use una columna creada por la anterior falla ahí aunque la secuencia completa
+ * sea perfecta. Eso es justo lo que pasa al poner al día una base atrasada —el caso
+ * en que más falta hace saber de antemano si va a andar— y el motivo por el que
+ * `docs/OPERACION.md` tenía que aclarar que los errores del dry-run son esperables.
+ * Un modo de verificación cuyos errores hay que aprender a ignorar no verifica nada.
+ *
+ * Acá el rollback es uno solo, al final. El SQL se ejecuta de verdad contra el
+ * schema y los datos reales, cada archivo ve lo que dejó el anterior, las
+ * autoverificaciones de cada migración corren, y no queda nada escrito.
+ *
+ * Lo que este modo NO prueba: que la cadena sea rápida (una transacción larga toma
+ * locks; contra una base en uso conviene una ventana tranquila), ni nada que dependa
+ * de un commit intermedio.
+ */
+async function ensayoCadena(
+  client: Client,
+  files: string[],
+  ledger: Map<string, string>,
+  explicitos: boolean
+): Promise<void> {
+  const pendientes = files.filter((f) => {
+    if (esRollback(f)) return false;
+    if (explicitos) return true;
+    const sql = readFileSync(f, "utf8");
+    return compararConLedger(checksum(sql), ledger.get(claveLedger(f))).estado !== "aplicada";
+  });
+
+  console.log("  --ensayo: las pendientes corren en UNA sola transacción, que se revierte al");
+  console.log("  final. Cada archivo ve lo que dejó el anterior, así que esto sí prueba la");
+  console.log("  cadena completa contra el schema y los datos reales. No queda nada escrito.\n");
+
+  if (pendientes.length === 0) {
+    console.log("✓ No hay pendientes: no hay cadena que ensayar.");
+    return;
+  }
+
+  await client.query("begin");
+  let hechas = 0;
+  try {
+    for (const f of pendientes) {
+      process.stdout.write(`→ ${f} ... `);
+      await client.query(readFileSync(f, "utf8"));
+      console.log("OK");
+      hechas++;
+    }
+  } catch (e) {
+    console.log("ERROR");
+    await client.query("rollback").catch(() => {});
+    throw new SalidaLimpia(
+      3,
+      `${(e as Error).message}\n` +
+        `  Falló en la ${hechas + 1} de ${pendientes.length} (${pendientes[hechas]}).\n` +
+        "  Se revirtió la transacción entera: la base quedó exactamente como estaba."
+    );
+  }
+  await client.query("rollback");
+  console.log(
+    `\n✓ Las ${pendientes.length} pendientes corren limpio encadenadas. Todo revertido.`
+  );
+  console.log("  Para aplicarlas de verdad: --apply");
+}
+
 /** Informa contra qué se está hablando de verdad, sin correr ninguna migración. */
 async function informarConexion(client: Client): Promise<void> {
   const { rows } = await client.query<{
@@ -387,7 +458,7 @@ async function main() {
     if (modo === "check-connection") return await informarConexion(client);
     if (modo === "sembrar") return await sembrar(client, files, hasta, auto);
 
-    const seco = modo === "dry-run";
+    const seco = modo === "dry-run" || modo === "ensayo";
 
     // Los rollbacks nunca tocan el ledger, así que tampoco justifican crearlo.
     const soloRollbacks = files.every(esRollback);
@@ -440,11 +511,16 @@ async function main() {
       console.log("  ⚠ Sin ledger: no se puede saber qué está aplicado ni registrar nada.\n");
     }
 
+    if (modo === "ensayo") {
+      return await ensayoCadena(client, files, ledger, explicit.length > 0);
+    }
+
     if (seco) {
       console.log("  --dry-run: cada archivo corre dentro de una transacción que termina");
       console.log("  en ROLLBACK. El SQL se ejecuta de verdad, pero no queda nada escrito.");
       console.log("  Ojo: como cada archivo se revierte, una migración que dependa de la");
-      console.log("  anterior va a fallar acá aunque la cadena completa sea correcta.\n");
+      console.log("  anterior va a fallar acá aunque la cadena completa sea correcta.");
+      console.log("  Para probar la cadena entera de una vez: --ensayo\n");
     }
 
     let aplicados = 0;

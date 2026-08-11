@@ -25,7 +25,18 @@ export PROD=yuxfgbbqhqquuoaudjdd
 | Respaldo de los datos de prod | ✅ `~/crm-mx-backups/yuxfgbbqhqquuoaudjdd-2026-08-11-19-07-20` — 24 tablas, 44.291 filas, verificado |
 | Alta pública cerrada en prod | ✅ `disable_signup = true` |
 | Diff dev↔prod conocido | ✅ prod es subconjunto exacto: faltan 2 tablas, 42 columnas, 20 funciones |
+| Ledger de prod creado y sembrado | ✅ 22 filas (`0001`–`0021` + `0028`) |
+| Cadena `0022`–`0027` ensayada contra prod | ✅ las 6 corren limpio (paso 2) |
 | Respaldo administrado de Supabase | ❌ **plan Free: no existe.** Ver "Decisión pendiente" al final |
+
+> **Node en tu terminal.** El shell no tiene node en el PATH. Una vez por ventana:
+> ```bash
+> export PATH="$HOME/.nvm/versions/node/v24.19.0/bin:$PATH"
+> ```
+>
+> **La región de prod.** Está en `us-east-2`, no en `ca-central-1` como dev. Sin decírselo, el
+> runner prueba cuatro hosts antes de acertar. Para saltearse la espera, agregá
+> `SUPABASE_DB_HOST=aws-0-us-east-2.pooler.supabase.com` adelante del comando.
 
 Comprobá que apuntás a donde creés:
 
@@ -59,21 +70,36 @@ que es `create or replace` y ya venía de antes.
 
 ---
 
-## 2. Dry-run — y cómo leerlo
+## 2. Ensayo de la cadena — ✅ hecho, salió limpio
 
 ```bash
-SUPABASE_PROJECT_REF=$PROD npx tsx scripts/db-migrate.ts --dry-run
+SUPABASE_PROJECT_REF=$PROD npx tsx scripts/db-migrate.ts --ensayo
 ```
 
-**Va a dar errores, y es esperable.** El `--dry-run` corre cada archivo en una transacción que
-revierte *antes* de pasar al siguiente, así que valida migraciones sueltas, no una cadena:
+Corre las 6 pendientes **en una sola transacción** y la revierte al final. Cada archivo ve lo que
+dejó el anterior, así que prueba la cadena de verdad contra el schema y los datos reales de
+producción. No escribe nada.
 
-- `0025_commercial_offers_mx.sql` agrega columnas a `commercial_offers`, que **crea `0022`**. Como
-  `0022` se revirtió, `0025` no la encuentra y falla.
-- Lo mismo con cualquier otra que dependa de una anterior.
+> **Por qué no alcanzaba el `--dry-run`.** Ese modo revierte cada archivo *antes* del siguiente,
+> así que valida archivos sueltos, no cadenas: `0023` usa una columna que crea `0022` y falla ahí
+> aunque la secuencia completa sea correcta. Un modo de verificación cuyos errores hay que
+> aprender a ignorar no verifica nada, así que se agregó `--ensayo`.
 
-**Lo que sí te dice el dry-run:** que `0022`, `0023`, `0024` y `0026` corren limpio sobre el prod
-real. Si alguna de esas cuatro falla, **pará y avisame**: ahí hay algo que el diff no vio.
+**Resultado del 11/8/2026:**
+
+```
+→ 0022_ai_foundation.sql        ... OK
+→ 0023_ai_aggregates.sql        ... OK
+→ 0024_quality_policies.sql     ... OK
+→ 0025_commercial_offers_mx.sql ... OK
+→ 0026_agent_specialists.sql    ... OK
+→ 0027_function_grants.sql      ... OK
+
+✓ Las 6 pendientes corren limpio encadenadas. Todo revertido.
+```
+
+Incluye la autoverificación de `0027`, que levanta excepción si quedó alguna función abierta:
+pasó. O sea que el resultado de seguridad también está validado de antemano.
 
 ---
 

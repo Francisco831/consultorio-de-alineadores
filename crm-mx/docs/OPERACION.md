@@ -41,6 +41,12 @@ escribas `sembrar` para confirmar.
 
 Siempre en tres pasos, en este orden:
 
+> **Antes de poner al día una base atrasada, usá `--ensayo` y no `--dry-run`.** El `--dry-run`
+> revierte cada archivo antes del siguiente: valida archivos sueltos, así que una migración que
+> use algo creado por la anterior falla ahí aunque la cadena entera sea correcta. El `--ensayo`
+> corre **todas** las pendientes en una sola transacción y la revierte al final, así que cada una
+> ve lo que dejó la anterior. Tampoco escribe nada.
+
 ```bash
 npx tsx scripts/db-migrate.ts --print-target
 ```

@@ -14,8 +14,11 @@ import {
   compararConLedger,
   esArchivoDeMigracion,
   esRollback,
+  MODOS,
+  MODOS_SIN_ESCRITURA,
   ordenarMigraciones,
   prefijo,
+  QUE_HACE,
   refEfectivo,
   resolverEntorno,
   resolverModo,
@@ -35,12 +38,34 @@ describe("resolverModo", () => {
     assert.deepEqual(resolverModo(["--print-target"]), { modo: "print-target" });
     assert.deepEqual(resolverModo(["--check-connection"]), { modo: "check-connection" });
     assert.deepEqual(resolverModo(["--dry-run"]), { modo: "dry-run" });
+    assert.deepEqual(resolverModo(["--ensayo"]), { modo: "ensayo" });
   });
 
   it("rechaza dos modos en vez de elegir uno", () => {
     const r = resolverModo(["--dry-run", "--apply"]);
     assert.ok("error" in r, "debería ser un error");
     assert.match(r.error, /incompatibles/);
+  });
+
+  it("--ensayo tampoco se combina con --apply", () => {
+    // Los dos corren el SQL; solo cambia si al final hay commit. Confundirlos sería
+    // el peor error posible del runner, así que se rechaza en vez de desempatar.
+    assert.ok("error" in resolverModo(["--ensayo", "--apply"]));
+    assert.ok("error" in resolverModo(["--ensayo", "--dry-run"]));
+  });
+
+  it("todo modo tiene su descripción, y los que no escriben están declarados", () => {
+    // Si alguien agrega un modo y se olvida de QUE_HACE, el runner imprimiría
+    // "undefined" en el recuadro del destino, que es justo donde no se puede dudar.
+    for (const m of MODOS) {
+      assert.equal(typeof QUE_HACE[m], "string", `falta QUE_HACE para --${m}`);
+      assert.ok(QUE_HACE[m].length > 0);
+    }
+    // Un modo nuevo que no escriba tiene que declararse acá; si no, el default
+    // seguro deja de ser verdad.
+    for (const m of MODOS_SIN_ESCRITURA) assert.ok(MODOS.includes(m));
+    assert.ok(!MODOS_SIN_ESCRITURA.includes("apply" as never));
+    assert.ok(!MODOS_SIN_ESCRITURA.includes("sembrar" as never));
   });
 });
 
