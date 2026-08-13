@@ -12,9 +12,9 @@ import type { z } from "zod";
 import { AGENTS } from "@/lib/ai/agents";
 import { getToolsForAgent } from "@/lib/ai/tools";
 import { BRAIN_VERSION, getBrainSections } from "@/lib/ai/brain";
-import { estimateCostUsd } from "@/lib/ai/cost";
+import { CACHE_TTL, estimateCostUsd } from "@/lib/ai/cost";
 import { combine } from "@/lib/ai/confidence";
-import { AI_MODEL, aiConfigured, createAiServiceClient } from "@/lib/ai/db";
+import { AI_EFFORT, AI_MODEL, aiConfigured, createAiServiceClient } from "@/lib/ai/db";
 import {
   agentEmitSchema,
   directorBriefSchema,
@@ -196,16 +196,34 @@ async function runLLM(
   // en tres: si fuera parte del bloque 2, un valor variable cambiaría el prefijo y
   // le haría perder el caché al prompt del agente, que hoy es idéntico entre
   // corridas y entre doctores. Lo variable siempre va después del último punto.
+  // TTL de 1 hora y no el de 5 minutos por defecto. El prefijo (Brain + prompt del
+  // agente) es idéntico entre doctores, así que lo que decide el costo no es cuánto
+  // dura una corrida sino cuánto tarda en llegar la siguiente.
+  //
+  // Escribir el caché sale 2× con TTL de 1h contra 1,25× con el de 5 min, así que
+  // el punto de equilibrio son DOS corridas por ventana: con una sola por hora esto
+  // sale ~0,06 más caro. Con dos o más, gana — y el uso real es trabajar la lista
+  // de /hoy de corrido, no un doctor por hora. Medido: la escritura son 0,19 de los
+  // 0,42 que cuesta un análisis, y con el TTL largo se paga una vez para todos los
+  // doctores de esa hora en lugar de una vez por doctor.
+  // El TTL sale de lib/ai/cost.ts, que es donde vive el multiplicador de escritura
+  // que depende de él. Si se eligiera acá, cambiarlo dejaría el costo reportado por
+  // debajo del real sin que nadie lo note.
+  const CACHE: Anthropic.Messages.CacheControlEphemeral = {
+    type: "ephemeral",
+    ttl: CACHE_TTL,
+  };
+
   const system: Anthropic.Messages.TextBlockParam[] = [
     {
       type: "text",
       text: getBrainSections(spec.brainSections),
-      cache_control: { type: "ephemeral" },
+      cache_control: CACHE,
     },
     {
       type: "text",
       text: spec.systemPrompt,
-      cache_control: { type: "ephemeral" },
+      cache_control: CACHE,
     },
     ...(opts.extraSystem
       ? [{ type: "text" as const, text: opts.extraSystem }]
@@ -242,6 +260,9 @@ async function runLLM(
       const response = await anthropic.messages.create({
         model: AI_MODEL,
         max_tokens: MAX_TOKENS,
+        // `effort` va DENTRO de output_config, no arriba. Sin AI_EFFORT esto
+        // manda "high", que es el default de la API: no cambia nada.
+        output_config: { effort: AI_EFFORT },
         system,
         tools,
         messages,

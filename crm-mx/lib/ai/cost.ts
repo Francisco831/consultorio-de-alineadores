@@ -10,8 +10,13 @@
 //   claude-haiku-4-5 entrada 1,00   salida  5,00
 //
 // Caché: la lectura cuesta ~0,1× el precio de entrada; la escritura 1,25× con TTL
-// de 5 minutos y 2× con TTL de 1 hora. Acá se asume el TTL corto, que es el que
-// usa el runner.
+// de 5 minutos y 2× con TTL de 1 hora.
+//
+// EL TTL SE DECIDE ACÁ, no en el runner, y el runner importa la constante. Es a
+// propósito: el multiplicador de escritura depende del TTL, así que si cada módulo
+// eligiera el suyo, cambiar el TTL en el runner dejaría el costo reportado por
+// debajo del real y nadie se enteraría. El módulo que sabe el precio es el que
+// elige la duración.
 
 export interface ModelPrice {
   /** USD por millón de tokens de entrada NO cacheados. */
@@ -20,8 +25,11 @@ export interface ModelPrice {
   output: number;
 }
 
+/** TTL del caché de prompt. Lo consume `lib/ai/runner.ts` en `cache_control`. */
+export const CACHE_TTL: "5m" | "1h" = "1h";
+
 const MULTIPLICADOR_CACHE_READ = 0.1;
-const MULTIPLICADOR_CACHE_WRITE_5M = 1.25;
+const MULTIPLICADOR_CACHE_WRITE = CACHE_TTL === "1h" ? 2 : 1.25;
 
 /** Precios de lista. Si aparece un modelo desconocido se estima con el de Opus
  *  (el más caro): es preferible sobreestimar el costo que subestimarlo. */
@@ -65,7 +73,7 @@ export function estimateCostUsd(o: CostInput): number | null {
   const usd =
     (input * p.input +
       cacheRead * p.input * MULTIPLICADOR_CACHE_READ +
-      cacheWrite * p.input * MULTIPLICADOR_CACHE_WRITE_5M +
+      cacheWrite * p.input * MULTIPLICADOR_CACHE_WRITE +
       output * p.output) /
     1_000_000;
   // 5 decimales = el precision del campo cost_usd en agent_runs (0026).
