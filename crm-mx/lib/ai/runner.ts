@@ -181,8 +181,21 @@ async function runLLM(
   );
   const tools = buildTools(toolDefs, toStrictJsonSchema(emitZodSchema), emitDescription);
 
-  // Prompt caching: primero el bloque estable (brain) con cache_control, después
-  // el bloque del agente (+ extraSystem variable). Orden estable siempre.
+  // Prompt caching. El orden de render de la API es tools → system → messages, y
+  // un punto de caché cachea TODO lo que va antes. Van dos, de más estable a menos:
+  //
+  //   1. Brain (14.6k tokens) → cachea tools + brain.
+  //   2. Prompt del agente (9.1k) → cachea tools + brain + prompt.
+  //
+  // El punto 2 faltaba, y era caro: el prompt del agente es lo más grande después
+  // del Brain —más que las 14 tools juntas— y se reenviaba a precio pleno en CADA
+  // iteración del bucle de tools. Medido sobre una corrida real: 9.080 tokens × 5
+  // iteraciones = 45.400 tokens al precio de entrada, por doctor.
+  //
+  // `extraSystem` va en un tercer bloque SIN cachear, y esa es la razón de partirlo
+  // en tres: si fuera parte del bloque 2, un valor variable cambiaría el prefijo y
+  // le haría perder el caché al prompt del agente, que hoy es idéntico entre
+  // corridas y entre doctores. Lo variable siempre va después del último punto.
   const system: Anthropic.Messages.TextBlockParam[] = [
     {
       type: "text",
@@ -191,10 +204,12 @@ async function runLLM(
     },
     {
       type: "text",
-      text: opts.extraSystem
-        ? `${spec.systemPrompt}\n\n${opts.extraSystem}`
-        : spec.systemPrompt,
+      text: spec.systemPrompt,
+      cache_control: { type: "ephemeral" },
     },
+    ...(opts.extraSystem
+      ? [{ type: "text" as const, text: opts.extraSystem }]
+      : []),
   ];
 
   const messages: Anthropic.Messages.MessageParam[] = [
