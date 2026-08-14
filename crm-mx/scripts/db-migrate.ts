@@ -173,7 +173,11 @@ async function confirmarDestino(files: string[], modo: Modo, auto: boolean): Pro
   }
 
   if (auto && (destino.exigeConfirmacionManual || discrepancia)) {
-    console.log("  --yes NO alcanza acá: el destino no está identificado sin ambigüedad.\n");
+    console.log(
+      destino.entorno === "produccion" && !discrepancia
+        ? "  --yes NO alcanza acá: el destino es PRODUCCIÓN.\n"
+        : "  --yes NO alcanza acá: el destino no está identificado sin ambigüedad.\n"
+    );
   }
   if (!process.stdin.isTTY) {
     throw new SalidaLimpia(4, "Destino no confirmado y no hay terminal interactiva.");

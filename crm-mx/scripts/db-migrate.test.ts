@@ -87,8 +87,15 @@ describe("resolverEntorno", () => {
 
   it("un ref desconocido no se destraba con --yes", () => {
     assert.equal(resolverEntorno("otro", {}).exigeConfirmacionManual, true);
-    // los conocidos sí
-    assert.equal(resolverEntorno("prodref", registro).exigeConfirmacionManual, false);
+    // desarrollo sí: es el destino donde --yes tiene sentido
+    assert.equal(resolverEntorno("devref", registro).exigeConfirmacionManual, false);
+  });
+
+  it("producción exige confirmación SIEMPRE, aunque esté registrada", () => {
+    // Esta prueba fijaba lo contrario. Registrar producción en environments.json
+    // se hizo para protegerla, y tenía el efecto exacto opuesto: la declaraba
+    // "conocida" y con eso habilitaba `--apply --yes` sin una sola pregunta.
+    assert.equal(resolverEntorno("prodref", registro).exigeConfirmacionManual, true);
   });
 
   it("acepta SUPABASE_DEV_REF por compatibilidad, y lo dice", () => {

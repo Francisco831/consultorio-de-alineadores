@@ -104,6 +104,12 @@ export interface Destino {
  * Un ref que no está registrado NO se asume desarrollo. Se trata como desconocido
  * y exige confirmación escrita aunque venga --yes: `--yes` existe para CI, y CI
  * corre contra bases registradas.
+ *
+ * PRODUCCIÓN exige confirmación SIEMPRE, venga o no --yes. La versión anterior
+ * devolvía false para los dos entornos declarados, así que registrar producción en
+ * environments.json —hecho justamente para protegerla— desactivaba su protección:
+ * `--apply --yes` contra el ref de producción escribía sin preguntar nada. El único
+ * destino que quedaba protegido era el que nadie había declarado.
  */
 export function resolverEntorno(
   ref: string,
@@ -115,7 +121,7 @@ export function resolverEntorno(
     return {
       entorno: declarado,
       fuente: "supabase/environments.json",
-      exigeConfirmacionManual: false,
+      exigeConfirmacionManual: declarado === "produccion",
     };
   }
   if (declarado != null) {
