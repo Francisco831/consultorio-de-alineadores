@@ -1,51 +1,23 @@
 // /api/ai/brief — AI Morning Brief del commercial_director.
 // POST genera uno nuevo (LLM); GET devuelve el último persistido en agent_runs.
+//
+// Los dos guards son distintos a propósito: el GET no llama al modelo, así que
+// pasa por requireSession() y NO cae bajo el tope de gasto — quedarse sin
+// presupuesto no puede dejar de mostrar el brief que ya está escrito.
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { aiConfigured } from "@/lib/ai/db";
+import { requireAgentInvoker, requireSession } from "@/lib/ai/guard";
 import { generateMorningBrief } from "@/lib/ai/director";
-import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 export const maxDuration = 300;
 
-async function authorize(): Promise<
-  { supabase: SupabaseClient; user: User } | { response: NextResponse }
-> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return {
-      response: NextResponse.json({ error: "No autenticado" }, { status: 401 }),
-    };
-  }
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("rol")
-    .eq("id", user.id)
-    .single();
-  if (!profile || profile.rol === "VIEWER") {
-    return {
-      response: NextResponse.json(
-        { error: "Tu rol no tiene permisos para invocar agentes" },
-        { status: 403 }
-      ),
-    };
-  }
-  return { supabase, user };
-}
-
 export async function POST() {
-  const auth = await authorize();
-  if ("response" in auth) return auth.response;
-  if (!aiConfigured()) {
-    return NextResponse.json({ error: "Falta ANTHROPIC_API_KEY" }, { status: 503 });
-  }
+  const guard = await requireAgentInvoker();
+  if (!guard.ok) return guard.res;
+
   try {
     const { brief, runId } = await generateMorningBrief({
-      requestedBy: auth.user.id,
+      requestedBy: guard.invocador.user.id,
     });
     return NextResponse.json({ brief, runId });
   } catch (e) {
@@ -56,9 +28,10 @@ export async function POST() {
 }
 
 export async function GET() {
-  const auth = await authorize();
-  if ("response" in auth) return auth.response;
-  const { data, error } = await auth.supabase
+  const guard = await requireSession();
+  if (!guard.ok) return guard.res;
+
+  const { data, error } = await guard.invocador.supabase
     .from("agent_runs")
     .select("id, result, created_at")
     .eq("agent", "commercial_director")

@@ -1,35 +1,16 @@
 // POST /api/ai/analyze — corre el orchestrator sobre un doctor (Doctor 360).
-// Auth adentro del handler (además del proxy): sesión Supabase + rol ≠ VIEWER.
+// Sesión, rol, clave y tope de gasto: lib/ai/guard.ts (una sola regla para las 3 rutas).
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { aiConfigured } from "@/lib/ai/db";
+import { requireAgentInvoker, esUuid } from "@/lib/ai/guard";
 import { analyzeDoctor } from "@/lib/ai/orchestrator";
 
 export const maxDuration = 300;
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  }
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("rol")
-    .eq("id", user.id)
-    .single();
-  if (!profile || profile.rol === "VIEWER") {
-    return NextResponse.json(
-      { error: "Tu rol no tiene permisos para invocar agentes" },
-      { status: 403 }
-    );
-  }
-  if (!aiConfigured()) {
-    return NextResponse.json({ error: "Falta ANTHROPIC_API_KEY" }, { status: 503 });
-  }
+  const guard = await requireAgentInvoker();
+  if (!guard.ok) return guard.res;
+  const { user } = guard.invocador;
 
   let doctorId = "";
   try {
@@ -40,6 +21,11 @@ export async function POST(request: Request) {
   }
   if (!doctorId) {
     return NextResponse.json({ error: "Falta doctorId" }, { status: 400 });
+  }
+  // Se valida acá y no en Postgres: un id con formato inválido volvía como 500 con
+  // el mensaje crudo del driver, que no le sirve a nadie y expone el error interno.
+  if (!esUuid(doctorId)) {
+    return NextResponse.json({ error: "doctorId no es un UUID" }, { status: 400 });
   }
 
   try {

@@ -1,34 +1,16 @@
 // POST /api/ai/ask — Ask Your CRM: pregunta libre al commercial_director.
+// Sesión, rol, clave y tope de gasto: lib/ai/guard.ts (una sola regla para las 3 rutas).
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { aiConfigured } from "@/lib/ai/db";
+import { requireAgentInvoker, MAX_PREGUNTA_CHARS } from "@/lib/ai/guard";
 import { askDirector } from "@/lib/ai/director";
 
 export const maxDuration = 300;
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  }
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("rol")
-    .eq("id", user.id)
-    .single();
-  if (!profile || profile.rol === "VIEWER") {
-    return NextResponse.json(
-      { error: "Tu rol no tiene permisos para invocar agentes" },
-      { status: 403 }
-    );
-  }
-  if (!aiConfigured()) {
-    return NextResponse.json({ error: "Falta ANTHROPIC_API_KEY" }, { status: 503 });
-  }
+  const guard = await requireAgentInvoker();
+  if (!guard.ok) return guard.res;
+  const { user } = guard.invocador;
 
   let question = "";
   try {
@@ -39,6 +21,16 @@ export async function POST(request: Request) {
   }
   if (!question) {
     return NextResponse.json({ error: "Falta la pregunta" }, { status: 400 });
+  }
+  // La pregunta entra entera al prompt: sin cota, un pegado accidental de miles de
+  // líneas se paga en tokens y puede tumbar la corrida por tamaño de contexto.
+  if (question.length > MAX_PREGUNTA_CHARS) {
+    return NextResponse.json(
+      {
+        error: `La pregunta es demasiado larga (${question.length} caracteres, máximo ${MAX_PREGUNTA_CHARS}).`,
+      },
+      { status: 400 }
+    );
   }
 
   try {
