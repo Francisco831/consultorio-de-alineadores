@@ -148,5 +148,38 @@ las dos aplicadas y verificadas en desarrollo el 13/8.
 |---|---|---|
 | 0027 función grants | Aplicada 10/8 | **Aplicada** (en el ledger) |
 | 0028 ledger | Aplicada 10/8 | **Aplicada** (en el ledger) |
-| 0029 HITL `ai_confirmado` | **Aplicada 13/8** · chequeo 5 de security-checks en OK | Pendiente |
-| 0030 guards por defecto | **Aplicada 13/8** · verificada en transacción revertida | Pendiente |
+| 0029 HITL `ai_confirmado` | **Aplicada 13/8** · chequeo 5 en OK | **Aplicada 13/8** · chequeo 5 en OK |
+| 0030 guards por defecto | **Aplicada 13/8** · verificada en transacción revertida | **Aplicada 13/8** |
+
+### Aplicación en producción — 13/8/2026
+
+Corrida por Pancho desde su terminal, con la confirmación escrita del ref que exige el runner
+para producción. `.env.local` ya apuntaba a `yuxfgbbqhqquuoaudjdd`.
+
+```
+  entorno     : PRODUCCION  (supabase/environments.json)
+  modo        : --apply  (APLICA los cambios de forma permanente)
+  Escribí el ref para confirmar (yuxfgbbqhqquuoaudjdd): yuxfgbbqhqquuoaudjdd
+✓ conectado via aws-0-us-east-2.pooler.supabase.com
+→ supabase/migrations/0029_hitl_ai_confirmado.sql ... OK
+→ supabase/migrations/0030_guards_por_defecto.sql ... OK
+✓ 2 aplicada(s), 28 ya estaban sobre yuxfgbbqhqquuoaudjdd
+```
+
+**Verificación posterior** — `npm run test:seguridad` contra `yuxfgbbqhqquuoaudjdd`:
+**6 OK · 1 FALLA · 1 PENDIENTE**, el mismo resultado que desarrollo.
+
+| Chequeo | Resultado en producción |
+|---|---|
+| 1. Permisos de funciones | OK — las 39 `SECURITY DEFINER` cerradas para `anon` |
+| 2. Exposición HTTP | OK — 0 de 12 RPC devuelven 200 sin sesión |
+| 3. Alta pública | OK — `disable_signup = true` |
+| 4. Allowlist de altas | PENDIENTE — `auth_allowlist` no existe todavía (R-3) |
+| 5. Guards de clasificación | **OK** — `ai_confirmado` aceptado, `import` rechazado. ALT-02 cerrado en producción |
+| 6. RLS y fuente del forecast | **OK** — las 3 pantallas usan `ai_forecast()` |
+| 7. Permisos de authenticated | OK — 22 de 22 funciones que la app necesita |
+| 8. Aislamiento de un alta espontánea | **FALLA** — 18 de 26 tablas legibles, 59.028 filas |
+
+El 8 es el radio de daño de UNA cuenta cualquiera, porque la policy de lectura es `using (true)`.
+Hoy nadie llega ahí desde afuera —el alta pública está cerrada— pero sigue siendo el hallazgo
+abierto más grande. Se cierra con R-3 (allowlist), que es lo que también destraba el chequeo 4.
