@@ -176,4 +176,9 @@ haber un plan de recuperación verificado — hay una herramienta, no un procedi
 - **Dónde corre la aplicación.** Hoy: `npm run dev` en la máquina de Pancho. No hay despliegue.
   Es el paso V-5 del plan.
 - **Crear usuarios.** `scripts/create-users.ts`. Imprime contraseñas iniciales una sola vez.
+  Desde `0031` hay una allowlist: un alta cuyo mail no esté invitado aborta con
+  `Alta no autorizada`. El script invita solo a los de su propia lista; para cualquier otro,
+  primero `insert into auth_allowlist (email, note) values ('...', 'motivo');` y después el
+  alta. Sacar un mail de la lista NO echa a nadie: el trigger es AFTER INSERT y no vuelve a
+  correr para quien ya existe.
 - **La capa de IA.** [`AI_ARCHITECTURE.md`](AI_ARCHITECTURE.md).

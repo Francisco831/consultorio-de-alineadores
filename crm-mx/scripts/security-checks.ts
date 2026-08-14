@@ -207,7 +207,7 @@ async function chequeo4(db: Client) {
     ]);
   }
   const permitido = await db.query<{ email: string }>(
-    "select email from auth_allowlist where active limit 1"
+    "select email from auth_allowlist where active"
   );
   const detalle: string[] = [];
   let ok = true;
@@ -222,26 +222,49 @@ async function chequeo4(db: Client) {
     });
     detalle.push("mail ajeno: ACEPTADO ← el guard no está frenando el alta");
     ok = false;
-  } catch {
-    detalle.push("mail ajeno: rechazado (correcto)");
-  }
-
-  // uno de la allowlist tiene que pasar
-  if (permitido.rows.length > 0) {
-    try {
-      await enTransaccionRevertida(db, async () => {
-        await db.query(
-          `insert into auth.users (id, email, aud, role)
-           values (gen_random_uuid(), $1 || '.test', 'authenticated', 'authenticated')`,
-          [permitido.rows[0].email]
-        );
-      });
-      detalle.push("mail de la allowlist: aceptado (correcto)");
-    } catch (e) {
-      detalle.push(`mail de la allowlist: RECHAZADO ← ${(e as Error).message.slice(0, 70)}`);
+  } catch (e) {
+    // No alcanza con que falle: tiene que fallar POR EL GUARD. Un `catch` a secas
+    // daba por bueno cualquier error —una columna que cambió de nombre, la conexión
+    // caída, un NOT NULL nuevo en auth.users— y el chequeo habría dicho "rechazado
+    // (correcto)" con el guard desarmado. Es la forma más cara de fallar en un test
+    // de seguridad: tranquiliza sin verificar.
+    const msg = (e as Error).message;
+    if (/Alta no autorizada/.test(msg)) {
+      detalle.push("mail ajeno: rechazado por el guard (correcto)");
+    } else {
+      detalle.push(`mail ajeno: falló por OTRO motivo, no por el guard ← ${msg.slice(0, 80)}`);
       ok = false;
     }
   }
+
+  // uno de la allowlist tiene que pasar.
+  //
+  // No se reusa un mail ya invitado: auth.users tiene el mail único, así que
+  // insertarlo de nuevo chocaría contra esa restricción y el chequeo diría
+  // "rechazado" por un motivo que no es el guard. La versión anterior de este
+  // bloque le pegaba '.test' al mail para esquivar el choque — y con eso el mail
+  // dejaba de estar en la allowlist, así que el caso positivo estaba condenado a
+  // fallar contra cualquier guard de coincidencia exacta.
+  //
+  // Se invita un mail nuevo DENTRO de la transacción revertida y se da de alta ese.
+  // Las dos escrituras se revierten juntas.
+  try {
+    await enTransaccionRevertida(db, async () => {
+      await db.query(
+        `insert into auth_allowlist (email, note)
+         values ('prueba-allowlist@example.com', 'alta de prueba de security-checks')`
+      );
+      await db.query(
+        `insert into auth.users (id, email, aud, role)
+         values (gen_random_uuid(), 'prueba-allowlist@example.com', 'authenticated', 'authenticated')`
+      );
+    });
+    detalle.push("mail invitado: aceptado (correcto)");
+  } catch (e) {
+    detalle.push(`mail invitado: RECHAZADO ← ${(e as Error).message.slice(0, 70)}`);
+    ok = false;
+  }
+  detalle.push(`${permitido.rows.length} mail(s) activos en la allowlist`);
   anotar(4, "Allowlist de altas", "Un alta fuera de la allowlist se rechaza", ok ? "OK" : "FALLA", detalle);
 }
 

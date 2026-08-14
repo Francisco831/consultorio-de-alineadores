@@ -27,6 +27,12 @@ Next.js 16 · TypeScript · Tailwind 4 · shadcn/ui (Base UI) · Supabase (Postg
    - Si `pg_cron` no está habilitado: Dashboard → Database → Extensions → habilitar `pg_cron`,
      y re-correr el bloque final de `0006_automations.sql`.
 4. **Crear usuarios**: `npx tsx scripts/create-users.ts` (imprime contraseñas iniciales una sola vez).
+   El script invita los mails en `auth_allowlist` antes de crearlos. Para sumar a alguien
+   que no esté en su lista, primero el mail y después el alta — sin ese paso el trigger de
+   `0031` rechaza el alta:
+   ```sql
+   insert into auth_allowlist (email, note) values ('quien@keepsmiling.com.ar', 'motivo');
+   ```
 5. **Importar datos reales**:
    ```
    npx tsx scripts/import-noloco.ts      # 175 doctores + 1.024 casos (con gate de validación)

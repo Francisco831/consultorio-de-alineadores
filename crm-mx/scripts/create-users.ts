@@ -20,11 +20,17 @@ const db = createClient(
   { auth: { persistSession: false, autoRefreshToken: false } }
 );
 
+// El equipo real. Itzel salió de esta lista: se dio de baja (scripts/remove-itzel.ts)
+// y ya no está en auth.users. Mientras figuraba acá el script la salteaba en
+// silencio; desde la allowlist (0031) el alta de un mail no invitado FALLA, así que
+// dejarla habría convertido cada corrida en un error.
+//
+// Para sumar a alguien: primero agregarlo a auth_allowlist, después correr esto.
+// Sin el primer paso, el trigger rechaza el alta con un mensaje explícito.
 const USERS = [
   { email: "francisco@keepsmiling.com.ar", nombre: "Pancho", rol: "ADMIN" },
   { email: "juan@keepsmiling.com.ar", nombre: "Juan", rol: "SALES" },
   { email: "rocio@keepsmiling.com.ar", nombre: "Rocío", rol: "CLINICAL" },
-  { email: "itzel@keepsmiling.com.ar", nombre: "Itzel", rol: "SALES" },
 ];
 
 async function main() {
@@ -34,6 +40,31 @@ async function main() {
   });
   const { data: existing } = await db.auth.admin.listUsers({ perPage: 1000 });
   const have = new Set(existing?.users.map((u) => u.email));
+
+  // Invitar ANTES de crear. Desde 0031 hay un guard en handle_new_user: un alta
+  // cuyo mail no esté en auth_allowlist aborta la transacción del alta. Este script
+  // es la herramienta de invitación del equipo, así que hace los dos pasos en el
+  // orden correcto en vez de fallar y hacer que alguien los descubra.
+  //
+  // Importa además por un caso que no es obvio: en una base NUEVA la allowlist se
+  // siembra vacía (no hay usuarios de dónde sembrarla) y el guard queda permisivo
+  // para poder arrancar. Si este script no cargara la lista, quedaría vacía para
+  // siempre y el guard nunca se activaría. Con esto, la primera corrida la puebla y
+  // a partir de ahí el guard aplica de verdad.
+  const { error: alErr } = await db
+    .from("auth_allowlist")
+    .upsert(
+      USERS.map((u) => ({ email: u.email, note: "equipo del CRM (create-users.ts)" })),
+      { onConflict: "email", ignoreDuplicates: true }
+    );
+  if (alErr && !/does not exist|no existe/i.test(alErr.message)) throw alErr;
+  if (alErr) {
+    // base anterior a 0031: no hay allowlist que cargar y el alta no la necesita
+    console.log("auth_allowlist no existe todavía (0031 sin aplicar): se saltea la invitación");
+  } else {
+    console.log(`allowlist: ${USERS.length} mail(s) invitados`);
+  }
+
   for (const u of USERS) {
     if (have.has(u.email)) {
       console.log(`${u.email} ya existe, salteado`);
