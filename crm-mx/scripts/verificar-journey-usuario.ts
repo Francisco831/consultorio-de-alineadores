@@ -12,6 +12,7 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
+import { confirmarDestino, salirConDestinoRechazado } from "./lib/destino";
 
 config({ path: ".env.local" });
 
@@ -22,6 +23,11 @@ if (!email || !password) {
 }
 
 async function main() {
+  await confirmarDestino({
+    accion: "crear y borrar un doctor de prueba para verificar el journey",
+    destructivo: true,
+    auto: process.argv.includes("--yes"),
+  });
   // el service client solo crea y limpia el doctor de prueba
   const svc = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -84,6 +90,7 @@ async function main() {
 }
 
 main().catch((e) => {
+  salirConDestinoRechazado(e);
   console.error("Falló:", e);
   process.exit(1);
 });

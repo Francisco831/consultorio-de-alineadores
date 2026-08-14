@@ -2,10 +2,15 @@
  * Baja de Itzel (no trabaja más): reasigna cualquier referencia suya a Juan
  * y elimina su usuario de auth (el profile cae en cascada).
  * Idempotente: si no existe, no hace nada.
- *   npx tsx scripts/remove-itzel.ts   (usa NEXT_PUBLIC_SUPABASE_URL/SERVICE_ROLE de env)
+ *
+ *   npx tsx scripts/remove-itzel.ts            informa qué reasignaría (no toca nada)
+ *   npx tsx scripts/remove-itzel.ts --aplicar  reasigna y elimina el usuario
+ *
+ * Elimina un usuario de auth: el modo por defecto NO escribe.
  */
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
+import { confirmarDestino, salirConDestinoRechazado } from "./lib/destino";
 
 config({ path: ".env.local" });
 
@@ -25,6 +30,19 @@ async function main() {
     return;
   }
   if (!juan) throw new Error("no encontré a Juan para reasignar");
+
+  const aplicar = process.argv.includes("--aplicar");
+  if (!aplicar) {
+    console.log(`Itzel existe (${itzel.id}). Con --aplicar se reasigna a Juan y se elimina.`);
+    console.log("  (no se tocó nada)");
+    return;
+  }
+
+  await confirmarDestino({
+    accion: "reasignar las referencias de Itzel a Juan y ELIMINAR su usuario de auth",
+    destructivo: true,
+    auto: process.argv.includes("--yes"),
+  });
 
   const refs: [string, string][] = [
     ["doctors", "owner_id"],
@@ -57,6 +75,7 @@ async function main() {
 }
 
 main().catch((e) => {
+  salirConDestinoRechazado(e);
   console.error("Falló:", e);
   process.exit(1);
 });

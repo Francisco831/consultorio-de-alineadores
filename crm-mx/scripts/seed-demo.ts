@@ -10,6 +10,7 @@ import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { config } from "dotenv";
+import { confirmarDestino, salirConDestinoRechazado } from "./lib/destino";
 
 config({ path: resolve(__dirname, "../.env.local") });
 
@@ -49,6 +50,11 @@ function nameMatch(a: string, b: string): boolean {
 }
 
 async function main() {
+  await confirmarDestino({
+    accion: "sembrar oportunidades/tareas reales y datos DEMO sintéticos",
+    destructivo: true,
+    auto: process.argv.includes("--yes"),
+  });
   const seedPath = resolve(__dirname, "../../gestion-mx/data/seed_gestion.json");
   const seed = JSON.parse(readFileSync(seedPath, "utf8"));
 
@@ -300,6 +306,7 @@ async function main() {
 }
 
 main().catch((e) => {
+  salirConDestinoRechazado(e);
   console.error("Seed falló:", e);
   process.exit(1);
 });

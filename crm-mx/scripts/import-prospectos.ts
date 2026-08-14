@@ -11,6 +11,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { config } from "dotenv";
 import { fetchAll } from "./lib/fetch-all";
+import { confirmarDestino, salirConDestinoRechazado } from "./lib/destino";
 
 config({ path: ".env.local" });
 
@@ -48,6 +49,10 @@ interface Activo {
 }
 
 async function main() {
+  await confirmarDestino({
+    accion: "importar prospectos minados de WhatsApp (upsert)",
+    auto: process.argv.includes("--yes"),
+  });
   const final = JSON.parse(
     readFileSync(resolve(__dirname, "../data/whatsapp_analisis_final.json"), "utf8")
   );
@@ -122,6 +127,7 @@ async function main() {
 }
 
 main().catch((e) => {
+  salirConDestinoRechazado(e);
   console.error("Import falló:", e);
   process.exit(1);
 });

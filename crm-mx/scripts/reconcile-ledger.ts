@@ -14,6 +14,7 @@ import { Client } from "pg";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { config } from "dotenv";
+import { confirmarDestino, salirConDestinoRechazado } from "./lib/destino";
 
 config({ path: ".env.local" });
 
@@ -63,6 +64,11 @@ interface Pago {
 }
 
 async function main() {
+  await confirmarDestino({
+    accion: "reconciliar el ledger de pagos contra los doctores (vincula y puede crear fichas)",
+    refEfectivo: ref,
+    auto: process.argv.includes("--yes"),
+  });
   const pagos: Pago[] = JSON.parse(
     readFileSync(resolve(__dirname, "../data/payments.json"), "utf8")
   );
@@ -149,6 +155,7 @@ async function main() {
 }
 
 main().catch((e) => {
+  salirConDestinoRechazado(e);
   console.error("Reconcile falló:", e);
   process.exit(1);
 });

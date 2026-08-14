@@ -10,6 +10,7 @@ import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
 import { resolve } from "node:path";
 import { config } from "dotenv";
+import { confirmarDestino, salirConDestinoRechazado } from "./lib/destino";
 
 config({ path: resolve(__dirname, "../.env.local") });
 
@@ -27,6 +28,10 @@ const USERS = [
 ];
 
 async function main() {
+  await confirmarDestino({
+    accion: "crear los usuarios del CRM en auth",
+    auto: process.argv.includes("--yes"),
+  });
   const { data: existing } = await db.auth.admin.listUsers({ perPage: 1000 });
   const have = new Set(existing?.users.map((u) => u.email));
   for (const u of USERS) {
@@ -57,6 +62,7 @@ async function main() {
 }
 
 main().catch((e) => {
+  salirConDestinoRechazado(e);
   console.error(e);
   process.exit(1);
 });

@@ -18,6 +18,7 @@ import { Client } from "pg";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { config } from "dotenv";
+import { confirmarDestino, salirConDestinoRechazado } from "./lib/destino";
 
 config({ path: ".env.local" });
 
@@ -108,6 +109,11 @@ function slug(s: string): string {
 }
 
 async function main() {
+  await confirmarDestino({
+    accion: "importar prospectos por fuente/evento y sus campañas",
+    refEfectivo: ref,
+    auto: process.argv.includes("--yes"),
+  });
   const people: Person[] = JSON.parse(
     readFileSync(resolve(__dirname, "../data/prospectos_fuentes.json"), "utf8")
   );
@@ -436,6 +442,7 @@ async function main() {
 }
 
 main().catch((e) => {
+  salirConDestinoRechazado(e);
   console.error("Import falló:", e);
   process.exit(1);
 });

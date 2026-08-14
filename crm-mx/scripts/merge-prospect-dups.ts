@@ -11,11 +11,16 @@
  *   - borra el duplicado y recomputa el doctor real
  *
  * Idempotente (segunda corrida no encuentra duplicados).
- *   npx tsx scripts/merge-prospect-dups.ts
+ *
+ *   npx tsx scripts/merge-prospect-dups.ts            lista las fusiones (no toca nada)
+ *   npx tsx scripts/merge-prospect-dups.ts --aplicar  las ejecuta
+ *
+ * Borra filas de doctors: el modo por defecto NO escribe.
  */
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 import { fetchAll } from "./lib/fetch-all";
+import { confirmarDestino, salirConDestinoRechazado } from "./lib/destino";
 
 config({ path: ".env.local" });
 
@@ -54,15 +59,37 @@ async function main() {
     }
   }
 
-  let merged = 0;
+  // Se resuelven TODAS las fusiones antes de escribir una sola: así el modo por
+  // defecto puede mostrar exactamente qué va a pasar, y la confirmación se pide
+  // una vez con el número real adelante.
+  const fusiones: { dup: (typeof doctors)[number]; real: { id: string; nombre: string } }[] = [];
   for (const dup of doctors ?? []) {
     if (dup.is_accredited) continue;
     const c = canonPhone(dup.phone) ?? canonPhone(dup.whatsapp);
     if (!c) continue;
     const real = accreditedByPhone.get(c);
     if (!real || real.id === dup.id) continue;
+    fusiones.push({ dup, real });
+  }
 
+  for (const { dup, real } of fusiones) {
     console.log(`merge: "${dup.nombre}" → "${real.nombre}"`);
+  }
+  console.log(`\n${fusiones.length} duplicados a fusionar`);
+  if (fusiones.length === 0) return;
+  if (!process.argv.includes("--aplicar")) {
+    console.log("  (no se tocó nada — agregá --aplicar para ejecutarlo)");
+    return;
+  }
+
+  await confirmarDestino({
+    accion: `fusionar ${fusiones.length} prospectos duplicados y BORRAR sus fichas`,
+    destructivo: true,
+    auto: process.argv.includes("--yes"),
+  });
+
+  let merged = 0;
+  for (const { dup, real } of fusiones) {
     // cases y payments PRIMERO: si el duplicado tenía casos o pagos y se borra
     // sin moverlos, se pierde facturación real (o falla la FK)
     for (const table of [
@@ -91,6 +118,7 @@ async function main() {
 }
 
 main().catch((e) => {
+  salirConDestinoRechazado(e);
   console.error("Merge falló:", e);
   process.exit(1);
 });

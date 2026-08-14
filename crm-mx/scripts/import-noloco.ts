@@ -14,6 +14,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { config } from "dotenv";
 import { fetchAll } from "./lib/fetch-all";
+import { confirmarDestino, salirConDestinoRechazado } from "./lib/destino";
 
 config({ path: resolve(__dirname, "../.env.local") });
 
@@ -78,6 +79,10 @@ function median(xs: number[]): number | null {
 }
 
 async function main() {
+  await confirmarDestino({
+    accion: "importar doctores y casos desde el export de Noloco (upsert)",
+    auto: process.argv.includes("--yes"),
+  });
   const jsonPath = resolve(
     process.argv[2] ?? resolve(__dirname, "../../gestion-mx/data/noloco_mx.json")
   );
@@ -334,6 +339,7 @@ async function main() {
 }
 
 main().catch((e) => {
+  salirConDestinoRechazado(e);
   console.error("Import falló:", e);
   process.exit(1);
 });

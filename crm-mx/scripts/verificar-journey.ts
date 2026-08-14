@@ -15,6 +15,7 @@
  */
 import { Client } from "pg";
 import { config } from "dotenv";
+import { confirmarDestino, salirConDestinoRechazado } from "./lib/destino";
 
 config({ path: ".env.local" });
 
@@ -24,6 +25,12 @@ const ref =
 const host = process.env.SUPABASE_DB_HOST ?? "aws-0-ca-central-1.pooler.supabase.com";
 
 async function main() {
+  await confirmarDestino({
+    accion: "crear y borrar un doctor de prueba para verificar los triggers del journey",
+    destructivo: true,
+    refEfectivo: ref,
+    auto: process.argv.includes("--yes"),
+  });
   const db = new Client({
     host,
     port: 5432,
@@ -94,6 +101,7 @@ async function main() {
 }
 
 main().catch((e) => {
+  salirConDestinoRechazado(e);
   console.error("Falló:", e);
   process.exit(1);
 });
