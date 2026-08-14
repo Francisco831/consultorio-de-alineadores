@@ -47,6 +47,7 @@ export default async function PipelinePage({
     supabase
       .from("opportunities")
       .select("id, stage")
+      .eq("is_demo", false)
       .in("stage", ["ganada", "perdida"])
       .gte("closed_at", monthStartISO),
     supabase.from("profiles").select("id, nombre"),
@@ -54,6 +55,7 @@ export default async function PipelinePage({
       .from("cases")
       .select("id", { count: "exact", head: true })
       .eq("is_new_case", true)
+      .eq("is_demo", false)
       .gte("fecha_ingreso", monthStartISO),
     supabase
       .from("goals")
@@ -91,14 +93,21 @@ export default async function PipelinePage({
 
   const target = goalRow?.target ?? null;
   const closed = monthCases ?? 0;
-  const commit = openOpps.filter((o) => o.forecast_category === "commit").length;
-  const bestCase = openOpps.filter(
+
+  // El TABLERO sigue mostrando las oportunidades demo —tienen su badge y se ven
+  // como lo que son— pero los TILES son los números con los que se decide el mes,
+  // y ahí el sintético no entra. Es el mismo criterio que ai_forecast() (0023),
+  // que filtra `not is_demo`: sin esto el tile y el asistente AI de la misma
+  // pantalla contestan distinto.
+  const realOpps = openOpps.filter((o) => !o.is_demo);
+  const commit = realOpps.filter((o) => o.forecast_category === "commit").length;
+  const bestCase = realOpps.filter(
     (o) => o.forecast_category === "best_case"
   ).length;
-  const pipeline = openOpps.filter(
+  const pipeline = realOpps.filter(
     (o) => o.forecast_category === "pipeline"
   ).length;
-  const weightedOpen = openOpps.reduce(
+  const weightedOpen = realOpps.reduce(
     (acc, o) => acc + (o.probability ?? 0) / 100,
     0
   );

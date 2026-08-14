@@ -31,20 +31,26 @@ export default async function EquipoPage() {
     fetchAllRows<{ id: string; owner_id: string | null }>((from, to) =>
       supabase.from("doctors").select("id, owner_id").range(from, to)
     ).then((data) => ({ data })),
+    // is_demo=false en las cuatro: ai_rep_performance() (0023) las filtra y acá no
+    // se filtraban. El seed reparte lo sintético entre las personas reales por
+    // nombre, así que el inflado no se diluye — cae entero sobre los que se miden.
     supabase
       .from("cases")
       .select("doctor_id")
       .eq("is_new_case", true)
+      .eq("is_demo", false)
       .gte("fecha_ingreso", monthStartISO),
     supabase
       .from("opportunities")
       .select("owner_id")
+      .eq("is_demo", false)
       .not("stage", "in", "(ganada,perdida)"),
     // actividades y tareas vencidas también se cuentan por persona en JS
     fetchAllRows<{ created_by: string | null; type: string }>((from, to) =>
       supabase
         .from("activities")
         .select("created_by, type")
+        .eq("is_demo", false)
         .gte("occurred_at", d30)
         .range(from, to)
     ).then((data) => ({ data })),
@@ -53,6 +59,7 @@ export default async function EquipoPage() {
         .from("tasks")
         .select("assigned_to")
         .eq("status", "pendiente")
+        .eq("is_demo", false)
         .lt("due_date", today)
         .range(from, to)
     ).then((data) => ({ data })),

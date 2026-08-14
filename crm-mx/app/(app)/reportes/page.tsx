@@ -96,6 +96,7 @@ async function Produccion({ supabase }: { supabase: SB }) {
         .from("cases")
         .select("fecha_ingreso, doctor_id")
         .eq("is_new_case", true)
+        .eq("is_demo", false)
         .gte("fecha_ingreso", yearAgo)
         .range(from, to)
     ),
@@ -447,7 +448,8 @@ async function Acreditacion({ supabase }: { supabase: SB }) {
     .select(
       "id, nombre, owner_id, source, accredited_at, first_paid_case_at, first_case_at, days_to_first_case, new_case_count, is_accredited"
     )
-    .eq("is_accredited", true);
+    .eq("is_accredited", true)
+    .eq("is_demo", false);
   const { data: profilesRaw } = await supabase
     .from("profiles")
     .select("id, nombre");
@@ -752,7 +754,8 @@ async function PipelineReport({ supabase }: { supabase: SB }) {
   const [{ data: opps }, { data: audit }] = await Promise.all([
     supabase
       .from("opportunities")
-      .select("id, stage, lost_reason, created_at, closed_at"),
+      .select("id, stage, lost_reason, created_at, closed_at")
+      .eq("is_demo", false),
     supabase
       .from("audit_log")
       .select("entity_id, old_value, new_value, created_at")
@@ -905,10 +908,13 @@ async function Actividad({ supabase }: { supabase: SB }) {
   // las tres primeras paginadas: actividades (4.4k+), casos y el mapa de owners
   // (6.4k doctores) se cuentan en JS, así que truncarlas falsea la tabla entera
   const [acts, cases90, doctors, { data: profiles }] = await Promise.all([
+    // sin is_demo=false esta tabla compara el esfuerzo REAL de cada persona contra
+    // ~200 actividades sintéticas repartidas en los mismos 90 días
     fetchAllRows<{ created_by: string | null; type: string }>((from, to) =>
       supabase
         .from("activities")
         .select("created_by, type")
+        .eq("is_demo", false)
         .gte("occurred_at", d90)
         .range(from, to)
     ),
@@ -917,6 +923,7 @@ async function Actividad({ supabase }: { supabase: SB }) {
         .from("cases")
         .select("doctor_id")
         .eq("is_new_case", true)
+        .eq("is_demo", false)
         .gte("fecha_ingreso", d90)
         .range(from, to)
     ),

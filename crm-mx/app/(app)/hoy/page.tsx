@@ -130,10 +130,14 @@ export default async function HoyPage({
     { data: profilesRaw },
     { data: waWaitingRaw },
   ] = await Promise.all([
+    // is_demo=false en todo lo que se cuenta o se pondera: las filas sintéticas del
+    // seed cuelgan de doctores REALES y están asignadas a personas reales, así que
+    // sin el filtro inflan el forecast, el tile de alertas y la cola de tareas.
     supabase
       .from("cases")
       .select("id", { count: "exact", head: true })
       .eq("is_new_case", true)
+      .eq("is_demo", false)
       .gte("fecha_ingreso", monthStartISO),
     supabase
       .from("goals")
@@ -145,6 +149,7 @@ export default async function HoyPage({
     supabase
       .from("opportunities")
       .select("probability")
+      .eq("is_demo", false)
       .not("stage", "in", "(ganada,perdida)"),
     motoresData,
     // el count es exacto aunque la lista venga recortada a 30: el tile de arriba
@@ -153,6 +158,7 @@ export default async function HoyPage({
       .from("alerts")
       .select("*", { count: "exact" })
       .eq("status", "abierta")
+      .eq("is_demo", false)
       .order("severity", { ascending: true })
       .order("created_at", { ascending: false })
       .limit(30),
@@ -161,6 +167,7 @@ export default async function HoyPage({
       .select("*")
       .eq("assigned_to", user!.id)
       .eq("status", "pendiente")
+      .eq("is_demo", false)
       .lte("due_date", todayISO)
       .order("due_date", { ascending: true })
       .limit(20),

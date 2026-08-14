@@ -79,8 +79,15 @@ export default async function DashboardPage() {
 
   // el universo puede tener MILES de doctores → todo por counts (PostgREST capea
   // fetches masivos en 1000 filas y mentiría en silencio)
+  //
+  // is_demo=false en TODAS las agregaciones de esta página: las funciones ai_* de
+  // 0023 ya filtran `not is_demo`, así que sin esto el tablero y el asistente AI
+  // de esta misma pantalla responden números distintos a la misma pregunta.
   const dc = () =>
-    supabase.from("doctors").select("id", { count: "exact", head: true });
+    supabase
+      .from("doctors")
+      .select("id", { count: "exact", head: true })
+      .eq("is_demo", false);
   const CONTACTADO_PLUS = [
     "contactado", "calificado", "reunion_agendada", "reunion_realizada",
     "interes_acreditacion", "acreditacion_agendada",
@@ -120,6 +127,7 @@ export default async function DashboardPage() {
       .from("cases")
       .select("id", { count: "exact", head: true })
       .eq("is_new_case", true)
+      .eq("is_demo", false)
       .gte("fecha_ingreso", monthStartISO),
     supabase
       .from("goals")
@@ -138,6 +146,7 @@ export default async function DashboardPage() {
     supabase
       .from("opportunities")
       .select("probability")
+      .eq("is_demo", false)
       .not("stage", "in", "(ganada,perdida)"),
     supabase
       .from("doctors")
@@ -148,12 +157,14 @@ export default async function DashboardPage() {
       .from("cases")
       .select("fecha_ingreso")
       .eq("is_new_case", true)
+      .eq("is_demo", false)
       .gte("fecha_ingreso", chartStartISO)
       .limit(5000),
     supabase
       .from("cases")
       .select("fecha_ingreso, doctor:doctors(id, nombre, categoria, owner_id)")
       .eq("is_new_case", true)
+      .eq("is_demo", false)
       .gte("fecha_ingreso", prevMonthStartISO)
       .limit(2000),
     supabase.from("profiles").select("id, nombre"),
