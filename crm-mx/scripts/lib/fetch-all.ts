@@ -23,7 +23,15 @@ export async function fetchAll<T = Record<string, unknown>>(
 ): Promise<T[]> {
   const out: T[] = [];
   for (let from = 0; ; from += PAGE) {
-    let q = db.from(table).select(columns).range(from, from + PAGE - 1);
+    // El orden explícito NO es cosmético: cada página es una query independiente y
+    // Postgres no garantiza orden estable sin ORDER BY, así que sin esto una fila
+    // puede venir dos veces y otra ninguna — que es exactamente el agujero que esta
+    // función existe para tapar.
+    let q = db
+      .from(table)
+      .select(columns)
+      .order("id")
+      .range(from, from + PAGE - 1);
     if (tweak) q = tweak(q);
     const { data, error } = await q;
     if (error) throw new Error(`fetchAll(${table}): ${error.message}`);

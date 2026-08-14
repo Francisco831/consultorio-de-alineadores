@@ -7,6 +7,8 @@ import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { config } from "dotenv";
+import { fetchAll } from "./lib/fetch-all";
+import { confirmarDestino, salirConDestinoRechazado } from "./lib/destino";
 
 config({ path: ".env.local" });
 
@@ -24,16 +26,23 @@ interface FichaRow {
 }
 
 async function main() {
+  await confirmarDestino({
+    accion: "volcar los tipos comerciales de la ficha sobre cases",
+    auto: process.argv.includes("--yes"),
+  });
   const rows: FichaRow[] = JSON.parse(
     readFileSync(resolve(__dirname, "../data/ficha_tipos.json"), "utf8")
   );
-  const { data: cases, error } = await db
-    .from("cases")
-    .select("id, id_externo")
-    .not("id_externo", "is", null);
-  if (error) throw error;
+  // paginado obligatorio: cases ya pasó las 1.000 filas, así que un select plano
+  // dejaría casos afuera del mapa y sus tipos comerciales sin cargar, en silencio.
+  const cases = await fetchAll<{ id: string; id_externo: string | null }>(
+    db,
+    "cases",
+    "id, id_externo",
+    (q) => q.not("id_externo", "is", null)
+  );
   const byExterno = new Map(
-    (cases ?? []).map((c) => [String(c.id_externo).toUpperCase(), c.id])
+    cases.map((c) => [String(c.id_externo).toUpperCase(), c.id])
   );
 
   const updates = rows
@@ -79,6 +88,7 @@ async function main() {
 }
 
 main().catch((e) => {
+  salirConDestinoRechazado(e);
   console.error("Import falló:", e);
   process.exit(1);
 });

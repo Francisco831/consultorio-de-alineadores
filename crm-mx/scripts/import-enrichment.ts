@@ -12,6 +12,8 @@ import { createClient } from "@supabase/supabase-js";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { config } from "dotenv";
+import { fetchAll } from "./lib/fetch-all";
+import { confirmarDestino, salirConDestinoRechazado } from "./lib/destino";
 
 config({ path: resolve(__dirname, "../.env.local") });
 
@@ -48,13 +50,35 @@ interface PaymentRow {
 }
 
 async function main() {
+  await confirmarDestino({
+    accion: "cargar enriquecimiento de doctores y el ledger de pagos (upsert)",
+    auto: process.argv.includes("--yes"),
+  });
   const enrichPath = resolve(__dirname, "../data/enrichment.json");
   const paymentsPath = resolve(__dirname, "../data/payments.json");
 
-  const { data: doctors } = await db
-    .from("doctors")
-    .select("id, noloco_id, phone, whatsapp, email, city, state, zona, accredited_at, competitor_brands, owner_id");
-  const byNoloco = new Map((doctors ?? []).map((d) => [d.noloco_id, d]));
+  // paginado obligatorio: sin esto PostgREST devuelve 1.000 de 7.034 doctores y
+  // el mapa de conciliación queda armado con una fracción arbitraria de la tabla.
+  // Aguas abajo eso no "saltea": el upsert de pagos escribe doctor_id=null sobre
+  // filas ya vinculadas del ledger, que es la fuente de verdad del KPI.
+  const doctors = await fetchAll<{
+    id: string;
+    noloco_id: string | null;
+    phone: string | null;
+    whatsapp: string | null;
+    email: string | null;
+    city: string | null;
+    state: string | null;
+    zona: string | null;
+    accredited_at: string | null;
+    competitor_brands: string[] | null;
+    owner_id: string | null;
+  }>(
+    db,
+    "doctors",
+    "id, noloco_id, phone, whatsapp, email, city, state, zona, accredited_at, competitor_brands, owner_id"
+  );
+  const byNoloco = new Map(doctors.map((d) => [d.noloco_id, d]));
 
   // comercial_asignado → owner solo para usuarios reales del CRM.
   // Angelica/Ursula son comerciales históricas de LATAM (no usuarias): se ignoran
@@ -109,27 +133,49 @@ async function main() {
   // ---------- pagos ----------
   if (existsSync(paymentsPath)) {
     const rows: PaymentRow[] = JSON.parse(readFileSync(paymentsPath, "utf8"));
-    const payRows = rows
-      .filter((r) => r.paid_at && r.amount_mxn != null)
-      .map((r) => ({
-        external_key: r.external_key,
-        doctor_id: r.noloco_id ? (byNoloco.get(r.noloco_id)?.id ?? null) : null,
-        paciente: r.paciente,
-        amount_mxn: r.amount_mxn,
-        paid_at: r.paid_at,
-        method: r.method,
-        notes: r.notes ?? (r.noloco_id ? null : `Doctor sin matchear: ${r.doctor_nombre_raw}`),
-        source: "import",
-      }));
-    for (let i = 0; i < payRows.length; i += 500) {
-      const { error } = await db
-        .from("payments")
-        .upsert(payRows.slice(i, i + 500), { onConflict: "external_key" });
-      if (error) throw error;
+    const vigentes = rows.filter((r) => r.paid_at && r.amount_mxn != null);
+
+    // El upsert de PostgREST resuelve con `merge-duplicates`: hace UPDATE de todas
+    // las columnas del payload, y la lista de columnas es la UNIÓN de las claves de
+    // las filas enviadas. Si `doctor_id` viaja en el payload valiendo null, pisa el
+    // vínculo que la fila ya tenía en la base.
+    //
+    // Quién puede reponerlo: solo scripts/reconcile-ledger.ts, que no está en ningún
+    // runbook. Por eso las filas sin doctor se mandan SIN la columna: para una fila
+    // nueva queda null igual (es el default) y para una existente se respeta lo que
+    // haya, venga de donde venga.
+    const comun = (r: PaymentRow) => ({
+      external_key: r.external_key,
+      paciente: r.paciente,
+      amount_mxn: r.amount_mxn,
+      paid_at: r.paid_at,
+      method: r.method,
+      notes: r.notes ?? (r.noloco_id ? null : `Doctor sin matchear: ${r.doctor_nombre_raw}`),
+      source: "import",
+    });
+
+    const conDoctor: Array<ReturnType<typeof comun> & { doctor_id: string }> = [];
+    const sinDoctor: Array<ReturnType<typeof comun>> = [];
+    for (const r of vigentes) {
+      const doctorId = r.noloco_id ? (byNoloco.get(r.noloco_id)?.id ?? null) : null;
+      if (doctorId) conDoctor.push({ ...comun(r), doctor_id: doctorId });
+      else sinDoctor.push(comun(r));
     }
-    const matched = payRows.filter((p) => p.doctor_id).length;
+
+    // Los dos lotes van en llamadas SEPARADAS a propósito: mezclarlos volvería a
+    // meter doctor_id en la unión de columnas y el null de las filas sin doctor
+    // pisaría igual.
+    for (const lote of [conDoctor, sinDoctor]) {
+      for (let i = 0; i < lote.length; i += 500) {
+        const { error } = await db
+          .from("payments")
+          .upsert(lote.slice(i, i + 500), { onConflict: "external_key" });
+        if (error) throw error;
+      }
+    }
     console.log(
-      `Pagos: ${payRows.length} upserted (${matched} con doctor, ${payRows.length - matched} sin matchear)`
+      `Pagos: ${vigentes.length} upserted (${conDoctor.length} con doctor, ` +
+        `${sinDoctor.length} sin matchear — su doctor_id no se toca)`
     );
   } else {
     console.log("Sin data/payments.json — salteado");
@@ -147,6 +193,7 @@ async function main() {
 }
 
 main().catch((e) => {
+  salirConDestinoRechazado(e);
   console.error("Enrichment falló:", e);
   process.exit(1);
 });

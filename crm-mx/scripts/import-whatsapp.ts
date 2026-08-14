@@ -11,6 +11,8 @@ import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { config } from "dotenv";
+import { fetchAll } from "./lib/fetch-all";
+import { confirmarDestino, salirConDestinoRechazado } from "./lib/destino";
 
 config({ path: ".env.local" });
 
@@ -34,6 +36,10 @@ interface Chat {
 }
 
 async function main() {
+  await confirmarDestino({
+    accion: "cargar los chats de Periskope en wa_conversations (upsert)",
+    auto: process.argv.includes("--yes"),
+  });
   const peri = JSON.parse(
     readFileSync(resolve(__dirname, "../data/whatsapp_periskope.json"), "utf8")
   );
@@ -48,45 +54,63 @@ async function main() {
     if (m.chat_id && m.doctor_id) recovered.set(m.chat_id, String(m.doctor_id));
   }
 
-  const { data: doctors, error: dErr } = await db
-    .from("doctors")
-    .select("id, noloco_id, whatsapp");
-  if (dErr) throw dErr;
-  const byNoloco = new Map((doctors ?? []).map((d) => [d.noloco_id, d]));
+  // paginado obligatorio: con un select plano vuelven 1.000 de 7.034 doctores y
+  // los chats de los demás se guardarían sin vínculo (y pisarían el que ya tenían).
+  const doctors = await fetchAll<{
+    id: string;
+    noloco_id: string | null;
+    whatsapp: string | null;
+  }>(db, "doctors", "id, noloco_id, whatsapp");
+  const byNoloco = new Map(doctors.map((d) => [d.noloco_id, d]));
 
   const rows = chats.map((c) => {
     const rawId = recovered.get(c.chat_id) ?? c.doctor_noloco?.id ?? null;
     const doc = rawId ? byNoloco.get(DOCTOR_ALIASES[rawId] ?? rawId) : null;
     return {
-      periskope_chat_id: c.chat_id,
-      chat_name: c.nombre,
-      phone: c.telefono_contacto,
-      doctor_id: doc?.id ?? null,
-      unanswered: c.esperando_respuesta,
-      activity_bucket: c.actividad,
-      lineas: c.lineas ?? [],
-      asignado: c.asignado,
+      chat: {
+        periskope_chat_id: c.chat_id,
+        chat_name: c.nombre,
+        phone: c.telefono_contacto,
+        unanswered: c.esperando_respuesta,
+        activity_bucket: c.actividad,
+        lineas: c.lineas ?? [],
+        asignado: c.asignado,
+      },
+      doctorId: doc?.id ?? null,
     };
   });
 
-  for (let i = 0; i < rows.length; i += 500) {
-    const { error } = await db
-      .from("wa_conversations")
-      .upsert(rows.slice(i, i + 500), { onConflict: "periskope_chat_id" });
-    if (error) throw error;
+  // Mismo cuidado que en import-enrichment: el upsert de PostgREST hace UPDATE de
+  // todas las columnas del payload, así que un doctor_id null pisaría el vínculo
+  // existente. Los chats sin doctor se mandan SIN la columna, en otra llamada.
+  const conDoctor = rows
+    .filter((r) => r.doctorId)
+    .map((r) => ({ ...r.chat, doctor_id: r.doctorId as string }));
+  const sinDoctor = rows.filter((r) => !r.doctorId).map((r) => r.chat);
+
+  for (const lote of [conDoctor, sinDoctor]) {
+    for (let i = 0; i < lote.length; i += 500) {
+      const { error } = await db
+        .from("wa_conversations")
+        .upsert(lote.slice(i, i + 500), { onConflict: "periskope_chat_id" });
+      if (error) throw error;
+    }
   }
-  const matched = rows.filter((r) => r.doctor_id).length;
-  console.log(`Chats upserted: ${rows.length} (${matched} con doctor)`);
+  const matched = conDoctor.length;
+  console.log(
+    `Chats upserted: ${rows.length} (${matched} con doctor, ` +
+      `${sinDoctor.length} sin vínculo — su doctor_id no se toca)`
+  );
 
   // completar doctors.whatsapp con el teléfono del canal (solo donde falta)
   let filled = 0;
   const bestByDoctor = new Map<string, string>();
   for (const r of rows) {
-    if (r.doctor_id && r.phone && !bestByDoctor.has(r.doctor_id)) {
-      bestByDoctor.set(r.doctor_id, r.phone);
+    if (r.doctorId && r.chat.phone && !bestByDoctor.has(r.doctorId)) {
+      bestByDoctor.set(r.doctorId, r.chat.phone);
     }
   }
-  for (const d of doctors ?? []) {
+  for (const d of doctors) {
     if (!d.whatsapp && bestByDoctor.has(d.id)) {
       const { error } = await db
         .from("doctors")
@@ -142,6 +166,7 @@ async function main() {
 }
 
 main().catch((e) => {
+  salirConDestinoRechazado(e);
   console.error("Import falló:", e);
   process.exit(1);
 });
