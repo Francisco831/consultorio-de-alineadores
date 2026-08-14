@@ -11,6 +11,7 @@ import {
 import { CasesChart, type MonthPoint } from "@/components/dashboard/cases-chart";
 import { AskCrm } from "@/components/ai/ask-crm";
 import { CATEGORIA_LABELS } from "@/lib/format";
+import { getForecastMes } from "@/lib/forecast";
 import { monthStartMX } from "@/lib/dates";
 import type { AcqStage, DoctorCategoria, LifecycleStage } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -101,7 +102,7 @@ export default async function DashboardPage() {
     { count: monthCases },
     { data: goalRow },
     { data: accGoalRow },
-    { data: openOppsRaw },
+    fc,
     { count: accreditedPrevMonth },
     { data: chartRaw },
     { data: recentRaw },
@@ -143,11 +144,7 @@ export default async function DashboardPage() {
       .eq("metric", "accreditations")
       .is("user_id", null)
       .maybeSingle(),
-    supabase
-      .from("opportunities")
-      .select("probability")
-      .eq("is_demo", false)
-      .not("stage", "in", "(ganada,perdida)"),
+    getForecastMes(supabase),
     supabase
       .from("doctors")
       .select("id", { count: "exact", head: true })
@@ -194,13 +191,13 @@ export default async function DashboardPage() {
 
   const target = goalRow?.target ?? null;
   const accTarget = accGoalRow?.target ?? null;
-  const closed = monthCases ?? 0;
-  const weightedOpen = (openOppsRaw ?? []).reduce(
-    (acc, o) => acc + (o.probability ?? 0) / 100,
-    0
-  );
-  const forecast = Math.round(closed + weightedOpen);
-  const gap = target != null ? target - forecast : null;
+  // Todo lo del mes sale de ai_forecast() (0023): una sola definición, ya con
+  // is_demo filtrado y huso de México. `closed` se conserva como respaldo por si
+  // la RPC no responde, para que la pantalla no quede en blanco.
+  const closed = fc?.casos_nuevos_mes ?? monthCases ?? 0;
+  const pagados = fc?.casos_pagados_mes_ledger ?? null;
+  const forecast = fc?.forecast_casos_nuevos ?? closed;
+  const gap = fc?.gap_vs_objetivo ?? null;
 
   const ownerNames = new Map(
     ((profilesRaw ?? []) as { id: string; nombre: string }[]).map((p) => [
@@ -322,12 +319,19 @@ export default async function DashboardPage() {
   // ---------- North Star tiles ----------
   const tiles: { label: string; value: string | number; sub?: string; className?: string }[] = [
     {
-      label: "Casos del mes",
-      value: target != null ? `${closed} / ${target}` : closed,
+      // El objetivo del mes es de casos PAGADOS y hasta hoy se comparaba contra
+      // los casos INGRESADOS, que es otra métrica: este mes son 3 contra 5. El
+      // ledger de pagos es la fuente de verdad del KPI (README y 0002:139).
+      label: "Pagados / objetivo",
+      value:
+        target != null ? `${pagados ?? "—"} / ${target}` : (pagados ?? "—"),
+      sub: "ledger de pagos · el KPI",
     },
-    { label: "Forecast", value: forecast },
+    { label: "Casos nuevos", value: closed, sub: "ingresados este mes (I_1)" },
+    { label: "Forecast", value: forecast, sub: "casos nuevos proyectados" },
     {
       label: "Gap",
+      sub: "objetivo vs forecast",
       value: gap == null ? "—" : gap > 0 ? `−${gap}` : `+${Math.abs(gap)}`,
       className:
         gap == null

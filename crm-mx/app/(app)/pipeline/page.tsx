@@ -7,6 +7,7 @@ import {
   type JourneyDoctor,
 } from "@/components/prospecting/journey-board";
 import { monthStartMX } from "@/lib/dates";
+import { getForecastMes } from "@/lib/forecast";
 import type { Opportunity } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -35,7 +36,7 @@ export default async function PipelinePage({
     { data: openRaw, error: openError },
     { data: closedRaw },
     { data: profilesRaw },
-    { count: monthCases },
+    fc,
     { data: goalRow },
     { data: funnelRaw },
   ] = await Promise.all([
@@ -51,12 +52,7 @@ export default async function PipelinePage({
       .in("stage", ["ganada", "perdida"])
       .gte("closed_at", monthStartISO),
     supabase.from("profiles").select("id, nombre"),
-    supabase
-      .from("cases")
-      .select("id", { count: "exact", head: true })
-      .eq("is_new_case", true)
-      .eq("is_demo", false)
-      .gte("fecha_ingreso", monthStartISO),
+    getForecastMes(supabase),
     supabase
       .from("goals")
       .select("target")
@@ -92,7 +88,9 @@ export default async function PipelinePage({
   );
 
   const target = goalRow?.target ?? null;
-  const closed = monthCases ?? 0;
+  // Misma fuente que dashboard y /hoy: ai_forecast() (0023). Ver lib/forecast.ts.
+  const closed = fc?.casos_nuevos_mes ?? 0;
+  const pagados = fc?.casos_pagados_mes_ledger ?? null;
 
   // El TABLERO sigue mostrando las oportunidades demo —tienen su badge y se ven
   // como lo que son— pero los TILES son los números con los que se decide el mes,
@@ -107,19 +105,16 @@ export default async function PipelinePage({
   const pipeline = realOpps.filter(
     (o) => o.forecast_category === "pipeline"
   ).length;
-  const weightedOpen = realOpps.reduce(
-    (acc, o) => acc + (o.probability ?? 0) / 100,
-    0
-  );
-  const forecast = Math.round(closed + weightedOpen);
-  const gap = target != null ? target - forecast : null;
+  const forecast = fc?.forecast_casos_nuevos ?? closed;
+  const gap = fc?.gap_vs_objetivo ?? null;
 
   const wonMonth = closedOpps.filter((o) => o.stage === "ganada").length;
   const lostMonth = closedOpps.filter((o) => o.stage === "perdida").length;
 
   const tiles: { label: string; value: string | number; className?: string }[] = [
     { label: "Objetivo", value: target ?? "—" },
-    { label: "Cerrados", value: closed },
+    { label: "Pagados", value: pagados ?? "—" },
+    { label: "Casos nuevos", value: closed },
     { label: "Commit", value: commit },
     { label: "Best case", value: bestCase },
     { label: "Pipeline", value: pipeline },

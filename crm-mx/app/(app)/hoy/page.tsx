@@ -22,6 +22,7 @@ import { TaskList } from "@/components/tasks/task-list";
 import { AgentBadge } from "@/components/ai/agent-badge";
 import { MorningBrief } from "@/components/ai/morning-brief";
 import { routeDoctorFromRow } from "@/lib/ai/orchestrator";
+import { getForecastMes } from "@/lib/forecast";
 import { todayMX, monthStartMX, hourMX } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { MessageCircle, Phone, ArrowRight, Check, X } from "lucide-react";
@@ -123,7 +124,7 @@ export default async function HoyPage({
   const [
     { count: monthCases },
     { data: goalRow },
-    { data: openOppsRaw },
+    fc,
     motores,
     { data: alertsRaw, count: alertsTotal },
     { data: myTasksRaw },
@@ -146,11 +147,7 @@ export default async function HoyPage({
       .eq("metric", "paid_cases")
       .is("user_id", null)
       .maybeSingle(),
-    supabase
-      .from("opportunities")
-      .select("probability")
-      .eq("is_demo", false)
-      .not("stage", "in", "(ganada,perdida)"),
+    getForecastMes(supabase),
     motoresData,
     // el count es exacto aunque la lista venga recortada a 30: el tile de arriba
     // tiene que decir cuántas alertas hay, no cuántas entran en la columna
@@ -186,13 +183,11 @@ export default async function HoyPage({
   const alerts = (alertsRaw ?? []) as Alert[];
   const myTasks = (myTasksRaw ?? []) as Task[];
   const target = goalRow?.target ?? null;
-  const closed = monthCases ?? 0;
-  const weightedOpen = (openOppsRaw ?? []).reduce(
-    (acc, o) => acc + (o.probability ?? 0) / 100,
-    0
-  );
-  const forecast = Math.round(closed + weightedOpen);
-  const gap = target != null ? target - forecast : null;
+  // Misma fuente que el dashboard: ai_forecast() (0023). Ver lib/forecast.ts.
+  const closed = fc?.casos_nuevos_mes ?? monthCases ?? 0;
+  const pagados = fc?.casos_pagados_mes_ledger ?? null;
+  const forecast = fc?.forecast_casos_nuevos ?? closed;
+  const gap = fc?.gap_vs_objetivo ?? null;
 
   // Señales de SERVICIO por doctor para el router determinístico (labels de
   // agente). Solo las reglas que representan un caso trabado o una entrega
@@ -281,9 +276,15 @@ export default async function HoyPage({
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-4">
         {[
           {
-            label: "Casos del mes",
-            value: target != null ? `${closed} / ${target}` : String(closed),
+            // el objetivo es de casos PAGADOS: se mide contra el ledger, no
+            // contra los ingresados (ver lib/forecast.ts)
+            label: "Pagados / objetivo",
+            value:
+              target != null
+                ? `${pagados ?? "—"} / ${target}`
+                : String(pagados ?? "—"),
           },
+          { label: "Casos nuevos", value: String(closed) },
           { label: "Forecast", value: forecast },
           {
             label: "Gap",
