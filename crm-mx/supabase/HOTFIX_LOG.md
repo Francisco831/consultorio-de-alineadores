@@ -118,3 +118,35 @@ ledger : 28 migración(es) registrada(s)
 ```
 
 El runner volvió a ser usable y es idempotente: correrlo de nuevo no hace nada.
+
+---
+
+## Estado verificado el 13/8/2026
+
+Este archivo declaraba producción como **Pendiente** para 0027 y 0028. Era falso desde el
+11/8: la puesta al día de producción se hizo y quedó documentada en
+[`docs/PUESTA_AL_DIA_PROD.md`](../docs/PUESTA_AL_DIA_PROD.md), pero las tablas de acá nunca
+se actualizaron. Tres archivos más arrastraban la misma versión vieja
+(`environments.json`, `docs/OPERACION.md`, `PLAN_REMEDIACION_CRM.md`). Corregidos todos.
+
+Verificado hoy con dos comandos, los dos de solo lectura:
+
+| Qué | Comando | Resultado |
+|---|---|---|
+| Los schemas coinciden | `npx tsx scripts/diff-entornos.ts` | exit 0 — 26 tablas · 406 columnas · 77 funciones · 62 policies en **las dos** |
+| Ledger de producción | `db-migrate --check-connection` contra el ref de prod | **28 migraciones registradas**, última `0027_function_grants.sql` |
+
+**Pendientes en producción:** `0029_hitl_ai_confirmado.sql` y `0030_guards_por_defecto.sql`,
+las dos aplicadas y verificadas en desarrollo el 13/8.
+
+> **Límite honesto de la verificación:** `diff-entornos` compara FIRMAS de función, no cuerpos.
+> Que las dos bases tengan las mismas 77 funciones no dice que hagan lo mismo — de hecho hoy no
+> lo hacen: los guards de producción son todavía los viejos, que es exactamente lo que 0029 y
+> 0030 vienen a corregir.
+
+| Migración | Desarrollo | Producción |
+|---|---|---|
+| 0027 función grants | Aplicada 10/8 | **Aplicada** (en el ledger) |
+| 0028 ledger | Aplicada 10/8 | **Aplicada** (en el ledger) |
+| 0029 HITL `ai_confirmado` | **Aplicada 13/8** · chequeo 5 de security-checks en OK | Pendiente |
+| 0030 guards por defecto | **Aplicada 13/8** · verificada en transacción revertida | Pendiente |

@@ -13,8 +13,10 @@ Un ref que no figura ahí se trata como **desconocido** y exige confirmación es
 pase `--yes`. Es deliberado: adivinar acá es el camino corto para escribir en producción
 creyendo que es desarrollo.
 
-> **Producción todavía no está registrada.** Hasta que lo esté, toda corrida contra prod pide
-> confirmación manual.
+> **Producción está registrada en `supabase/environments.json`, y aun así toda corrida contra
+> ella pide confirmación escrita** — `--yes` no alcanza. Registrarla la identifica; no la
+> destraba. (Hasta el 13/8/2026 pasaba lo contrario: estar registrada habilitaba `--apply --yes`
+> sin preguntar nada.)
 
 ## Antes de migrar por primera vez: sembrar el ledger
 
@@ -164,9 +166,10 @@ hay, escribilo antes de tocar nada.
 decisión completo: [`SMOKE_TEST_permisos.md`](SMOKE_TEST_permisos.md). Resumen: agregar el
 `grant` que falta es casi siempre mejor que correr el rollback.
 
-**Respaldos.** Estado **desconocido** — nadie verificó plan, frecuencia, retención ni si hay
-PITR. Es el paso V-4 del plan de remediación y sigue abierto. Hasta que se responda, **no hay
-plan de recuperación ante pérdida de datos**, solo el de rollback de cambios.
+**Respaldos.** Respondido: el proyecto está en plan **Free**, o sea **sin backups administrados
+ni PITR**. El único respaldo es el que se corre a mano con `scripts/backup-datos.ts`, que vuelca
+cada tabla a NDJSON fuera del repositorio. **Nunca se probó una restauración**, así que sigue sin
+haber un plan de recuperación verificado — hay una herramienta, no un procedimiento probado.
 
 ## Lo que este documento no cubre
 

@@ -92,7 +92,12 @@ const { ref, discrepancia } = refEfectivo(refDeclarado, process.env.SUPABASE_DB_
 const password = process.env.SUPABASE_DB_PASSWORD;
 
 const REGIONS = [
-  "ca-central-1", // ambos proyectos viven acá; el pooler es IPv4 (la directa db.<ref> es IPv6-only)
+  // dev vive en ca-central-1 y prod en us-east-2: NO comparten región, aunque una
+  // versión anterior de este comentario decía que sí. Contra prod eso son varios
+  // intentos fallidos antes de acertar; se saltean con SUPABASE_DB_HOST.
+  // El pooler es IPv4 (la conexión directa db.<ref> es IPv6-only).
+  "ca-central-1",
+  "us-east-2",
   "us-east-1", "us-east-2", "us-west-1", "sa-east-1",
   "us-west-2", "eu-west-1", "eu-central-1",
 ];

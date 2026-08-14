@@ -3,7 +3,25 @@
 **Proyecto:** `crm-mx/` · **Commit:** `5e7fc72`, rama `crm-mx-ai`
 **Fecha:** 10 de agosto de 2026 · **Diagnóstico base:** `AUDITORIA_CRM.md` (revisión 2, aprobada)
 
-> **Estado real al 11/8/2026 — este encabezado decía "nada de esto está aplicado" y ya no es
+> **Estado real al 13/8/2026.** Este encabezado se corrigió dos veces; la versión de abajo
+> (11/8) también quedó vieja. Lo verificado hoy, con dos comandos de solo lectura:
+>
+> - **Los schemas de las dos bases COINCIDEN** (`diff-entornos`, exit 0): 26 tablas, 406
+>   columnas, 77 funciones y 62 policies en ambas. La afirmación "prod ≈ 0022" que sostenía
+>   este documento y `environments.json` era falsa desde el 11/8.
+> - **El ledger de producción tiene 28 migraciones**, la última `0027`. O sea: **V-3 no está
+>   detenido, está hecho**, y CRIT-01 está cerrado también en producción.
+> - Pendientes en prod: `0029` (HITL) y `0030` (guards), aplicadas en desarrollo el 13/8.
+> - **R-4 (ALT-02) está CERRADO**: migración `0029`, con el chequeo 5 de `security-checks`
+>   pasando de PENDIENTE a OK contra la base real.
+> - **Decisión de Pancho (13/8): producción es la base que manda.** La app todavía apunta a
+>   desarrollo; mudarla es el paso que queda.
+>
+> Detalle en [`supabase/HOTFIX_LOG.md`](supabase/HOTFIX_LOG.md).
+>
+> ---
+>
+> **Estado al 11/8/2026 — este encabezado decía "nada de esto está aplicado" y ya no es
 > cierto.** Corregido en la sesión de consolidación:
 >
 > - **`0027` y `0028` están aplicadas en desarrollo**, las dos por accidente y en días distintos.
