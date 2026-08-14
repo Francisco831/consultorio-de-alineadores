@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...menos la plantilla, que es la que documenta qué variables hacen falta y no
+# tiene ni un valor real. El patrón .env* la venía tapando, así que el repo
+# quedaba sin plantilla y con 3 de las ~10 variables documentadas en el README.
+!.env.local.example
 
 # vercel
 .vercel
