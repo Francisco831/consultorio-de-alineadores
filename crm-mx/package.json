@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "tsx --test \"scripts/**/*.test.ts\" \"lib/**/*.test.ts\"",
     "test:seguridad": "tsx scripts/security-checks.ts"
   },
