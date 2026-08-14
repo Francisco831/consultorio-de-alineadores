@@ -14,6 +14,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { config } from "dotenv";
 import { fetchAll } from "./lib/fetch-all";
+import { canonPhone, canonEmail } from "./lib/phone";
 import { confirmarDestino, salirConDestinoRechazado } from "./lib/destino";
 
 config({ path: resolve(__dirname, "../.env.local") });
@@ -191,16 +192,74 @@ async function main() {
   const existing = await fetchAll<{
     id: string;
     noloco_id: string | null;
+    nombre: string;
     email: string | null;
+    phone: string | null;
+    whatsapp: string | null;
     categoria: string;
-  }>(db, "doctors", "id, noloco_id, email, categoria");
+    is_accredited: boolean;
+  }>(
+    db,
+    "doctors",
+    "id, noloco_id, nombre, email, phone, whatsapp, categoria, is_accredited"
+  );
   const existingByNoloco = new Map(existing.map((r) => [r.noloco_id, r.id]));
   const currentFields = new Map(
     existing.map((r) => [r.noloco_id, { email: r.email, categoria: r.categoria }])
   );
 
+  // ---- Adopción de fichas del CRM que Noloco todavía no conoce ----
+  //
+  // EL PROBLEMA QUE RESUELVE: un prospecto que el equipo acredita desde el kanban
+  // queda is_accredited=true y SIN noloco_id — el guard de 0019 prohíbe setearlo a
+  // mano, a propósito. Cuando ese doctor ingresa su primer caso y aparece en el
+  // export, la conciliación por noloco_id no lo encuentra y crea una ficha NUEVA.
+  // El journey se parte en dos justo en la Conversión 2, que es el evento que el
+  // equipo necesita medir: dueño, notas, actividades, WhatsApp y accredited_at
+  // quedan en la ficha vieja; los casos y los pagos arrancan en la nueva. Y no hay
+  // forma de repararlo desde la app.
+  //
+  // Al 13/8/2026 hay 35 acreditados sin noloco_id y NINGUNO tiene casos todavía:
+  // no se partió ninguna ficha aún, pero cada uno se parte solo el día que ingresa
+  // su primer caso.
+  //
+  // CUÁNDO ADOPTA: solo si hay UN candidato sin ambigüedad. Con dos o más no
+  // adivina — inserta la ficha nueva y lo grita, que es el mismo criterio que ya
+  // usa reconcile-ledger. Los teléfonos de consultorio se comparten entre colegas,
+  // así que un match de teléfono con dos candidatos no es evidencia de nada.
+  const sinNoloco = existing.filter((r) => !r.noloco_id);
+  const porEmail = new Map<string, typeof sinNoloco>();
+  const porTelefono = new Map<string, typeof sinNoloco>();
+  for (const r of sinNoloco) {
+    const e = canonEmail(r.email);
+    if (e) porEmail.set(e, [...(porEmail.get(e) ?? []), r]);
+    for (const p of [r.phone, r.whatsapp]) {
+      const c = canonPhone(p);
+      if (c && !(porTelefono.get(c) ?? []).some((x) => x.id === r.id)) {
+        porTelefono.set(c, [...(porTelefono.get(c) ?? []), r]);
+      }
+    }
+  }
+  const yaAdoptados = new Set<string>();
+
+  /** Ficha existente que es el MISMO doctor, o null si no hay o hay dudas. */
+  function buscarFichaAdoptable(d: { nombre: string; email: string | null; phone: string | null }) {
+    // el email primero: identifica a una persona mucho mejor que un teléfono
+    for (const cands of [
+      porEmail.get(canonEmail(d.email) ?? "") ?? [],
+      porTelefono.get(canonPhone(d.phone) ?? "") ?? [],
+    ]) {
+      const libres = cands.filter((c) => !yaAdoptados.has(c.id));
+      if (libres.length === 1) return { ficha: libres[0], ambiguo: false as const };
+      if (libres.length > 1) return { ficha: null, ambiguo: true as const, cands: libres };
+    }
+    return null;
+  }
+
   let inserted = 0;
   let updated = 0;
+  const adoptadas: string[] = [];
+  const ambiguos: string[] = [];
   for (const d of docs.values()) {
     const allT = d.allDates.map((x) => Date.parse(x)).sort((a, b) => a - b);
     const newT = d.newDates.map((x) => Date.parse(x)).sort((a, b) => a - b);
@@ -229,6 +288,35 @@ async function main() {
       if (error) throw error;
       updated++;
     } else {
+      const match = buscarFichaAdoptable(d);
+      if (match?.ambiguo) {
+        ambiguos.push(
+          `${d.nombre} (noloco ${d.noloco_id}) → ${match.cands.length} candidatas: ` +
+            match.cands.map((c) => c.nombre).join(" · ")
+        );
+      }
+      if (match && !match.ambiguo && match.ficha) {
+        // ADOPTAR: la ficha ya existe en el CRM con su historial. Se le pega el
+        // noloco_id y las estadísticas, y NO se pisa nada de lo que es del CRM
+        // (dueño, notas, lifecycle, teléfonos cargados a mano).
+        //
+        // Esta escritura va con service-role, que es lo único que puede setear
+        // noloco_id: el guard de 0019 lo prohíbe desde la app a propósito, porque
+        // la acreditación se registra moviendo la tarjeta, no editando el campo.
+        const ficha = match.ficha;
+        const patch: Record<string, unknown> = { noloco_id: d.noloco_id, ...stats };
+        if (!ficha.email && d.email) patch.email = d.email;
+        if (ficha.categoria === "SIN_CATEGORIA" && d.categoria !== "SIN_CATEGORIA") {
+          patch.categoria = d.categoria;
+        }
+        const { error } = await db.from("doctors").update(patch).eq("id", ficha.id);
+        if (error) throw error;
+        yaAdoptados.add(ficha.id);
+        existingByNoloco.set(d.noloco_id, ficha.id);
+        adoptadas.push(`${ficha.nombre} ←→ noloco ${d.noloco_id} (${d.nombre})`);
+        continue;
+      }
+
       const { data: ins, error } = await db
         .from("doctors")
         .insert({
@@ -247,7 +335,17 @@ async function main() {
       inserted++;
     }
   }
-  console.log(`Doctores: ${inserted} nuevos, ${updated} actualizados`);
+  console.log(
+    `Doctores: ${inserted} nuevos, ${updated} actualizados, ${adoptadas.length} fichas adoptadas`
+  );
+  for (const a of adoptadas) console.log(`  adoptada: ${a}`);
+  if (ambiguos.length) {
+    console.log(
+      `\n  ⚠ ${ambiguos.length} con más de una ficha candidata: se creó una nueva en vez de` +
+        ` adivinar. Revisar a mano y fusionar si corresponde.`
+    );
+    for (const a of ambiguos) console.log(`    - ${a}`);
+  }
 
   // ---------- Fase 2: casos ----------
   const resolveDoctor = (rawId: string) =>
