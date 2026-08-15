@@ -26,6 +26,10 @@ import type {
   AgentRunTrigger,
   RecommendationStatus,
 } from "@/lib/ai/types";
+import {
+  AllowlistManager,
+  type InvitacionRow,
+} from "@/components/ajustes/allowlist-manager";
 
 const REC_STATUSES: RecommendationStatus[] = [
   "propuesta",
@@ -74,8 +78,12 @@ export default async function AjustesPage() {
     profile?.rol ?? ""
   );
 
-  const [{ data: rulesRaw }, { data: goalsRaw }, { data: profilesRaw }] =
-    await Promise.all([
+  const [
+    { data: rulesRaw },
+    { data: goalsRaw },
+    { data: profilesRaw },
+    { data: allowRaw, error: allowErr },
+  ] = await Promise.all([
       supabase.from("automation_rules").select("*").order("key"),
       supabase
         .from("goals")
@@ -84,9 +92,19 @@ export default async function AjustesPage() {
         .is("user_id", null)
         .order("period", { ascending: true }),
       supabase.from("profiles").select("*").order("nombre"),
+      // La tabla puede no existir todavía (0031 sin aplicar): el error se maneja
+      // abajo mostrando qué falta, en vez de romper la página entera de ajustes.
+      supabase
+        .from("auth_allowlist")
+        .select("id, email, active, note, added_at, removed_at")
+        .order("active", { ascending: false })
+        .order("email"),
     ]);
   const rules = (rulesRaw ?? []) as Rule[];
   const goals = (goalsRaw ?? []) as { id: string; period: string; target: number }[];
+  const invitaciones: InvitacionRow[] | null = allowErr
+    ? null
+    : ((allowRaw ?? []) as InvitacionRow[]);
   const team = (profilesRaw ?? []) as {
     id: string;
     nombre: string;
@@ -299,9 +317,27 @@ export default async function AjustesPage() {
           ))}
         </ul>
         <p className="text-xs text-muted-foreground">
-          Los usuarios se crean con scripts/create-users.ts (invite-only).
+          Los usuarios se crean con scripts/create-users.ts (invite-only), y el mail
+          tiene que estar invitado abajo antes de crear la cuenta.
         </p>
       </section>
+
+      {/* ---------- quién puede tener cuenta ---------- */}
+      {isManager ? (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Quién puede tener cuenta
+          </h2>
+          {invitaciones ? (
+            <AllowlistManager invitaciones={invitaciones} isManager={isManager} />
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              La lista de invitaciones todavía no existe en esta base: falta aplicar la
+              migración <code>0031_auth_allowlist.sql</code>.
+            </p>
+          )}
+        </section>
+      ) : null}
 
       {/* ---------- inteligencia comercial (AI) ---------- */}
       {isManager ? (
