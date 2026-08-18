@@ -14,16 +14,27 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { relativeDays } from "@/lib/format";
-import { ACQ_STAGE_LABELS, type AcqStage, type Doctor } from "@/lib/types";
+import {
+  ACQ_STAGE_LABELS,
+  SOURCE_LABELS,
+  type AcqStage,
+  type Doctor,
+} from "@/lib/types";
 
 // La lista del área "POR ACREDITARSE". Hasta ahora no existía: el link de la
 // columna desbordada del kanban mandaba a /doctores con un filtro, o sea a la
 // lista del OTRO área.
 //
-// Las columnas no son las de /doctores a propósito. Casos históricos, ritmo y
-// categoría le muestran cero a alguien que todavía no pudo mandar un caso; acá
-// las que importan son en qué etapa está, cuánto interés hay y hace cuánto que
-// nadie lo toca.
+// Las columnas no son las de /doctores a propósito: casos históricos, ritmo y
+// categoría le muestran cero a alguien que todavía no pudo mandar un caso.
+//
+// Y TAMPOCO son las que parecían obvias. Medido contra producción sobre los 6.826
+// no acreditados: accreditation_interest y specialty están cargados en CERO filas,
+// así que una columna "Interés" o "Especialidad" sería una fila de guiones repetida
+// 6.826 veces. Lo que sí hay: fuente 6.826, ciudad 3.733, marcas que ya usa 3.198,
+// por qué es interesante 3.108, último contacto 4.570, casos/mes estimados 1.425.
+// Esas son las columnas. Cuando el comercial empiece a cargar interés y
+// especialidad trabajando la lista, se agregan.
 
 export const dynamic = "force-dynamic";
 
@@ -42,22 +53,6 @@ const ETAPAS: AcqStage[] = [
   "acreditacion_agendada",
   "no_interesado",
 ];
-
-function Interes({ n }: { n: number | null }) {
-  if (!n) return <span className="text-muted-foreground">—</span>;
-  return (
-    <span
-      className={cn(
-        "tabular-nums",
-        n >= 4 ? "text-emerald-400" : n <= 2 ? "text-muted-foreground" : undefined
-      )}
-      title={`${n} de 5`}
-    >
-      {"●".repeat(n)}
-      <span className="text-muted-foreground/40">{"●".repeat(5 - n)}</span>
-    </span>
-  );
-}
 
 export default async function ProspeccionListaPage({
   searchParams,
@@ -157,8 +152,8 @@ export default async function ProspeccionListaPage({
               <TableRow className="hover:bg-transparent">
                 <TableHead>Doctor</TableHead>
                 <TableHead>Etapa</TableHead>
-                <TableHead>Especialidad</TableHead>
-                <TableHead>Interés</TableHead>
+                <TableHead>Fuente</TableHead>
+                <TableHead>Ya usa</TableHead>
                 <TableHead className="text-right">Casos/mes est.</TableHead>
                 <TableHead>Último contacto</TableHead>
                 <TableHead className="text-right">Prioridad</TableHead>
@@ -181,9 +176,12 @@ export default async function ProspeccionListaPage({
                           />
                         ) : null}
                       </span>
-                      {d.city ? (
-                        <span className="text-xs font-normal text-muted-foreground">
-                          {d.city}
+                      {/* por qué es interesante está cargado en 3.108 de 6.826 y es
+                          lo que explica al doctor de un vistazo; la ciudad queda de
+                          respaldo cuando no hay */}
+                      {d.why_interesting || d.city ? (
+                        <span className="block truncate text-xs font-normal text-muted-foreground">
+                          {d.why_interesting ?? d.city}
                         </span>
                       ) : null}
                     </Link>
@@ -196,10 +194,14 @@ export default async function ProspeccionListaPage({
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {d.specialty ?? "—"}
+                    {d.source ? SOURCE_LABELS[d.source] : "—"}
                   </TableCell>
-                  <TableCell>
-                    <Interes n={d.accreditation_interest ?? d.interest_level} />
+                  <TableCell className="text-sm text-muted-foreground">
+                    {d.competitor_brands?.length
+                      ? d.competitor_brands.join(", ")
+                      : d.uses_aligners
+                        ? "Alineadores"
+                        : "—"}
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-sm text-muted-foreground">
                     {d.estimated_cases_month ?? "—"}
