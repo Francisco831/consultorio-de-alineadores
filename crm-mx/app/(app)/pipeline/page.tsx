@@ -12,11 +12,21 @@ import type { Opportunity } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface OppRow extends Opportunity {
-  doctor: { id: string; nombre: string; phone: string | null; whatsapp: string | null } | null;
+  doctor: {
+    id: string;
+    nombre: string;
+    phone: string | null;
+    whatsapp: string | null;
+    is_accredited: boolean;
+  } | null;
 }
 
+// is_accredited viaja en el select para poder MARCAR la tarjeta. No se filtra: un
+// doctor importante puede traer un paciente antes de acreditarse, y esa oportunidad
+// es la señal más caliente que hay — esconderla sería peor que mezclarla. Lo que no
+// puede pasar es que se lea como una oportunidad más de la base acreditada.
 const OPP_SELECT =
-  "*, doctor:doctors(id, nombre, phone, whatsapp)";
+  "*, doctor:doctors(id, nombre, phone, whatsapp, is_accredited)";
 
 const JOURNEY_SELECT =
   "id, nombre, city, source, owner_id, acquisition_stage, activation_stage, interest_level, estimated_cases_month, priority_score, last_contact_at, accredited_at, created_at, is_demo";
@@ -66,6 +76,9 @@ export default async function PipelinePage({
       ? supabase
           .from("doctors")
           .select(JOURNEY_SELECT)
+          // el universo B son las DOS condiciones juntas; sin este filtro el board
+          // de activación mostraba a cualquiera que tuviera etapa cargada
+          .eq("is_accredited", true)
           .not("activation_stage", "is", null)
           .or(
             `activation_stage.neq.primer_caso_pagado,first_paid_case_at.gte.${monthStartISO}`

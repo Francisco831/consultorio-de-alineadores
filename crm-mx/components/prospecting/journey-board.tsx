@@ -193,7 +193,7 @@ export function JourneyBoard({
                       <Link
                         href={
                           mode === "adquisicion"
-                            ? "/doctores?f=prospectos&sort=prioridad"
+                            ? "/prospeccion/lista"
                             : "/doctores?f=activacion&sort=prioridad"
                         }
                         className="rounded-lg border border-dashed p-2.5 text-center text-xs text-muted-foreground hover:bg-muted/60"

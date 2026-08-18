@@ -2,8 +2,13 @@
 
 /**
  * Perfil comercial del PROSPECTO (universo A): la info que sí existe antes
- * de acreditarse y que alimenta su priority score. Solo se muestra en
- * doctores no acreditados.
+ * de acreditarse y que alimenta su priority score.
+ *
+ * En un doctor YA acreditado sigue estando, pero plegado y de solo lectura, con
+ * el título "Cómo lo conseguimos": deja de ser un formulario que mueve la
+ * prioridad —del otro lado la prioridad la calculan los casos— y pasa a ser el
+ * registro de cómo entró. Antes desaparecía de la pantalla el día de la
+ * acreditación y esa información no se veía nunca más.
  */
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -28,6 +33,36 @@ export function ProspectProfileCard({ doctor }: { doctor: Doctor }) {
       if (res?.error) setError(res.error);
       else setSaved(true);
     });
+  }
+
+  const historico = doctor.is_accredited;
+
+  if (historico) {
+    const datos: [string, string | null][] = [
+      ["Especialidad", doctor.specialty],
+      ["Usaba alineadores", doctor.uses_aligners == null ? null : doctor.uses_aligners ? "Sí" : "No"],
+      ["Casos/mes estimados", doctor.estimated_cases_month?.toString() ?? null],
+      ["Interés", doctor.accreditation_interest ? `${doctor.accreditation_interest} de 5` : null],
+      ["Por qué era interesante", doctor.why_interesting],
+      ["Marcas que usaba", doctor.competitor_brands?.length ? doctor.competitor_brands.join(", ") : null],
+    ];
+    const cargados = datos.filter(([, v]) => v);
+    if (!cargados.length) return null;
+    return (
+      <details className="rounded-lg border p-4 [&[open]>summary>svg]:rotate-90">
+        <summary className="cursor-pointer list-none text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          Cómo lo conseguimos
+        </summary>
+        <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+          {cargados.map(([k, v]) => (
+            <div key={k}>
+              <dt className="text-xs text-muted-foreground">{k}</dt>
+              <dd className="text-sm">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      </details>
+    );
   }
 
   return (

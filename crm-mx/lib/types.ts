@@ -324,3 +324,17 @@ export const BUCKET_LABELS: Record<PriorityBucket, string> = {
   riesgo: "Riesgo",
   growth: "Growth",
 };
+
+/** Las dos áreas tienen su propio marcador mensual. `paid_cases` es el del área
+ *  ACREDITADOS; `accreditations` el de POR ACREDITARSE — este último ya lo leían
+ *  /prospeccion y /dashboard y ninguna línea del código lo escribía, así que el
+ *  tile mostraba el conteo del mes sin denominador.
+ *
+ *  Vive acá y no en lib/actions/admin.ts porque ese archivo es "use server" y
+ *  solo puede exportar funciones async. */
+export const METRICAS_OBJETIVO = {
+  paid_cases: "Casos pagados (Acreditados)",
+  accreditations: "Acreditaciones (Por acreditarse)",
+} as const;
+
+export type MetricaObjetivo = keyof typeof METRICAS_OBJETIVO;

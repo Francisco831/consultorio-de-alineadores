@@ -381,7 +381,12 @@ export default async function DoctorPage({
         </div>
 
         {/* ---------- perfil de prospecto (solo universo A) ---------- */}
-        {!doctor.is_accredited ? <ProspectProfileCard doctor={doctor} /> : null}
+        {/* Ya no desaparece al acreditarse. Lo que el área "Por acreditarse"
+            aprendió —especialidad, interés, casos estimados, por qué era
+            interesante— se quedaba en la fila y dejaba de verse justo el día
+            que el doctor pasaba a importar. Del lado acreditado se muestra
+            plegado y de solo lectura. */}
+        <ProspectProfileCard doctor={doctor} />
 
         {/* ---------- inteligencia comercial (AI + motor de reglas) ---------- */}
         <DoctorAIPanel doctorId={doctor.id} />

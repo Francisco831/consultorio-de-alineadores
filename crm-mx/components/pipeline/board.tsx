@@ -86,7 +86,7 @@ export interface PipelineOpp {
   expected_close_date: string | null;
   owner_id: string | null;
   is_demo: boolean;
-  doctor: { id: string; nombre: string } | null;
+  doctor: { id: string; nombre: string; is_accredited?: boolean } | null;
 }
 
 export function PipelineBoard({
@@ -412,6 +412,14 @@ function OppCard({
               className="block truncate text-sm font-medium hover:underline"
             >
               {opp.doctor.nombre}
+              {opp.doctor.is_accredited === false ? (
+                <span
+                  className="ml-1.5 rounded-sm border border-amber-500/40 bg-amber-500/10 px-1 py-px align-middle text-[9px] font-semibold uppercase tracking-wide text-amber-300"
+                  title="Este doctor todavía no está acreditado: el caso no puede ingresar hasta que lo esté"
+                >
+                  sin acreditar
+                </span>
+              ) : null}
             </Link>
           ) : (
             <span className="text-sm font-medium text-muted-foreground">

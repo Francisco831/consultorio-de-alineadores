@@ -39,23 +39,21 @@ const SORTS: Record<string, { col: string; label: string }> = {
   health: { col: "health_score", label: "Health" },
 };
 
-// DOS UNIVERSOS: los tabs separan no-acreditados (universo A: hay que ACREDITARLOS)
-// de acreditados (universo B: hay que generarles CASOS)
+// ESTA PANTALLA ES EL ÁREA "ACREDITADOS", entera. El corte no es un tab que se pueda
+// desmarcar: la consulta de abajo agrega `.eq("is_accredited", true)` siempre. Los
+// doctores por acreditarse tienen su propia lista en /prospeccion/lista, con las
+// columnas que les corresponden.
+//
+// Los tabs de acá adentro filtran por lifecycle_stage, y eso NO alcanza por sí solo:
+// lifecycle_stage es un enum de 14 etapas que atraviesa las dos áreas, así que
+// "Perdidos" sin el corte devolvía prospectos descartados mezclados con acreditados
+// que se fueron. Lo mismo "Activos", "En riesgo" y "Dormidos".
 const FILTERS: {
   key: string;
   label: string;
   stages?: LifecycleStage[];
-  accredited?: boolean;
 }[] = [
   { key: "todos", label: "Todos" },
-  { key: "prospectos", label: "Prospectos", accredited: false },
-  {
-    key: "acreditacion",
-    label: "Por acreditar",
-    accredited: false,
-    stages: ["interes_acreditacion", "acreditacion_agendada"],
-  },
-  { key: "acreditados", label: "Acreditados", accredited: true },
   {
     key: "activacion",
     label: "Activación",
@@ -134,11 +132,12 @@ export default async function DoctoresPage({
     .order("new_case_count", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
+  // el corte del área, no negociable desde la URL
+  query = query.eq("is_accredited", true);
+
   if (q) query = query.ilike("nombre", `%${q}%`);
   const filter = FILTERS.find((x) => x.key === f);
   if (filter?.stages) query = query.in("lifecycle_stage", filter.stages);
-  if (filter?.accredited !== undefined)
-    query = query.eq("is_accredited", filter.accredited);
 
   const { data, count, error } = await query;
   const doctors = (data ?? []) as Doctor[];
@@ -151,7 +150,10 @@ export default async function DoctoresPage({
         <div>
           <h1 className="text-lg font-semibold tracking-tight">Doctores</h1>
           <p className="text-sm text-muted-foreground">
-            {total} {total === 1 ? "doctor" : "doctores"}
+            {total} {total === 1 ? "acreditado" : "acreditados"} ·{" "}
+            <Link href="/prospeccion/lista" className="hover:underline">
+              ver los que están por acreditarse
+            </Link>
           </p>
         </div>
       </div>
@@ -201,7 +203,7 @@ export default async function DoctoresPage({
               ? `No hay doctores que coincidan con “${q}”.`
               : f !== "todos"
                 ? `No hay doctores en “${FILTERS.find((x) => x.key === f)?.label}” por ahora.`
-                : "Todavía no hay doctores cargados."}
+                : "Todavía no hay doctores acreditados."}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border">

@@ -18,6 +18,7 @@ import {
   guardarObjetivo,
 } from "@/lib/actions/admin";
 import { formatDate } from "@/lib/format";
+import { METRICAS_OBJETIVO } from "@/lib/types";
 import { AgentBadge } from "@/components/ai/agent-badge";
 import { BRAIN_VERSION } from "@/lib/ai/brain";
 import { AI_MODEL, aiConfigured } from "@/lib/ai/db";
@@ -85,11 +86,14 @@ export default async function AjustesPage() {
     { data: allowRaw, error: allowErr },
   ] = await Promise.all([
       supabase.from("automation_rules").select("*").order("key"),
+      // las DOS áreas: paid_cases es el marcador de Acreditados, accreditations
+      // el de Por acreditarse
       supabase
         .from("goals")
         .select("*")
-        .eq("metric", "paid_cases")
+        .in("metric", ["paid_cases", "accreditations"])
         .is("user_id", null)
+        .order("metric", { ascending: true })
         .order("period", { ascending: true }),
       supabase.from("profiles").select("*").order("nombre"),
       // La tabla puede no existir todavía (0031 sin aplicar): el error se maneja
@@ -101,7 +105,12 @@ export default async function AjustesPage() {
         .order("email"),
     ]);
   const rules = (rulesRaw ?? []) as Rule[];
-  const goals = (goalsRaw ?? []) as { id: string; period: string; target: number }[];
+  const goals = (goalsRaw ?? []) as {
+    id: string;
+    period: string;
+    target: number;
+    metric: string;
+  }[];
   const invitaciones: InvitacionRow[] | null = allowErr
     ? null
     : ((allowRaw ?? []) as InvitacionRow[]);
@@ -201,7 +210,7 @@ export default async function AjustesPage() {
       {/* ---------- objetivos ---------- */}
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Objetivo mensual de casos (país)
+          Objetivos mensuales (país)
         </h2>
         <ul className="divide-y rounded-lg border">
           {goals.map((g) => (
@@ -211,14 +220,22 @@ export default async function AjustesPage() {
                   month: "long",
                   year: "numeric",
                 })}
+                <span className="ml-2 text-xs normal-case text-muted-foreground">
+                  {g.metric === "accreditations"
+                    ? "Por acreditarse"
+                    : "Acreditados"}
+                </span>
               </span>
-              <span className="font-medium tabular-nums">{g.target} casos</span>
+              <span className="font-medium tabular-nums">
+                {g.target}{" "}
+                {g.metric === "accreditations" ? "acreditaciones" : "casos"}
+              </span>
             </li>
           ))}
           {goals.length === 0 ? (
             <li className="px-4 py-3 text-sm text-muted-foreground">
-              Sin objetivos cargados. La rampa H2: ago 24 · sep 26 · oct 28 ·
-              nov 30 · dic 30.
+              Sin objetivos cargados. La rampa H2 de casos: ago 24 · sep 26 ·
+              oct 28 · nov 30 · dic 30.
             </li>
           ) : null}
         </ul>
@@ -237,8 +254,25 @@ export default async function AjustesPage() {
               />
             </div>
             <div className="space-y-1">
+              <label htmlFor="goal-metric" className="text-xs text-muted-foreground">
+                Área
+              </label>
+              <select
+                id="goal-metric"
+                name="metric"
+                defaultValue="paid_cases"
+                className="h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                {Object.entries(METRICAS_OBJETIVO).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
               <label htmlFor="goal-target" className="text-xs text-muted-foreground">
-                Casos
+                Meta
               </label>
               <Input
                 id="goal-target"

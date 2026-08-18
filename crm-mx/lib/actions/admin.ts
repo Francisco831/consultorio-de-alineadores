@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { METRICAS_OBJETIVO, type MetricaObjetivo } from "@/lib/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 async function managerClient(): Promise<SupabaseClient | null> {
@@ -63,21 +64,28 @@ export async function guardarObjetivo(formData: FormData): Promise<void> {
   if (!supabase) return;
   const period = String(formData.get("period")); // YYYY-MM
   const target = parseInt(String(formData.get("target")));
+  const metricRaw = String(formData.get("metric") ?? "paid_cases");
+  // sin whitelist, un valor cualquiera escribiría una meta que ninguna pantalla
+  // lee y que nadie encontraría después
+  const metric: MetricaObjetivo =
+    metricRaw in METRICAS_OBJETIVO ? (metricRaw as MetricaObjetivo) : "paid_cases";
   if (!period || !Number.isFinite(target)) return;
   const periodDate = `${period}-01`;
   const { data: existing } = await supabase
     .from("goals")
     .select("id")
     .eq("period", periodDate)
-    .eq("metric", "paid_cases")
+    .eq("metric", metric)
     .is("user_id", null)
     .maybeSingle();
   const { error } = existing
     ? await supabase.from("goals").update({ target }).eq("id", existing.id)
     : await supabase
         .from("goals")
-        .insert({ period: periodDate, metric: "paid_cases", target, user_id: null });
+        .insert({ period: periodDate, metric, target, user_id: null });
   if (error) console.error("guardarObjetivo:", error.message);
   revalidatePath("/ajustes");
   revalidatePath("/hoy");
+  revalidatePath("/prospeccion");
+  revalidatePath("/dashboard");
 }

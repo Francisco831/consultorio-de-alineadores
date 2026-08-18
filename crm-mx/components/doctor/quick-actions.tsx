@@ -9,6 +9,8 @@ import {
   ClipboardList,
   Target,
   FileSearch,
+  MoveRight,
+  BadgeCheck,
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -25,14 +27,37 @@ import { Textarea } from "@/components/ui/textarea";
 import { logActivity } from "@/lib/actions/activities";
 import { createTask } from "@/lib/actions/tasks";
 import { createOpportunity } from "@/lib/actions/opportunities";
+import { moveAcquisitionStage, acreditarDoctor } from "@/lib/actions/journey";
 import { updateDoctorContact } from "@/lib/actions/doctors";
 import { waLink, telLink, periskopeLink } from "@/lib/phone";
-import { ACTIVITY_TYPE_LABELS, TASK_TYPE_LABELS, type Doctor } from "@/lib/types";
+import {
+  ACTIVITY_TYPE_LABELS,
+  TASK_TYPE_LABELS,
+  ACQ_STAGE_LABELS,
+  type AcqStage,
+  type Doctor,
+} from "@/lib/types";
 
 const selectClass =
   "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
-type DialogKind = "actividad" | "tarea" | "oportunidad" | "viabilidad" | "contacto" | null;
+type DialogKind =
+  | "actividad"
+  | "tarea"
+  | "oportunidad"
+  | "viabilidad"
+  | "contacto"
+  | "etapa"
+  | "acreditar"
+  | null;
+
+// El área "Por acreditarse" mueve al doctor con estas etapas. 'acreditado' NO está:
+// cruzar de área es una acción con nombre propio y con recibo, no un ítem más de un
+// select (ver el botón Acreditar). 'no_interesado' sí, porque descartar es parte del
+// trabajo de este lado.
+const ETAPAS_ADQUISICION = (
+  Object.keys(ACQ_STAGE_LABELS) as AcqStage[]
+).filter((e) => e !== "acreditado");
 
 export function QuickActions({
   doctor,
@@ -68,6 +93,31 @@ export function QuickActions({
         else setOpen(null);
       });
     };
+  }
+
+  // moveAcquisitionStage toma (id, etapa), no un FormData: va con su propio submit.
+  function moverEtapa(fd: FormData) {
+    setError(null);
+    const etapa = String(fd.get("acquisition_stage") ?? "") as AcqStage;
+    if (!etapa) return;
+    startTransition(async () => {
+      const res = await moveAcquisitionStage(doctor.id, etapa);
+      if (res?.error) setError(res.error);
+      else setOpen(null);
+    });
+  }
+
+  function acreditar(fd: FormData) {
+    setError(null);
+    startTransition(async () => {
+      const res = await acreditarDoctor(doctor.id, String(fd.get("nota") ?? ""));
+      // el aviso es el caso raro en que el doctor YA cruzó pero la nota no se
+      // guardó: se muestra igual que un error y el diálogo queda abierto, porque
+      // cerrarlo diciendo "listo" sería mentir a medias
+      const problema = res.error ?? ("aviso" in res ? res.aviso : null);
+      if (problema) setError(problema);
+      else setOpen(null);
+    });
   }
 
   return (
@@ -107,6 +157,21 @@ export function QuickActions({
         <ClipboardList data-icon="inline-start" />
         Tarea
       </Button>
+      {/* La acción propia del área "Por acreditarse", que hasta ahora vivía solo en
+          el arrastre del kanban: desde la ficha de un prospecto no había forma de
+          moverlo de etapa. */}
+      {!doctor.is_accredited ? (
+        <>
+          <Button size="sm" onClick={() => setOpen("acreditar")}>
+            <BadgeCheck data-icon="inline-start" />
+            Acreditar
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setOpen("etapa")}>
+            <MoveRight data-icon="inline-start" />
+            Mover etapa
+          </Button>
+        </>
+      ) : null}
       <Button variant="outline" size="sm" onClick={() => setOpen("oportunidad")}>
         <Target data-icon="inline-start" />
         Oportunidad
@@ -222,6 +287,16 @@ export function QuickActions({
                 : `Un paciente potencial de ${doctor.nombre}`}
             </DialogDescription>
           </DialogHeader>
+          {/* No se bloquea: un doctor importante puede traer un paciente antes de
+              acreditarse. Pero se dice, porque es la señal más caliente del área
+              "Por acreditarse" y no tiene que pasar desapercibida. */}
+          {!doctor.is_accredited ? (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+              {doctor.nombre} todavía no está acreditado. Se puede cargar igual —
+              tener un paciente esperando es motivo para acreditarlo cuanto antes—
+              pero el caso no va a poder ingresar hasta que la acreditación esté hecha.
+            </p>
+          ) : null}
           <form action={submit(createOpportunity)} className="space-y-3">
             <input type="hidden" name="doctor_id" value={doctor.id} />
             <input
@@ -257,6 +332,79 @@ export function QuickActions({
                   : open === "viabilidad"
                     ? "Crear viabilidad"
                     : "Crear oportunidad"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ---------- acreditar: el cruce de área, con recibo ---------- */}
+      <Dialog open={open === "acreditar"} onOpenChange={(o) => !o && setOpen(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Acreditar a {doctor.nombre}</DialogTitle>
+            <DialogDescription>
+              Pasa al área de acreditados y arranca el pipeline de activación.
+            </DialogDescription>
+          </DialogHeader>
+          <form action={acreditar} className="space-y-3">
+            <ul className="space-y-1 rounded-lg border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              <li>· Queda acreditado con fecha de hoy.</li>
+              <li>· Se cierran las tareas de captación que sigan abiertas.</li>
+              <li>· Queda el hito en su historial.</li>
+            </ul>
+            <div className="space-y-1.5">
+              <Label htmlFor="qa-acr-nota">Nota (opcional)</Label>
+              <Textarea
+                id="qa-acr-nota"
+                name="nota"
+                rows={2}
+                placeholder="Cómo se cerró, qué acordaron, qué sigue…"
+              />
+            </div>
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <DialogFooter>
+              <Button type="submit" disabled={pending}>
+                {pending ? "Acreditando…" : "Acreditar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ---------- mover de etapa (área "Por acreditarse") ---------- */}
+      <Dialog open={open === "etapa"} onOpenChange={(o) => !o && setOpen(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mover de etapa</DialogTitle>
+            <DialogDescription>
+              {doctor.nombre} · pipeline de acreditación
+            </DialogDescription>
+          </DialogHeader>
+          <form action={moverEtapa} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="qa-acq-stage">Etapa</Label>
+              <select
+                id="qa-acq-stage"
+                name="acquisition_stage"
+                className={selectClass}
+                defaultValue={doctor.acquisition_stage ?? "identificado"}
+              >
+                {ETAPAS_ADQUISICION.map((e) => (
+                  <option key={e} value={e}>
+                    {ACQ_STAGE_LABELS[e]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Acreditarlo no se hace desde acá: es el botón Acreditar, que además
+              cierra las tareas de captación y deja el hito en el historial.
+            </p>
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <DialogFooter>
+              <Button type="submit" disabled={pending}>
+                {pending ? "Moviendo…" : "Mover"}
               </Button>
             </DialogFooter>
           </form>

@@ -6,8 +6,10 @@ import type { AcqStage, ActStage } from "@/lib/types";
 
 function revalidateJourney(doctorId?: string) {
   revalidatePath("/prospeccion");
+  revalidatePath("/prospeccion/lista");
   revalidatePath("/pipeline");
   revalidatePath("/doctores");
+  revalidatePath("/tareas");
   revalidatePath("/hoy");
   revalidatePath("/dashboard");
   if (doctorId) revalidatePath(`/doctores/${doctorId}`);
@@ -122,4 +124,87 @@ export async function updateProspectProfile(formData: FormData) {
   revalidatePath(`/doctores/${id}`);
   revalidatePath("/prospeccion");
   return { ok: true };
+}
+
+/**
+ * ACREDITAR: el cruce de un doctor del área "Por acreditarse" a "Acreditados".
+ *
+ * Hasta acá el cruce era arrastrar una tarjeta en el kanban y ver un toast. Eso
+ * dispara la Conversión 1 correctamente, pero deja tres cabos sueltos que con las
+ * dos áreas separadas se vuelven visibles:
+ *
+ *  1. Las tareas de captación quedaban abiertas. La automatización deja de
+ *     GENERARLAS al acreditarse (filtra `not d.is_accredited`, 0020:272) pero no
+ *     cierra las que ya existen: el día del cruce el vendedor veía, en la sección
+ *     "Acreditados", una tarea pidiéndole que lo acredite.
+ *  2. El momento de la acreditación —el corte central del negocio— no quedaba
+ *     como hito en el historial del doctor.
+ *  3. /tareas no se revalidaba.
+ *
+ * LA FECHA NO SE PUEDE ELEGIR, y es a propósito del diseño de la base: doctors_guard
+ * (0019:705-711) prohíbe escribir accredited_at a mano, y el trigger de journey lo
+ * pone en current_date (0015:161). Acreditar con fecha retroactiva necesitaría una
+ * función con permisos de sistema.
+ */
+export async function acreditarDoctor(doctorId: string, nota?: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Sesión expirada" };
+
+  // 1. el cruce — dispara la Conversión 1 (is_accredited, accredited_at,
+  //    activation_stage='acreditado', lifecycle='en_activacion')
+  const { data, error } = await supabase
+    .from("doctors")
+    .update({ acquisition_stage: "acreditado" })
+    .eq("id", doctorId)
+    .select("id, nombre");
+  if (error) return { error: error.message };
+  if (!data?.length)
+    return { error: "Tu rol no tiene permisos para acreditar doctores" };
+
+  // 2. el hito en el historial. Si falla, el doctor YA cruzó: no se revierte el
+  //    cruce por no poder escribir la nota, pero tampoco se miente diciendo que
+  //    salió todo bien.
+  const { error: errNota } = await supabase.from("activities").insert({
+    doctor_id: doctorId,
+    type: "nota",
+    summary: "Acreditado",
+    outcome: nota?.trim() || null,
+    occurred_at: new Date().toISOString(),
+    created_by: user.id,
+  });
+
+  // 3. cerrar las tareas de captación que quedaron abiertas. Se identifican sin
+  //    ambigüedad por automation_rule_id: es la marca que dejó la regla que las
+  //    creó. Las tareas cargadas a mano NO se tocan — nadie sabe si siguen
+  //    valiendo, y cerrarlas por las dudas sería peor.
+  const { data: reglas } = await supabase
+    .from("automation_rules")
+    .select("id")
+    .eq("key", "prospecto_sin_seguimiento");
+  const ids = (reglas ?? []).map((r) => (r as { id: string }).id);
+  let cerradas = 0;
+  if (ids.length) {
+    const { data: cerradasRaw } = await supabase
+      .from("tasks")
+      .update({
+        status: "cancelada",
+        outcome: "Se acreditó",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("doctor_id", doctorId)
+      .eq("status", "pendiente")
+      .in("automation_rule_id", ids)
+      .select("id");
+    cerradas = cerradasRaw?.length ?? 0;
+  }
+
+  revalidateJourney(doctorId);
+  return {
+    ok: true,
+    cerradas,
+    ...(errNota ? { aviso: `El doctor quedó acreditado, pero la nota no se guardó: ${errNota.message}` } : {}),
+  };
 }
