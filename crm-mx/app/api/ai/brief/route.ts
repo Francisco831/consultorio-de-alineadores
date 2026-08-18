@@ -9,7 +9,19 @@ import { NextResponse } from "next/server";
 import { requireAgentInvoker, requireSession } from "@/lib/ai/guard";
 import { generateMorningBrief } from "@/lib/ai/director";
 
-export const maxDuration = 300;
+// 60 y no 300 porque el proyecto está en el plan Hobby de Vercel, cuyo techo son
+// 60 segundos: declarar más hace fallar el despliegue.
+//
+// LO QUE HAY QUE SABER: las seis corridas reales medidas el 13/8 tardaron 74, 84,
+// 118, 122, 123 y 144 segundos (agent_runs.latency_ms). Las seis pasan de 60, y la
+// de 74 es la que corrió con effort 'medium' — bajar el esfuerzo no alcanza. En
+// Hobby este endpoint se corta SIEMPRE, y como el runner escribe la fila de
+// agent_runs recién cuando el agente termina, la corrida muere antes de dejar
+// rastro: se paga y no se registra.
+//
+// Por eso en Hobby NO se carga ANTHROPIC_API_KEY: sin clave el guard responde 503
+// limpio y no se gasta nada. El resto del CRM no depende de esto.
+export const maxDuration = 60;
 
 export async function POST() {
   const guard = await requireAgentInvoker();
