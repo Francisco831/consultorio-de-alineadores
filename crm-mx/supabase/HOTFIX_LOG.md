@@ -150,6 +150,9 @@ las dos aplicadas y verificadas en desarrollo el 13/8.
 | 0028 ledger | Aplicada 10/8 | **Aplicada** (en el ledger) |
 | 0029 HITL `ai_confirmado` | **Aplicada 13/8** · chequeo 5 en OK | **Aplicada 13/8** · chequeo 5 en OK |
 | 0030 guards por defecto | **Aplicada 13/8** · verificada en transacción revertida | **Aplicada 13/8** |
+| 0031 allowlist de altas | **Aplicada 18/8** | **Aplicada 18/8** · chequeo 4 en OK (`--probar-altas`) |
+| 0032 recompute al cruzar | **Aplicada 18/8** | **Aplicada 18/8** |
+| 0033 revoke allowlist_audit | **Aplicada 18/8** | Pendiente — ensayada OK |
 
 ### Aplicación en producción — 13/8/2026
 
@@ -183,3 +186,18 @@ para producción. `.env.local` ya apuntaba a `yuxfgbbqhqquuoaudjdd`.
 El 8 es el radio de daño de UNA cuenta cualquiera, porque la policy de lectura es `using (true)`.
 Hoy nadie llega ahí desde afuera —el alta pública está cerrada— pero sigue siendo el hallazgo
 abierto más grande. Se cierra con R-3 (allowlist), que es lo que también destraba el chequeo 4.
+
+### Aplicación en producción — 18/8/2026
+
+`0031` y `0032` las corrió Pancho desde su terminal con la confirmación del ref,
+después del respaldo del día (94.219 filas). Verificación posterior con
+`--probar-altas`: **chequeo 4 en OK** — un alta con mail ajeno se rechaza, la
+allowlist quedó sembrada con los 3 usuarios reales.
+
+**Hallazgo de esa verificación:** el chequeo 1 pasó de OK a FALLA porque
+`auth_allowlist_audit()` (0031:131) quedó sin el `revoke` que las otras funciones
+de 0031 sí tienen — en Postgres una función nueva nace ejecutable por PUBLIC.
+Exposición real: ninguna (devuelve `trigger`, no invocable por RPC). Lo cierra
+`0033`, aplicada en desarrollo el mismo día y ensayada OK contra producción.
+
+Desarrollo, que estaba en 30, quedó en 33 (`0031`+`0032`+`0033` en una corrida).

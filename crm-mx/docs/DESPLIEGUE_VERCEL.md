@@ -11,6 +11,10 @@ antes.
 
 ## Antes de empezar: el bloqueante
 
+> **Cerrado el 18/8/2026:** `0031` está aplicada en producción y el chequeo 4 dio OK con
+> `--probar-altas` — un alta con mail ajeno se rechaza aunque el toggle se encienda. Lo
+> que sigue de esta sección queda como registro de por qué era condición.
+
 **`0031_auth_allowlist.sql` tiene que estar aplicada en producción.** No es burocracia:
 
 - El chequeo 8 de `security-checks` está en **FALLA**: la policy de lectura es `using (true)`,

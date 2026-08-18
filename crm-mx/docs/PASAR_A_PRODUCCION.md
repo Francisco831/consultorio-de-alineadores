@@ -1,5 +1,11 @@
 # Pasar la operación a producción
 
+> **Estado al 18/8/2026 — los pasos de este documento están HECHOS.** La app apunta a
+> producción, el ledger está en 32 (`0031` allowlist y `0032` recompute aplicadas por
+> Pancho desde su terminal, con respaldo previo del día) y la verificación con
+> `--probar-altas` dio el chequeo 4 en OK. Queda `0033` (un revoke sin exposición real,
+> ensayado OK) y el despliegue en Vercel — ver `DESPLIEGUE_VERCEL.md`.
+
 **Estado al 13/8/2026.** Decisión de Pancho: **producción es la base que manda**. Faltan dos
 pasos y los dos los tiene que hacer una persona en una terminal — no por burocracia, sino
 porque el runner exige que alguien escriba el ref de producción a mano antes de escribir en
