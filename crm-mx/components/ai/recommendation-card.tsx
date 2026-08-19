@@ -162,7 +162,7 @@ export function RecommendationCard({ rec }: { rec: AiRecommendationRow }) {
         </p>
       </div>
 
-      {/* ---------- por qué (inferencias, marcadas como tales) ---------- */}
+      {/* ---------- por qué (razonamiento; el agente marca sus inferencias en el texto) ---------- */}
       {rec.why.length > 0 ? (
         <div>
           <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -170,12 +170,7 @@ export function RecommendationCard({ rec }: { rec: AiRecommendationRow }) {
           </p>
           <ul className="mt-1 space-y-0.5 text-sm text-muted-foreground">
             {rec.why.map((w, i) => (
-              <li key={i}>
-                • {w}{" "}
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
-                  · inferencia
-                </span>
-              </li>
+              <li key={i}>• {w}</li>
             ))}
           </ul>
         </div>

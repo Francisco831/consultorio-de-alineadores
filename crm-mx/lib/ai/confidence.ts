@@ -92,12 +92,12 @@ export function dataConfidence(ctx: DoctorContext): { score: number; caps: strin
   if (quality === "POOR") {
     score -= PENALTY.interaction_poor;
     caps.push(
-      "Calidad de interacciones POBRE: las actividades registradas no permiten saber si hubo conversación real, así que el reloj de contacto significativo no sirve como evidencia (ausencia de registro no es ausencia de contacto)."
+      "Las actividades registradas no permiten saber si hubo conversación real con el doctor: puede haber contacto reciente que acá no figure (que no esté registrado no significa que no pasó)."
     );
   } else if (quality === "PARTIAL") {
     score -= PENALTY.interaction_partial;
     caps.push(
-      "Calidad de interacciones PARCIAL: solo una parte de las actividades está calificada como conversación real."
+      "Solo una parte de las actividades registradas está confirmada como conversación real: del resto no se sabe."
     );
   } else if (quality === null) {
     score -= PENALTY.interaction_poor;
@@ -126,7 +126,7 @@ export function dataConfidence(ctx: DoctorContext): { score: number; caps: strin
   if (ctx.is_accredited && !ctx.accreditation_date) {
     score -= PENALTY.missing_accreditation_date;
     caps.push(
-      "Acreditado sin fecha de acreditación cargada: no se puede medir el día 75 ni la antigüedad del hito."
+      "Acreditado sin fecha de acreditación cargada: no se puede saber hace cuánto se acreditó ni si sus primeros hitos están en plazo."
     );
   }
 
@@ -140,15 +140,15 @@ export function dataConfidence(ctx: DoctorContext): { score: number; caps: strin
   const stale = daysStale(ctx.data_as_of);
   if (stale === null) {
     score -= PENALTY.stale_7d;
-    caps.push("No se pudo determinar la frescura de los datos (sin watermark de sync).");
+    caps.push("No se pudo determinar qué tan frescos son los datos (no consta la fecha de la última sincronización).");
   } else if (stale > STALE_HARD_DAYS) {
     score -= PENALTY.stale_30d;
     caps.push(
-      `Los datos tienen ${stale} días (snapshot al ${ctx.data_as_of}): cualquier conclusión sobre ritmo o contacto puede estar vencida.`
+      `Los datos tienen ${stale} días (última actualización: ${ctx.data_as_of}): cualquier conclusión sobre ritmo o contacto puede estar vencida.`
     );
   } else if (stale > STALE_WARN_DAYS) {
     score -= PENALTY.stale_7d;
-    caps.push(`Los datos tienen ${stale} días (snapshot al ${ctx.data_as_of}).`);
+    caps.push(`Los datos tienen ${stale} días (última actualización: ${ctx.data_as_of}).`);
   }
 
   return { score: clamp(score), caps };
