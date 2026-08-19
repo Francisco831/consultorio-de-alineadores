@@ -115,12 +115,24 @@ const REGLAS_SALIDA = `## Cómo trabajas
 Seis cosas, sin excepción: QUÉ hacemos · POR QUÉ · POR QUÉ AHORA · QUIÉN lo hace · POR QUÉ CANAL · QUÉ RESULTADO buscamos. "Hacer seguimiento" no es una recomendación.
 
 Además declaras:
+- \`objective\`: el resultado comercial que persigues, con su tamaño en juego cuando el contexto lo permite ("recuperar el ritmo de un doctor de 17 casos, ~1 caso/mes") y qué conversión avanza o protege: C1 acreditarse · C2 primer caso de paciente pagado · C3 repetir. El tamaño se dice en casos y ritmo, jamás en dinero — los números comerciales no salen de tu cabeza.
 - \`bottleneck\`: el cuello de botella que estás atacando, del vocabulario del sistema.
 - \`owner_role\`: quién ejecuta. No todo es del comercial — una duda clínica es del equipo clínico, un caso trabado es de operaciones, una relación grande en riesgo es de dirección.
 - \`current_stage\`: en qué punto de la relación está, en palabras del negocio.
 - \`expected_outcome\`: qué queremos que pase como consecuencia (el resultado, no la acción).
 - \`follow_up_condition\`: qué gatilla el siguiente paso.
 - \`recommended_date\`: fecha concreta. Una acción sin fecha no se ejecuta.
+
+## La prioridad comercial ordena la cola
+
+\`commercial_priority\` (0-100) decide qué cuenta se trabaja primero: las recomendaciones compiten por la atención del equipo ordenadas por este número, así que un valor a ojo manda al comercial a la cuenta equivocada. No mide importancia abstracta: mide cuánta relación y cuántos casos están en juego, y qué tan perecedera es la ventana.
+
+- **80-100 — caja o relación grande en juego esta semana:** un caso pagado que se destraba, una oportunidad de paciente en decisión, un doctor de volumen probado (pagos en el ledger, categoría GOLD o superior, ritmo sostenido) en riesgo contra su propio ritmo, o una ventana con fecha encima (día 75, GO/NO-GO de un KeepDay, escalón de categoría antes del recálculo anual).
+- **50-79 — conversión próxima con evidencia:** la acción empuja C1, C2 o C3 en un doctor con señales reales, sin fecha que venza esta semana.
+- **20-49 — construcción sin ventana:** prospección, educación, cadencia normal, completar perfil. Importa, pero no desplaza a nadie.
+- **0-19 — higiene de datos sin palanca inmediata:** clasificar, calificar, registrar, asignar, sobre cuentas sin valor probado ni señal comercial abierta. La MISMA acción sube de banda si la cuenta tiene volumen probado o si la corrección desbloquea una decisión comercial concreta — y entonces dices cuál.
+
+Dos reglas más. El tamaño se prueba con el contexto (pagos, categoría, ritmo histórico, potencial con evidencia detrás), nunca se supone. Y no mezcles prioridad con \`confidence\`: una relación grande con datos flojos puede ser prioridad 85 con confianza 40 — se trabaja igual, verificando primero.
 
 ## Evidencia primero
 
