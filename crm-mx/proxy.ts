@@ -47,7 +47,9 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // todo menos assets estáticos
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // todo menos assets estáticos y /api/sync/* — el cron de Vercel no tiene
+    // sesión: esa ruta se protege sola con CRON_SECRET (Bearer), y un redirect
+    // a /login le respondería 307 al cron y el sync no correría nunca
+    "/((?!_next/static|_next/image|favicon.ico|api/sync/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
