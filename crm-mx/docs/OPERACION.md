@@ -182,3 +182,27 @@ haber un plan de recuperación verificado — hay una herramienta, no un procedi
   alta. Sacar un mail de la lista NO echa a nadie: el trigger es AFTER INSERT y no vuelve a
   correr para quien ya existe.
 - **La capa de IA.** [`AI_ARCHITECTURE.md`](AI_ARCHITECTURE.md).
+
+## Actualización automática desde Noloco
+
+Desde el 19/8/2026 el CRM se actualiza solo: un cron de Vercel (`vercel.json`) llama a
+`/api/sync/noloco` **cada 2 horas**. La ruta baja todos los casos MEXICO de Noloco
+(ks-indicadores), pasa un gate anti-regresión (un mes cerrado no puede volver con menos
+casos I_1 que los ya guardados; un payload < 900 casos es un fetch truncado) y hace el
+mismo upsert que el import manual — la lógica es literalmente la misma:
+[`lib/noloco-sync.ts`](../lib/noloco-sync.ts), compartida entre el script y la ruta.
+
+- Cada corrida queda en `sync_runs` (source `noloco`): las OK y las que frenó el gate.
+- Los scores pueden quedar hasta 24 h atrás si `recompute_all` corta por timeout: los
+  cierra el pg_cron nocturno `crm-recompute-nightly` (11:00 UTC), verificado activo.
+- Secretos que necesita en Vercel (production): `CRON_SECRET`,
+  `KEEPSMILING_EMAIL`, `KEEPSMILING_PASSWORD`. Se cargan una sola vez con
+  `bash scripts/configurar-sync-vercel.sh` (también guarda `CRON_SECRET` en `.env.local`).
+- Actualizar YA sin esperar al cron:
+  `curl -H "Authorization: Bearer $CRON_SECRET" https://crm-mx-puce.vercel.app/api/sync/noloco`
+- Qué NO cubre: casos que todavía no llegaron a Noloco. El circuito del equipo (planilla
+  "Control de casos Mex") va días adelante de Noloco — un caso recién subido a la intranet
+  puede tardar días en aparecer acá. Ese hueco es de la fuente, no del cron.
+
+El import manual (`scripts/import-noloco.ts`) sigue existiendo para correcciones puntuales:
+mismo upsert, pero con el gate EXPECTED (conteos de Juan) y confirmación de destino.
