@@ -1,4 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { guardarMetasComercial } from "@/lib/actions/team";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { fetchAllRows } from "@/lib/supabase/fetch-all";
 import { todayMX, monthStartMX } from "@/lib/dates";
 import {
@@ -24,6 +27,7 @@ export default async function EquipoPage() {
     { data: acts30 },
     { data: overdueTasks },
     { data: goals },
+    { data: actsMes },
   ] = await Promise.all([
     supabase.from("profiles").select("id, nombre, rol, activo").order("nombre"),
     // paginado: el mapa doctor→owner cruza los casos del mes. Con 6.4k doctores
@@ -65,10 +69,36 @@ export default async function EquipoPage() {
     ).then((data) => ({ data })),
     supabase
       .from("goals")
-      .select("user_id, target")
+      .select("user_id, metric, target")
       .eq("period", monthStartISO)
-      .eq("metric", "paid_cases"),
+      .in("metric", ["paid_cases", "contactos", "videollamadas", "keepdays"]),
+    fetchAllRows<{ created_by: string | null; type: string }>((from, to) =>
+      supabase
+        .from("activities")
+        .select("created_by, type")
+        .eq("is_demo", false)
+        .gte("occurred_at", monthStartISO)
+        .range(from, to)
+    ).then((data) => ({ data })),
   ]);
+
+  // último ingreso de cada uno (auth.users) — la función tiene gate de rol
+  // adentro: para un rol sin gestión devuelve error y la columna no se muestra
+  const { data: signins } = await supabase.rpc("team_signins");
+  const lastSignIn = new Map<string, string | null>(
+    ((signins ?? []) as { user_id: string; last_sign_in_at: string | null }[]).map(
+      (s) => [s.user_id, s.last_sign_in_at]
+    )
+  );
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser();
+  const { data: myProfile } = currentUser
+    ? await supabase.from("profiles").select("rol").eq("id", currentUser.id).single()
+    : { data: null };
+  const isManager = ["ADMIN", "COUNTRY_MANAGER", "SALES_MANAGER"].includes(
+    myProfile?.rol ?? ""
+  );
 
   const ownerOf = new Map((doctors ?? []).map((d) => [d.id, d.owner_id]));
   const stats = new Map<
@@ -102,7 +132,27 @@ export default async function EquipoPage() {
     const s = ensure(t.assigned_to);
     if (s) s.vencidas++;
   }
-  const goalOf = new Map((goals ?? []).map((g) => [g.user_id, g.target]));
+  const goalOf = new Map(
+    (goals ?? [])
+      .filter((g) => g.metric === "paid_cases")
+      .map((g) => [g.user_id, g.target])
+  );
+  const metaDe = new Map(
+    (goals ?? []).map((g) => [`${g.user_id}|${g.metric}`, g.target])
+  );
+
+  // reales del MES calendario para el panel de metas (la tabla de arriba usa 30d)
+  const CONTACTO_TYPES = new Set(["llamada", "whatsapp", "visita", "reunion"]);
+  const mes = new Map<string, { contactos: number; videollamadas: number; keepdays: number }>();
+  for (const a of actsMes ?? []) {
+    if (!a.created_by) continue;
+    if (!mes.has(a.created_by))
+      mes.set(a.created_by, { contactos: 0, videollamadas: 0, keepdays: 0 });
+    const m = mes.get(a.created_by)!;
+    if (CONTACTO_TYPES.has(a.type)) m.contactos++;
+    if (a.type === "reunion") m.videollamadas++;
+    if (a.type === "keepday") m.keepdays++;
+  }
 
   const team = (profiles ?? []).filter((p) => p.activo);
 
@@ -126,6 +176,7 @@ export default async function EquipoPage() {
               <TableHead className="text-right">Visitas 30d</TableHead>
               <TableHead className="text-right">KeepDays 30d</TableHead>
               <TableHead className="text-right">Tareas vencidas</TableHead>
+              {signins ? <TableHead className="text-right">Último ingreso</TableHead> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -157,12 +208,100 @@ export default async function EquipoPage() {
                       "0"
                     )}
                   </TableCell>
+                  {signins ? (
+                    <TableCell className="text-right text-xs tabular-nums text-muted-foreground">
+                      {lastSignIn.get(p.id)
+                        ? new Date(lastSignIn.get(p.id)!).toLocaleString("es-MX", {
+                            timeZone: "America/Mexico_City",
+                            day: "2-digit",
+                            month: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "nunca entró"}
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               );
             })}
           </TableBody>
         </Table>
       </div>
+      <div className="space-y-2">
+        <div>
+          <h2 className="text-base font-semibold tracking-tight">
+            Metas del comercial — mes en curso
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Contactos (llamada + WhatsApp + visita + videollamada) ·
+            videollamadas · KeepDays · casos del mes
+            {isManager ? " — las metas se estipulan acá mismo" : ""}
+          </p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {team.map((p) => {
+            const real = mes.get(p.id) ?? { contactos: 0, videollamadas: 0, keepdays: 0 };
+            const casosReal = stats.get(p.id)?.casos ?? 0;
+            const celdas: { label: string; name: string; real: number; meta: number | undefined }[] = [
+              { label: "Contactos", name: "contactos", real: real.contactos, meta: metaDe.get(`${p.id}|contactos`) },
+              { label: "Videollamadas", name: "videollamadas", real: real.videollamadas, meta: metaDe.get(`${p.id}|videollamadas`) },
+              { label: "KeepDays", name: "keepdays", real: real.keepdays, meta: metaDe.get(`${p.id}|keepdays`) },
+              { label: "Casos", name: "paid_cases", real: casosReal, meta: metaDe.get(`${p.id}|paid_cases`) },
+            ];
+            return (
+              <div key={p.id} className="rounded-lg border bg-card p-4">
+                <p className="mb-3 font-medium">{p.nombre}</p>
+                <form action={guardarMetasComercial} className="space-y-2">
+                  <input type="hidden" name="user_id" value={p.id} />
+                  {celdas.map((c) => {
+                    const cumple = c.meta !== undefined && c.real >= c.meta;
+                    return (
+                      <div key={c.name} className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-muted-foreground">{c.label}</span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={
+                              "text-sm font-medium tabular-nums " +
+                              (c.meta === undefined
+                                ? ""
+                                : cumple
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : "")
+                            }
+                          >
+                            {c.real}
+                            <span className="text-muted-foreground font-normal">
+                              {" "}/ {c.meta ?? "—"}
+                            </span>
+                          </span>
+                          {isManager ? (
+                            <Input
+                              type="number"
+                              name={c.name}
+                              min={0}
+                              defaultValue={c.meta ?? ""}
+                              placeholder="meta"
+                              className="h-7 w-20 text-right text-xs"
+                            />
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {isManager ? (
+                    <div className="pt-1 text-right">
+                      <Button type="submit" size="sm" variant="outline">
+                        Guardar metas
+                      </Button>
+                    </div>
+                  ) : null}
+                </form>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <p className="text-xs text-muted-foreground">
         “Casos del mes” cuenta los casos nuevos (1ª etapa) de los doctores de los
         que cada persona es owner. Los objetivos por persona se cargan en la tabla

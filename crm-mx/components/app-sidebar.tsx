@@ -15,6 +15,8 @@ import {
   ShieldCheck,
   Settings,
   ListChecks,
+  CalendarDays,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +60,8 @@ const NAV: { href: string; label: string; icon: typeof Sun; grupo?: string }[] =
     { href: "/casos", label: "Casos", icon: FolderOpen, grupo: "Acreditados" },
 
     { href: "/tareas", label: "Tareas", icon: CheckSquare },
+    { href: "/eventos", label: "Eventos", icon: CalendarDays },
+    { href: "/herramientas", label: "Herramientas", icon: BookOpen },
     { href: "/reportes", label: "Reportes", icon: BarChart3 },
     { href: "/equipo", label: "Equipo", icon: Users },
     // qué sabe y qué no sabe la capa AI + las colas de clasificación humana
