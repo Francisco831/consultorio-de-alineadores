@@ -1,5 +1,16 @@
 # Desplegar el CRM en Vercel
 
+> **HECHO — 18/8/2026.** El CRM corre en **crm-mx-puce.vercel.app** (proyecto `crm-mx`,
+> equipo "CRM Mexico", repo Francisco831/consultorio-de-alineadores, producción sigue la
+> rama `crm-mx-ai`, Root Directory `crm-mx`). El mismo día se contrató **Vercel Pro**
+> (USD 20/mes): con el techo de 300s la capa AI quedó viva en la URL — primera corrida
+> real verificada (3 agentes, 233s, USD 0,71, 5 recomendaciones en propuesta). Las 4
+> variables cargadas: las 2 públicas de Supabase + `SUPABASE_SERVICE_ROLE_KEY` +
+> `ANTHROPIC_API_KEY`. Los 3 usuarios activos.
+>
+> Lo que sigue de este documento queda como registro de las decisiones y del porqué.
+
+
 Hoy el CRM corre con `npm run dev` en la máquina de Pancho. Desplegarlo es lo que lo
 convierte en una herramienta de equipo: Juan y Rocío entran desde México sin depender de
 que esa Mac esté prendida.
