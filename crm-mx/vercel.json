@@ -3,6 +3,10 @@
     {
       "path": "/api/sync/noloco",
       "schedule": "0 */2 * * *"
+    },
+    {
+      "path": "/api/sync/actividades",
+      "schedule": "0 15 * * *"
     }
   ]
 }

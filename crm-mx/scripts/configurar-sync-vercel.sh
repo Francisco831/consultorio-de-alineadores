@@ -22,14 +22,23 @@ fi
 EMAIL=$(grep '^KEEPSMILING_EMAIL=' ../tracer/.env | cut -d= -f2-)
 PASS=$(grep '^KEEPSMILING_PASSWORD=' ../tracer/.env | cut -d= -f2-)
 [ -n "$EMAIL" ] && [ -n "$PASS" ] || { echo "ERROR: faltan credenciales en tracer/.env"; exit 1; }
+IEMAIL=$(grep '^INTRANET_EMAIL=' ../tracer/.env | cut -d= -f2-)
+IPASS=$(grep '^INTRANET_PASSWORD=' ../tracer/.env | cut -d= -f2-)
 
 # Si la variable ya existe en Vercel, `env add` falla: se borra y recarga.
-for VAR in CRON_SECRET KEEPSMILING_EMAIL KEEPSMILING_PASSWORD; do
+for VAR in CRON_SECRET KEEPSMILING_EMAIL KEEPSMILING_PASSWORD INTRANET_EMAIL INTRANET_PASSWORD; do
   npx vercel env rm "$VAR" production --yes >/dev/null 2>&1 || true
 done
 printf '%s' "$SECRET" | npx vercel env add CRON_SECRET production >/dev/null
 printf '%s' "$EMAIL"  | npx vercel env add KEEPSMILING_EMAIL production >/dev/null
 printf '%s' "$PASS"   | npx vercel env add KEEPSMILING_PASSWORD production >/dev/null
+if [ -n "$IEMAIL" ] && [ -n "$IPASS" ]; then
+  printf '%s' "$IEMAIL" | npx vercel env add INTRANET_EMAIL production >/dev/null
+  printf '%s' "$IPASS"  | npx vercel env add INTRANET_PASSWORD production >/dev/null
+  echo "· Credenciales del intranet cargadas (sync de contact points)"
+else
+  echo "· OJO: sin INTRANET_EMAIL/INTRANET_PASSWORD en tracer/.env — el cron de contact points va a saltearse"
+fi
 echo "· Variables cargadas en Vercel (production)"
 
 echo "· Redesplegando producción para que tomen efecto…"
