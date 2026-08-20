@@ -13,4 +13,5 @@ generate_pdf*.py
 references/
 reports/
 scripts.zip
-scripts/
+/scripts/
+.gstack/

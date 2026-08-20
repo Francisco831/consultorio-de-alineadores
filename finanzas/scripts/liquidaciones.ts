@@ -1,0 +1,215 @@
+// Calcula las liquidaciones de las doctoras desde el ledger y las compara contra
+// la salida del script viejo (consultorio-gestion/build_liquidaciones.py).
+//
+// El plan lo pedía explícito: correr los dos en paralelo y exigir Δ$0 ANTES de
+// apagar el script viejo. Sin --apply solo compara.
+//
+// Uso:  npx tsx scripts/liquidaciones.ts            (compara contra la referencia)
+//       npx tsx scripts/liquidaciones.ts --apply    (además las guarda en la base)
+
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { serviceClient, fetchAllRows, argFlags } from "./lib/service-client";
+import {
+  costearCuotas, calcularLiquidaciones,
+  type CobroAlineador, type MovimientoLiq,
+} from "../lib/liquidaciones/costeo";
+
+// Excepciones declaradas en build_liquidaciones.py
+const ETAPA_ADICIONAL = new Set(["cugat fernanda", "fernanda cugat"]);
+const PLAN_PACIENTE: Record<string, number> = { "hogner agustina": 7, "agustina hogner": 7 };
+
+type Ref = {
+  periodo: string; doctora: string; cobrado_ars: number; cobrado_usd: number;
+  gastos_tratamiento: number; base_ars: number; liquidacion_ars: number;
+  liquidacion_usd: number; retiros: number; saldo: number;
+};
+
+async function main() {
+  const flags = argFlags();
+  const referencia = JSON.parse(
+    readFileSync(resolve(__dirname, "../seed-data/liquidaciones_referencia.json"), "utf8")
+  ).filas as Ref[];
+
+  const db = await serviceClient({
+    accion: "calcular liquidaciones de doctoras y compararlas con el script viejo",
+    auto: true,   // solo lee salvo --apply; el guard igual anuncia el destino
+  });
+
+  const { data: cia } = await db.from("companies").select("id").eq("slug", "ar").single();
+  if (!cia) throw new Error("empresa 'ar' inexistente");
+  const companyId = cia.id;
+
+  const { data: precio } = await db.from("ks_price_list").select("*")
+    .eq("company_id", companyId).eq("audience", "adultos").eq("scope", "full")
+    .eq("arcades", 2).order("valid_from", { ascending: false }).limit(1).single();
+  if (!precio) throw new Error("falta la lista de precios KS: correr seed-etapa2");
+
+  const { data: profs } = await db.from("professionals")
+    .select("settlement_pct, settles_separately, cp:counterparties!inner(display_name)")
+    .eq("company_id", companyId);
+  const pctPorDoctora = new Map<string, number>();
+  const aparte = new Set<string>();
+  for (const p of profs ?? []) {
+    const nombre = (p.cp as unknown as { display_name: string }).display_name;
+    pctPorDoctora.set(nombre, Number(p.settlement_pct));
+    if (p.settles_separately) aparte.add(nombre);
+  }
+
+  const movs = await fetchAllRows<{
+    id: string; occurred_on: string; kind: string; amount: string; currency: string;
+    meta: {
+      doctora?: string; motivo?: string; obs?: string;
+      tipo_origen?: string; categoria_origen?: string; seq?: number;
+    };
+    counterparties: { display_name: string } | null;
+  }>(db, "movements",
+    "id, occurred_on, kind, amount, currency, meta, counterparties(display_name)",
+    (q) => q.eq("company_id", companyId).neq("status", "void"));
+
+  // El orden (meta.seq) solo decide QUÉ cuota se costea cuando hay pagos
+  // parciales, así que se exige únicamente a los cobros de alineadores. Los
+  // egresos cargados desde un extracto no participan del costeo.
+  const sinSeq = movs.filter(
+    (m) => m.kind === "income" && m.meta?.categoria_origen === "Alineadores" && m.meta?.seq == null
+  ).length;
+  if (sinSeq) {
+    console.error(`✗ ${sinSeq} cobros de alineadores sin meta.seq: correr scripts/backfill-seq.ts --apply`);
+    process.exit(1);
+  }
+
+  // cobros de alineadores → costeo KS (una fila por PATA de moneda, como el original)
+  const cobrosAlineadores: CobroAlineador[] = movs
+    .filter((m) => m.kind === "income" && m.meta?.categoria_origen === "Alineadores")
+    .map((m) => ({
+      id: m.id,
+      paciente: (m.counterparties as { display_name?: string } | null)?.display_name ?? "",
+      fecha: m.occurred_on,
+      ars: m.currency === "USD" ? 0 : Number(m.amount),
+      usd: m.currency === "USD" ? Number(m.amount) : 0,
+      motivo: m.meta?.motivo ?? "",
+      texto: `${m.meta?.motivo ?? ""} ${m.meta?.obs ?? ""}`,
+      seq: m.meta?.seq ?? 0,
+    }));
+
+  const { costoArs, costoUsd, sinCostear } = costearCuotas(cobrosAlineadores, {
+    precioDefault: {
+      list_price: Number(precio.list_price), discount_pct: Number(precio.discount_pct),
+    },
+    planPorPaciente: PLAN_PACIENTE,
+    etapaAdicional: ETAPA_ADICIONAL,
+  });
+  console.log(`\nCobros de alineadores: ${cobrosAlineadores.length} · sin costear: ${sinCostear}`);
+
+  const paraLiquidar: MovimientoLiq[] = movs
+    .filter((m) => m.meta?.doctora)
+    .map((m) => ({
+      id: m.id,
+      doctora: m.meta!.doctora!,
+      periodo: m.occurred_on.slice(0, 7),
+      ars: m.currency === "USD" ? 0 : Number(m.amount),
+      usd: m.currency === "USD" ? Number(m.amount) : 0,
+      tipo:
+        m.meta?.tipo_origen === "retiro_liquidacion" ? "retiro_liquidacion"
+        : m.meta?.tipo_origen === "gasto_tratamiento" ? "gasto_tratamiento"
+        : m.kind === "income" ? "cobro"
+        : "otro",
+    }));
+
+  const calculadas = calcularLiquidaciones(
+    paraLiquidar, costoArs, costoUsd,
+    (d) => pctPorDoctora.get(d) ?? 40
+  );
+
+  // ---------- comparación contra el script viejo ----------
+  const refPorClave = new Map(referencia.map((r) => [`${r.periodo}|${r.doctora}`, r]));
+  let iguales = 0;
+  const difs: string[] = [];
+  const retirosNuevos: string[] = [];
+  for (const l of calculadas) {
+    if (aparte.has(l.doctora)) continue;         // Coni: cuenta propia, fuera
+    const r = refPorClave.get(`${l.periodo}|${l.doctora}`);
+    if (!r) {
+      // Puede ser legítima: si no cobró nada ese mes pero se le pagó un retiro
+      // (saldo de meses anteriores), la liquidación existe recién ahora porque
+      // el retiro salió por Mercado Pago y el script viejo no lo veía.
+      if (l.cobradoArs === 0 && l.cobradoUsd === 0 && l.retiros > 0) {
+        retirosNuevos.push(
+          `${l.periodo} ${l.doctora}: retiro de ${l.retiros.toLocaleString("es-AR")} sin cobros en el mes ` +
+          `(el script viejo no generaba esta liquidación)`
+        );
+      } else {
+        difs.push(`${l.periodo} ${l.doctora}: no está en la referencia`);
+      }
+      continue;
+    }
+    // Los RETIROS quedan fuera de la comparación estricta a propósito: el script
+    // viejo solo mira la caja y no ve los retiros que se pagaron por Mercado Pago
+    // (2,68M entre junio y julio). Que aparezcan de más es la corrección, no un
+    // error — se reportan aparte.
+    const campos: Array<[string, number, number]> = [
+      ["cobrado ARS", l.cobradoArs, r.cobrado_ars],
+      ["cobrado USD", l.cobradoUsd, r.cobrado_usd],
+      ["costo KS", l.gastosTratamiento, r.gastos_tratamiento],
+      ["liquidación ARS", l.liquidacionArs, r.liquidacion_ars],
+    ];
+    if (Math.abs(l.retiros - r.retiros) >= 1) {
+      retirosNuevos.push(
+        `${l.periodo} ${l.doctora}: retiros ${l.retiros.toLocaleString("es-AR")} ` +
+        `(el script viejo veía ${r.retiros.toLocaleString("es-AR")})`
+      );
+    }
+    const malos = campos.filter(([, a, b]) => Math.abs(a - b) >= 1);
+    if (malos.length) {
+      difs.push(
+        `${l.periodo} ${l.doctora}: ` +
+        malos.map(([c, a, b]) => `${c} calculado ${a.toLocaleString("es-AR")} vs referencia ${b.toLocaleString("es-AR")}`).join(" · ")
+      );
+    } else iguales++;
+  }
+
+  console.log(`\nLiquidaciones calculadas: ${calculadas.length} · comparables con la referencia: ${iguales + difs.length}`);
+  console.log(`  ✓ idénticas al script viejo: ${iguales}`);
+  console.log(`  ${difs.length ? "✗" : "✓"} con diferencias: ${difs.length}`);
+  if (retirosNuevos.length) {
+    console.log(`\n  Retiros que el script viejo no veía (salieron por Mercado Pago):`);
+    for (const r of retirosNuevos) console.log(`     ${r}`);
+  }
+  for (const d of difs.slice(0, 15)) console.log(`     ${d}`);
+  if (difs.length > 15) console.log(`     … y ${difs.length - 15} más`);
+
+  if (difs.length) {
+    console.error("\n✗ No coincide con build_liquidaciones.py. NO se guardan liquidaciones.");
+    process.exit(1);
+  }
+
+  if (flags.dryRun) {
+    console.log("\nDRY-RUN: coincide todo. Con --apply se guardan en la base.");
+    return;
+  }
+
+  // ---------- guardar ----------
+  const { data: cps } = await db.from("counterparties").select("id, display_name")
+    .eq("company_id", companyId).eq("kind", "professional");
+  const idPorNombre = new Map((cps ?? []).map((c) => [c.display_name, c.id]));
+
+  let guardadas = 0;
+  for (const l of calculadas) {
+    if (aparte.has(l.doctora)) continue;
+    const profId = idPorNombre.get(l.doctora);
+    if (!profId) continue;
+    const { error } = await db.from("professional_settlements").upsert({
+      company_id: companyId, professional_id: profId, period: l.periodo,
+      status: "draft", pct: pctPorDoctora.get(l.doctora) ?? 40,
+      totals: {
+        ARS: { collected: l.cobradoArs, ks_cost: l.gastosTratamiento, base: l.baseArs, due: l.liquidacionArs, withdrawn: l.retiros, balance: l.saldo },
+        USD: { collected: l.cobradoUsd, due: l.liquidacionUsd },
+      },
+    }, { onConflict: "company_id,professional_id,period" });
+    if (error) throw new Error(`settlement ${l.periodo}/${l.doctora}: ${error.message}`);
+    guardadas++;
+  }
+  console.log(`\n✓ ${guardadas} liquidaciones guardadas (en borrador, listas para revisar y confirmar).`);
+}
+
+main().catch((e) => { console.error(e.message ?? e); process.exit(1); });
