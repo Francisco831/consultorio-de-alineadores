@@ -97,7 +97,13 @@ export async function actividadesExistentes(db: SupabaseClient): Promise<Set<str
 }
 
 export function claveActividad(doctorId: string, iso: string, summary: string): string {
-  return `${doctorId}|${iso.slice(0, 10)}|${summary.slice(0, 80)}`;
+  // SIEMPRE en UTC: PostgREST devuelve occurred_at en UTC, pero los candidatos
+  // llegan con hora local de México (-06:00). Un evento de las 18:00+ CDMX cruza
+  // de día en UTC, y comparar strings crudos hacía que el dedup no lo viera:
+  // los mismos 13 contact points vespertinos se re-insertaban en CADA corrida
+  // (detectado 20/8: ×4 copias; limpiado a mano, este fix evita la quinta).
+  const dia = new Date(iso).toISOString().slice(0, 10);
+  return `${doctorId}|${dia}|${summary.slice(0, 80)}`;
 }
 
 export interface ReporteFuente {
