@@ -380,6 +380,47 @@ export default async function DoctorPage({
           )}
         </div>
 
+        {/* ---------- canal Instagram (censo de seguidores 20/8) ----------
+            Va al lado del de WhatsApp porque para varios doctores es el ÚNICO
+            canal que tenemos: los que entraron por el censo de seguidores no
+            traen teléfono. El tag "sigue-instagram" dice que sigue la cuenta;
+            sin el tag, el handle está pero la relación todavía no. */}
+        {doctor.instagram ? (
+          <div className="rounded-lg border p-4">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Instagram
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <a
+                href={`https://www.instagram.com/${doctor.instagram}/`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary hover:underline"
+              >
+                @{doctor.instagram}
+              </a>
+              {(doctor.tags ?? []).includes("sigue-instagram") ? (
+                <Badge className="border-pink-200 bg-pink-50 text-pink-700 dark:border-pink-900 dark:bg-pink-950 dark:text-pink-400">
+                  te sigue
+                </Badge>
+              ) : null}
+              {(doctor.tags ?? [])
+                .filter((t) => t.startsWith("ig-alt:"))
+                .map((t) => (
+                  <a
+                    key={t}
+                    href={`https://www.instagram.com/${t.slice(7)}/`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-muted-foreground hover:underline"
+                  >
+                    @{t.slice(7)}
+                  </a>
+                ))}
+            </div>
+          </div>
+        ) : null}
+
         {/* ---------- perfil de prospecto (solo universo A) ---------- */}
         {/* Ya no desaparece al acreditarse. Lo que el área "Por acreditarse"
             aprendió —especialidad, interés, casos estimados, por qué era

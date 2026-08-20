@@ -48,10 +48,16 @@ const SORTS: Record<string, { col: string; label: string }> = {
 // lifecycle_stage es un enum de 14 etapas que atraviesa las dos áreas, así que
 // "Perdidos" sin el corte devolvía prospectos descartados mezclados con acreditados
 // que se fueron. Lo mismo "Activos", "En riesgo" y "Dormidos".
+// "sigue-instagram" no es una etapa del ciclo de vida sino un hecho del canal:
+// lo pone scripts/tag-seguidores-ig.ts desde el censo de seguidores del 20/8.
+// Por eso filtra por tag y no por lifecycle_stage.
+const TAG_IG = "sigue-instagram";
+
 const FILTERS: {
   key: string;
   label: string;
   stages?: LifecycleStage[];
+  tag?: string;
 }[] = [
   { key: "todos", label: "Todos" },
   {
@@ -63,6 +69,7 @@ const FILTERS: {
   { key: "riesgo", label: "En riesgo", stages: ["en_riesgo"] },
   { key: "dormidos", label: "Dormidos", stages: ["dormido"] },
   { key: "perdidos", label: "Perdidos", stages: ["perdido"] },
+  { key: "ig", label: "Te siguen en IG", tag: TAG_IG },
 ];
 
 function SortableHead({
@@ -138,6 +145,7 @@ export default async function DoctoresPage({
   if (q) query = query.ilike("nombre", `%${q}%`);
   const filter = FILTERS.find((x) => x.key === f);
   if (filter?.stages) query = query.in("lifecycle_stage", filter.stages);
+  if (filter?.tag) query = query.contains("tags", [filter.tag]);
 
   const { data, count, error } = await query;
   const doctors = (data ?? []) as Doctor[];

@@ -110,6 +110,8 @@ export interface Doctor {
   interest_level: number | null;
   accreditation_interest: number | null;
   why_interesting: string | null;
+  // handle sin arroba; la URL es instagram.com/<handle> (migración 0036)
+  instagram: string | null;
   tags: string[];
   competitor_brands: string[];
   custom: Record<string, unknown>;
