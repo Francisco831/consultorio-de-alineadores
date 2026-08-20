@@ -1,0 +1,1227 @@
+{
+"fuente": "/Users/franciscobasilico/Library/Mobile Documents/com~apple~CloudDocs/Keep Smiling/KS Mexico/Contable",
+"estados": [
+{
+"formato": "pdf",
+"periodo": "2026-01",
+"control": {
+"entradas": 77154.39,
+"salidas": -73837.76,
+"saldo_inicial": 22.9,
+"saldo_final": 3339.53
+},
+"movimientos": [
+{
+"fecha": "2026-01-09",
+"descripcion": "Liberación de dinero",
+"op_id": "140706473721",
+"valor": 16966.21
+},
+{
+"fecha": "2026-01-10",
+"descripcion": "Transferencia enviada Panoramica Dental Monterrey Sa de cv",
+"op_id": "141487851754",
+"valor": -1400.0
+},
+{
+"fecha": "2026-01-10",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "141488689462",
+"valor": -10000.0
+},
+{
+"fecha": "2026-01-10",
+"descripcion": "Transferencia enviada Tueme Clinica Dental",
+"op_id": "141492150928",
+"valor": -550.0
+},
+{
+"fecha": "2026-01-12",
+"descripcion": "PRODUCTOS DENTALES Y SERVICIOS RADIOLOGICOS SA",
+"op_id": "141060188603",
+"valor": -799.0
+},
+{
+"fecha": "2026-01-12",
+"descripcion": "Compra de Válvula Dren / Purga Manual 1/4 Para Compresor Mercado Libre",
+"op_id": "141074265515",
+"valor": -311.96
+},
+{
+"fecha": "2026-01-12",
+"descripcion": "Retiro de efectivo Cajero automático",
+"op_id": "141767593584",
+"valor": -3034.8
+},
+{
+"fecha": "2026-01-16",
+"descripcion": "Pago Sumesa oaxaca",
+"op_id": "141674868899",
+"valor": -200.9
+},
+{
+"fecha": "2026-01-16",
+"descripcion": "Retiro de efectivo Sumesa oaxaca",
+"op_id": "141674868899",
+"valor": -100.0
+},
+{
+"fecha": "2026-01-19",
+"descripcion": "Liberación de dinero",
+"op_id": "142005538909",
+"valor": 16196.65
+},
+{
+"fecha": "2026-01-19",
+"descripcion": "Transferencia enviada Grupo Dental Odontoz SA de CV colon",
+"op_id": "142005674045",
+"valor": -600.0
+},
+{
+"fecha": "2026-01-19",
+"descripcion": "Transferencia enviada Getzemany Contreras Ruiz",
+"op_id": "142005979981",
+"valor": -500.0
+},
+{
+"fecha": "2026-01-19",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "142676741282",
+"valor": -9500.0
+},
+{
+"fecha": "2026-01-19",
+"descripcion": "Pago Sumesa oaxaca",
+"op_id": "142680818098",
+"valor": -252.5
+},
+{
+"fecha": "2026-01-19",
+"descripcion": "Retiro de efectivo Sumesa oaxaca",
+"op_id": "142680818098",
+"valor": -100.0
+},
+{
+"fecha": "2026-01-19",
+"descripcion": "Retiro de efectivo Cajero automático",
+"op_id": "142681201538",
+"valor": -1834.8
+},
+{
+"fecha": "2026-01-20",
+"descripcion": "Transferencia enviada Panoramica Dental Monterrey Sa de cv",
+"op_id": "142848305182",
+"valor": -700.0
+},
+{
+"fecha": "2026-01-21",
+"descripcion": "Transferencia enviada Rodrigo Saldivar Magana",
+"op_id": "142275572145",
+"valor": -600.0
+},
+{
+"fecha": "2026-01-23",
+"descripcion": "Liberación de dinero",
+"op_id": "143219111494",
+"valor": 20643.8
+},
+{
+"fecha": "2026-01-23",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "143231545770",
+"valor": -21345.0
+},
+{
+"fecha": "2026-01-26",
+"descripcion": "Transferencia enviada Jose Fernando Ortega Munoz",
+"op_id": "142907313365",
+"valor": -500.0
+},
+{
+"fecha": "2026-01-27",
+"descripcion": "Pago Apto mexicali aeromark",
+"op_id": "142992862571",
+"valor": -135.0
+},
+{
+"fecha": "2026-01-27",
+"descripcion": "Retiro de efectivo Cajero automático",
+"op_id": "143668132100",
+"valor": -532.4
+},
+{
+"fecha": "2026-01-27",
+"descripcion": "Transferencia enviada Alejandro Gerardo Martinez Santillan",
+"op_id": "143758569378",
+"valor": -700.0
+},
+{
+"fecha": "2026-01-27",
+"descripcion": "Liberación de dinero",
+"op_id": "143084475585",
+"valor": 6964.63
+},
+{
+"fecha": "2026-01-27",
+"descripcion": "Transferencia enviada Norberto Cornejo Leyva",
+"op_id": "143084173395",
+"valor": -6464.0
+},
+{
+"fecha": "2026-01-28",
+"descripcion": "Liberación de dinero",
+"op_id": "143894516326",
+"valor": 16383.1
+},
+{
+"fecha": "2026-01-29",
+"descripcion": "Transferencia enviada Alejandro Juarez Bautista",
+"op_id": "143305829199",
+"valor": -7425.0
+},
+{
+"fecha": "2026-01-29",
+"descripcion": "Transferencia enviada MOCHILAS PROMOCIONALES Y CARPETAS sa de cv",
+"op_id": "143307248239",
+"valor": -6252.4
+}
+],
+"archivo": "Estados de cuenta Clara/2026/Estado de cuenta mp enero 2026.pdf",
+"sha256": "0c994badf82cf24b"
+},
+{
+"formato": "pdf",
+"periodo": "2026-02",
+"control": {
+"entradas": 99087.38,
+"salidas": -102312.86,
+"saldo_inicial": 3339.53,
+"saldo_final": 114.05
+},
+"movimientos": [
+{
+"fecha": "2026-02-03",
+"descripcion": "Liberación de dinero",
+"op_id": "143944571247",
+"valor": 19473.11
+},
+{
+"fecha": "2026-02-03",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "144643002590",
+"valor": -22000.0
+},
+{
+"fecha": "2026-02-04",
+"descripcion": "PRODUCTOS DENTALES Y SERVICIOS RADIOLOGICOS SA",
+"op_id": "144108858133",
+"valor": -799.0
+},
+{
+"fecha": "2026-02-04",
+"descripcion": "Liberación de dinero",
+"op_id": "144183532175",
+"valor": 12660.76
+},
+{
+"fecha": "2026-02-04",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "144187394421",
+"valor": -12000.0
+},
+{
+"fecha": "2026-02-06",
+"descripcion": "Pago Sumesa oaxaca",
+"op_id": "145168921878",
+"valor": -146.4
+},
+{
+"fecha": "2026-02-06",
+"descripcion": "Retiro de efectivo Sumesa oaxaca",
+"op_id": "145168921878",
+"valor": -100.0
+},
+{
+"fecha": "2026-02-09",
+"descripcion": "Pago Office max m roma",
+"op_id": "145559365996",
+"valor": -20.9
+},
+{
+"fecha": "2026-02-10",
+"descripcion": "Liberación de dinero",
+"op_id": "145013116297",
+"valor": 19473.11
+},
+{
+"fecha": "2026-02-10",
+"descripcion": "Transferencia enviada Panoramica Dental Monterrey Sa de cv",
+"op_id": "145012841421",
+"valor": -1400.0
+},
+{
+"fecha": "2026-02-10",
+"descripcion": "Transferencia enviada Panoramica Dental Monterrey Sa de cv",
+"op_id": "145703672868",
+"valor": -700.0
+},
+{
+"fecha": "2026-02-10",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "145705303352",
+"valor": -14000.0
+},
+{
+"fecha": "2026-02-10",
+"descripcion": "Compra de Alcohol Isopropílico Profesional 99.9% 5l - Laboratorios Y Clínicas Merc...",
+"op_id": "145027739569",
+"valor": -1178.0
+},
+{
+"fecha": "2026-02-10",
+"descripcion": "Pago Sumesa oaxaca",
+"op_id": "145032402763",
+"valor": -206.3
+},
+{
+"fecha": "2026-02-10",
+"descripcion": "Retiro de efectivo Sumesa oaxaca",
+"op_id": "145032402763",
+"valor": -100.0
+},
+{
+"fecha": "2026-02-12",
+"descripcion": "Transferencia enviada Fabian Aguirre Padilla",
+"op_id": "145994181694",
+"valor": -388.0
+},
+{
+"fecha": "2026-02-12",
+"descripcion": "Retiro de efectivo Cajero automático",
+"op_id": "145342488137",
+"valor": -1234.8
+},
+{
+"fecha": "2026-02-18",
+"descripcion": "Liberación de dinero",
+"op_id": "146073489923",
+"valor": 11942.68
+},
+{
+"fecha": "2026-02-18",
+"descripcion": "Transferencia enviada Alejandro Juarez Bautista",
+"op_id": "146096078529",
+"valor": -7425.0
+},
+{
+"fecha": "2026-02-18",
+"descripcion": "Transferencia enviada RIEX RADIO DIAGNOTICO SC",
+"op_id": "146793261566",
+"valor": -650.0
+},
+{
+"fecha": "2026-02-18",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "146096616775",
+"valor": -4500.0
+},
+{
+"fecha": "2026-02-24",
+"descripcion": "Liberación de dinero",
+"op_id": "147609603330",
+"valor": 11700.89
+},
+{
+"fecha": "2026-02-24",
+"descripcion": "Transferencia enviada Norberto Cornejo Leyva",
+"op_id": "147638991898",
+"valor": -6464.0
+},
+{
+"fecha": "2026-02-24",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "147640836258",
+"valor": -5200.0
+},
+{
+"fecha": "2026-02-24",
+"descripcion": "Liberación de dinero",
+"op_id": "146937845661",
+"valor": 8593.81
+},
+{
+"fecha": "2026-02-24",
+"descripcion": "Pago DEPOSITO DENTAL VILLA DE CORTE",
+"op_id": "147642830196",
+"valor": -1047.56
+},
+{
+"fecha": "2026-02-24",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "147641176024",
+"valor": -7600.0
+},
+{
+"fecha": "2026-02-25",
+"descripcion": "Liberación de dinero",
+"op_id": "147050622963",
+"valor": 15243.02
+},
+{
+"fecha": "2026-02-25",
+"descripcion": "Transferencia enviada RIEX RADIO DIAGNOTICO SC",
+"op_id": "147051825221",
+"valor": -650.0
+},
+{
+"fecha": "2026-02-25",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "147056318119",
+"valor": -12600.0
+},
+{
+"fecha": "2026-02-26",
+"descripcion": "Pago Office max m roma",
+"op_id": "147261268063",
+"valor": -268.2
+},
+{
+"fecha": "2026-02-26",
+"descripcion": "Pago Office max m roma",
+"op_id": "147261639735",
+"valor": -99.9
+},
+{
+"fecha": "2026-02-26",
+"descripcion": "Transferencia enviada LUIPAT s De RL de RL de cv",
+"op_id": "147990572054",
+"valor": -1200.0
+},
+{
+"fecha": "2026-02-27",
+"descripcion": "Retiro de efectivo Cajero automático",
+"op_id": "148152421190",
+"valor": -334.8
+}
+],
+"archivo": "Estados de cuenta BBVA/2026/Febrero 26 Meli.pdf",
+"sha256": "40a193166d684f98"
+},
+{
+"formato": "pdf",
+"periodo": "2026-03",
+"control": {
+"entradas": 107013.52,
+"salidas": -106459.87,
+"saldo_inicial": 114.05,
+"saldo_final": 667.7
+},
+"movimientos": [
+{
+"fecha": "2026-03-01",
+"descripcion": "Liberación de dinero",
+"op_id": "147686445623",
+"valor": 14790.46
+},
+{
+"fecha": "2026-03-01",
+"descripcion": "Liberación de dinero",
+"op_id": "148398346488",
+"valor": 14100.26
+},
+{
+"fecha": "2026-03-02",
+"descripcion": "Transferencia enviada Ronaldo Salas Duarte",
+"op_id": "147799157389",
+"valor": -500.0
+},
+{
+"fecha": "2026-03-02",
+"descripcion": "Transferencia enviada Ruben Ochoa",
+"op_id": "147798688091",
+"valor": -800.0
+},
+{
+"fecha": "2026-03-02",
+"descripcion": "Transferencia enviada MOCHILAS PROMOCIONALES Y CARPETAS sa de cv",
+"op_id": "147800779181",
+"valor": -6252.4
+},
+{
+"fecha": "2026-03-02",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "148512678904",
+"valor": -20000.0
+},
+{
+"fecha": "2026-03-02",
+"descripcion": "Transferencia enviada Dento Metric SA de CV",
+"op_id": "147838049407",
+"valor": -650.0
+},
+{
+"fecha": "2026-03-03",
+"descripcion": "Transferencia enviada Dento Metric SA de CV",
+"op_id": "148655264232",
+"valor": -650.0
+},
+{
+"fecha": "2026-03-04",
+"descripcion": "Liberación de dinero",
+"op_id": "148131410949",
+"valor": 17192.26
+},
+{
+"fecha": "2026-03-04",
+"descripcion": "Pago Intl mugt fedex chapul",
+"op_id": "148851427158",
+"valor": -1395.17
+},
+{
+"fecha": "2026-03-04",
+"descripcion": "Transferencia enviada Imelda Lopez Martinez",
+"op_id": "148141136237",
+"valor": -480.0
+},
+{
+"fecha": "2026-03-04",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "148854425202",
+"valor": -15000.0
+},
+{
+"fecha": "2026-03-12",
+"descripcion": "Retiro de efectivo Cajero automático",
+"op_id": "149377840637",
+"valor": -434.8
+},
+{
+"fecha": "2026-03-18",
+"descripcion": "Liberación de dinero",
+"op_id": "150191273831",
+"valor": 17833.91
+},
+{
+"fecha": "2026-03-18",
+"descripcion": "Retiro de efectivo Cajero automático",
+"op_id": "150920801350",
+"valor": -2034.8
+},
+{
+"fecha": "2026-03-18",
+"descripcion": "Transferencia enviada LW Ortodiagnostico SA de CV",
+"op_id": "150922724354",
+"valor": -1392.0
+},
+{
+"fecha": "2026-03-18",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "150196689437",
+"valor": -7400.0
+},
+{
+"fecha": "2026-03-18",
+"descripcion": "Transferencia enviada Norberto Cornejo Leyva",
+"op_id": "150922383192",
+"valor": -6464.0
+},
+{
+"fecha": "2026-03-18",
+"descripcion": "Liberación de dinero",
+"op_id": "150204075507",
+"valor": 10525.99
+},
+{
+"fecha": "2026-03-18",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "150223666477",
+"valor": -9000.0
+},
+{
+"fecha": "2026-03-18",
+"descripcion": "Transferencia enviada Tueme Clinica Dental",
+"op_id": "150953673544",
+"valor": -550.0
+},
+{
+"fecha": "2026-03-19",
+"descripcion": "Transferencia enviada Adriana Munoz",
+"op_id": "150320740105",
+"valor": -480.0
+},
+{
+"fecha": "2026-03-19",
+"descripcion": "Transferencia enviada Loana Juarez Santoyo",
+"op_id": "151063113050",
+"valor": -1009.2
+},
+{
+"fecha": "2026-03-19",
+"descripcion": "Liberación de dinero",
+"op_id": "150391063063",
+"valor": 10947.07
+},
+{
+"fecha": "2026-03-20",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "151141987618",
+"valor": -10000.0
+},
+{
+"fecha": "2026-03-24",
+"descripcion": "Pago Sumesa oaxaca",
+"op_id": "151757089010",
+"valor": -231.7
+},
+{
+"fecha": "2026-03-24",
+"descripcion": "Transferencia enviada Loana Juarez Santoyo",
+"op_id": "151026858045",
+"valor": -174.0
+},
+{
+"fecha": "2026-03-25",
+"descripcion": "Pago Office max m roma",
+"op_id": "151176376825",
+"valor": -139.0
+},
+{
+"fecha": "2026-03-27",
+"descripcion": "Liberación de dinero",
+"op_id": "151454107763",
+"valor": 13360.36
+},
+{
+"fecha": "2026-03-27",
+"descripcion": "Liberación de dinero",
+"op_id": "151454801853",
+"valor": 8263.21
+},
+{
+"fecha": "2026-03-27",
+"descripcion": "Retiro de efectivo Cajero automático",
+"op_id": "152190110056",
+"valor": -1234.8
+},
+{
+"fecha": "2026-03-27",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "151456418955",
+"valor": -14000.0
+},
+{
+"fecha": "2026-03-27",
+"descripcion": "Transferencia enviada Cedirama Digital SC",
+"op_id": "151456453083",
+"valor": -5488.0
+},
+{
+"fecha": "2026-03-31",
+"descripcion": "Transferencia enviada Alejandro Gerardo Martinez Santillan",
+"op_id": "152700255122",
+"valor": -700.0
+}
+],
+"archivo": "Estados de cuenta BBVA/2026/account_statement_generic-ee3b8bc0-eb0e-46df-afad-7247abba1133.pdf",
+"sha256": "98209d4e2348d0af"
+},
+{
+"formato": "pdf",
+"periodo": "2026-04",
+"control": {
+"entradas": 72815.89,
+"salidas": -72316.6,
+"saldo_inicial": 667.7,
+"saldo_final": 1166.99
+},
+"movimientos": [
+{
+"fecha": "2026-04-07",
+"descripcion": "Liberación de dinero",
+"op_id": "152940114733",
+"valor": 16734.55
+},
+{
+"fecha": "2026-04-07",
+"descripcion": "Transferencia enviada Margarita de la cruz toledo",
+"op_id": "153682734032",
+"valor": -1000.0
+},
+{
+"fecha": "2026-04-07",
+"descripcion": "Transferencia enviada RIEX RADIO DIAGNOTICO SC",
+"op_id": "152939931907",
+"valor": -650.0
+},
+{
+"fecha": "2026-04-07",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "152940816905",
+"valor": -15000.0
+},
+{
+"fecha": "2026-04-09",
+"descripcion": "Liberación de dinero",
+"op_id": "153259995447",
+"valor": 16734.55
+},
+{
+"fecha": "2026-04-09",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "153267611465",
+"valor": -17480.0
+},
+{
+"fecha": "2026-04-09",
+"descripcion": "Liberación de dinero",
+"op_id": "154023745480",
+"valor": 17644.81
+},
+{
+"fecha": "2026-04-09",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "153301936001",
+"valor": -9000.0
+},
+{
+"fecha": "2026-04-14",
+"descripcion": "Transferencia enviada Panoramica Dental Monterrey Sa de cv",
+"op_id": "154032589671",
+"valor": -700.0
+},
+{
+"fecha": "2026-04-16",
+"descripcion": "Transferencia enviada Norberto Cornejo Leyva",
+"op_id": "155054287100",
+"valor": -4960.0
+},
+{
+"fecha": "2026-04-16",
+"descripcion": "Liberación de dinero",
+"op_id": "155085012212",
+"valor": 12603.19
+},
+{
+"fecha": "2026-04-16",
+"descripcion": "Transferencia enviada Cedirama Digital SC",
+"op_id": "155087791002",
+"valor": -2058.0
+},
+{
+"fecha": "2026-04-16",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "155087197766",
+"valor": -12000.0
+},
+{
+"fecha": "2026-04-16",
+"descripcion": "Liberación de dinero",
+"op_id": "154405575407",
+"valor": 3353.61
+},
+{
+"fecha": "2026-04-20",
+"descripcion": "Transferencia enviada Norberto Cornejo Leyva",
+"op_id": "155686849424",
+"valor": -4000.0
+},
+{
+"fecha": "2026-04-20",
+"descripcion": "Retiro de efectivo Cajero automático",
+"op_id": "155700201654",
+"valor": -534.8
+},
+{
+"fecha": "2026-04-22",
+"descripcion": "Liberación de dinero",
+"op_id": "155262026039",
+"valor": 5745.18
+},
+{
+"fecha": "2026-04-23",
+"descripcion": "Transferencia enviada Margarita de la cruz toledo",
+"op_id": "155343426897",
+"valor": -1000.0
+},
+{
+"fecha": "2026-04-23",
+"descripcion": "PRODUCTOS DENTALES Y SERVICIOS RADIOLOGICOS SA",
+"op_id": "155355467633",
+"valor": -799.0
+},
+{
+"fecha": "2026-04-24",
+"descripcion": "Retiro de efectivo Cajero automático",
+"op_id": "156238547558",
+"valor": -1534.8
+},
+{
+"fecha": "2026-04-24",
+"descripcion": "Transferencia enviada Hector Daniel Jimenez Penaloza",
+"op_id": "155526736979",
+"valor": -1250.0
+},
+{
+"fecha": "2026-04-27",
+"descripcion": "Transferencia enviada Jaime Alejandro Lagunes Lopez",
+"op_id": "155917758539",
+"valor": -350.0
+}
+],
+"archivo": "Estados de cuenta BBVA/2026/Abril 26 Meli.pdf",
+"sha256": "ab59f3ccd73da145"
+},
+{
+"formato": "csv",
+"periodo": "2026-05",
+"control": {},
+"movimientos": [
+{
+"fecha": "2026-05-31",
+"descripcion": "PAYOUTS",
+"op_id": "161093642337",
+"valor": -13000.0
+},
+{
+"fecha": "2026-05-29",
+"descripcion": "SETTLEMENT",
+"op_id": "161590804212",
+"valor": -812.2
+},
+{
+"fecha": "2026-05-29",
+"descripcion": "SETTLEMENT",
+"op_id": "160838881473",
+"valor": 12660.76
+},
+{
+"fecha": "2026-05-29",
+"descripcion": "PAYOUTS",
+"op_id": "160808242457",
+"valor": -4000.0
+},
+{
+"fecha": "2026-05-28",
+"descripcion": "SETTLEMENT",
+"op_id": "160643349919",
+"valor": 5425.0
+},
+{
+"fecha": "2026-05-28",
+"descripcion": "PAYOUTS",
+"op_id": "160603519619",
+"valor": -700.0
+},
+{
+"fecha": "2026-05-27",
+"descripcion": "PAYOUTS",
+"op_id": "161283702190",
+"valor": -18500.0
+},
+{
+"fecha": "2026-05-27",
+"descripcion": "SETTLEMENT",
+"op_id": "160492883063",
+"valor": 18578.96
+},
+{
+"fecha": "2026-05-26",
+"descripcion": "PAYOUTS",
+"op_id": "161096044092",
+"valor": -550.0
+},
+{
+"fecha": "2026-05-19",
+"descripcion": "PAYOUTS",
+"op_id": "160083431310",
+"valor": -10000.0
+},
+{
+"fecha": "2026-05-19",
+"descripcion": "PAYOUTS",
+"op_id": "159304049799",
+"valor": -8960.0
+},
+{
+"fecha": "2026-05-19",
+"descripcion": "SETTLEMENT",
+"op_id": "160083725300",
+"valor": 18578.96
+},
+{
+"fecha": "2026-05-19",
+"descripcion": "SETTLEMENT",
+"op_id": "160082707328",
+"valor": -564.9
+},
+{
+"fecha": "2026-05-19",
+"descripcion": "PAYOUTS",
+"op_id": "160074215908",
+"valor": -1715.0
+},
+{
+"fecha": "2026-05-18",
+"descripcion": "PAYOUTS",
+"op_id": "159155208339",
+"valor": -650.0
+},
+{
+"fecha": "2026-05-18",
+"descripcion": "PAYOUTS",
+"op_id": "159155300103",
+"valor": -700.0
+},
+{
+"fecha": "2026-05-14",
+"descripcion": "SETTLEMENT",
+"op_id": "159304040146",
+"valor": -1034.8
+},
+{
+"fecha": "2026-05-14",
+"descripcion": "SETTLEMENT",
+"op_id": "158582317399",
+"valor": 2800.0
+},
+{
+"fecha": "2026-05-14",
+"descripcion": "PAYOUTS",
+"op_id": "158568847325",
+"valor": -14750.0
+},
+{
+"fecha": "2026-05-14",
+"descripcion": "SETTLEMENT",
+"op_id": "159343034486",
+"valor": 17401.36
+},
+{
+"fecha": "2026-05-14",
+"descripcion": "PAYOUTS",
+"op_id": "159284242604",
+"valor": -1000.0
+},
+{
+"fecha": "2026-05-13",
+"descripcion": "PAYOUTS",
+"op_id": "158331709253",
+"valor": -700.0
+},
+{
+"fecha": "2026-05-11",
+"descripcion": "PAYOUTS",
+"op_id": "158893405242",
+"valor": -11500.0
+},
+{
+"fecha": "2026-05-11",
+"descripcion": "SETTLEMENT",
+"op_id": "158871523064",
+"valor": 4701.88
+},
+{
+"fecha": "2026-05-11",
+"descripcion": "SETTLEMENT",
+"op_id": "158870251324",
+"valor": 8837.61
+},
+{
+"fecha": "2026-05-04",
+"descripcion": "PAYOUTS",
+"op_id": "157761089138",
+"valor": -16500.0
+},
+{
+"fecha": "2026-05-04",
+"descripcion": "SETTLEMENT",
+"op_id": "157743782086",
+"valor": 16383.1
+}
+],
+"archivo": "Estados de Cuenta Mercado pago/2026/Mercado pago mayo 26.csv",
+"sha256": "621a6648eb522b02"
+},
+{
+"formato": "pdf",
+"periodo": "2026-06",
+"control": {
+"entradas": 91472.44,
+"salidas": -84669.6,
+"saldo_inicial": 897.72,
+"saldo_final": 7700.56
+},
+"movimientos": [
+{
+"fecha": "2026-06-01",
+"descripcion": "Transferencia enviada Panoramica Dental Monterrey nueva",
+"op_id": "162008279714",
+"valor": -700.0
+},
+{
+"fecha": "2026-06-01",
+"descripcion": "Liberación de dinero",
+"op_id": "162013281838",
+"valor": 20643.8
+},
+{
+"fecha": "2026-06-01",
+"descripcion": "Liberación de dinero",
+"op_id": "161239669377",
+"valor": 11390.66
+},
+{
+"fecha": "2026-06-01",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "161242787191",
+"valor": -30000.0
+},
+{
+"fecha": "2026-06-02",
+"descripcion": "Transferencia enviada Panoramica Nueva",
+"op_id": "161378951049",
+"valor": -700.0
+},
+{
+"fecha": "2026-06-02",
+"descripcion": "Transferencia enviada Panoramica Nueva",
+"op_id": "162205188386",
+"valor": -700.0
+},
+{
+"fecha": "2026-06-03",
+"descripcion": "Pago Office depot hamburgo",
+"op_id": "161579832237",
+"valor": -160.0
+},
+{
+"fecha": "2026-06-05",
+"descripcion": "Transferencia enviada Tueme Clinica Dental",
+"op_id": "161867010931",
+"valor": -550.0
+},
+{
+"fecha": "2026-06-05",
+"descripcion": "Liberación de dinero",
+"op_id": "162715384198",
+"valor": 17426.56
+},
+{
+"fecha": "2026-06-08",
+"descripcion": "Transferencia enviada Ruben Ochoa",
+"op_id": "162336033869",
+"valor": -800.0
+},
+{
+"fecha": "2026-06-08",
+"descripcion": "Transferencia enviada Alejandro Juarez Bautista",
+"op_id": "162345986049",
+"valor": -8490.0
+},
+{
+"fecha": "2026-06-08",
+"descripcion": "Retiro de efectivo Cajero automático",
+"op_id": "163182467254",
+"valor": -1534.8
+},
+{
+"fecha": "2026-06-17",
+"descripcion": "Liberación de dinero",
+"op_id": "163792920797",
+"valor": 16531.06
+},
+{
+"fecha": "2026-06-17",
+"descripcion": "Transferencia enviada Ruben Ochoa",
+"op_id": "163809738949",
+"valor": -1600.0
+},
+{
+"fecha": "2026-06-17",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "164625117752",
+"valor": -19000.0
+},
+{
+"fecha": "2026-06-18",
+"descripcion": "Transferencia recibida LUCERO PEDREROS OSORIO",
+"op_id": "163930351135",
+"valor": 10500.0
+},
+{
+"fecha": "2026-06-18",
+"descripcion": "Transferencia enviada Ortodoncia Keep Sa de CV",
+"op_id": "164746968070",
+"valor": -7000.0
+},
+{
+"fecha": "2026-06-18",
+"descripcion": "Retiro de efectivo Cajero automático",
+"op_id": "163933332985",
+"valor": -4534.8
+},
+{
+"fecha": "2026-06-19",
+"descripcion": "Transferencia enviada Jaime Alejandro Lagunes Lopez",
+"op_id": "164044895351",
+"valor": -350.0
+},
+{
+"fecha": "2026-06-25",
+"descripcion": "Transferencia enviada Tueme Clinica Dental",
+"op_id": "165773491466",
+"valor": -550.0
+},
+{
+"fecha": "2026-06-30",
+"descripcion": "Liberación de dinero",
+"op_id": "166545906116",
+"valor": 14980.36
+},
+{
+"fecha": "2026-06-30",
+"descripcion": "Transferencia enviada Alejandro Juarez Bautista",
+"op_id": "165708719645",
+"valor": -8000.0
+}
+],
+"archivo": "Estados de cuenta BBVA/2026/junio 26 mercado pago.pdf",
+"sha256": "9c44fd0b66f73af2"
+},
+{
+"formato": "csv",
+"periodo": "2026-07",
+"control": {},
+"movimientos": [
+{
+"fecha": "2026-07-31",
+"descripcion": "PAYOUTS",
+"op_id": "170533668427",
+"valor": -4459.0
+},
+{
+"fecha": "2026-07-30",
+"descripcion": "PAYOUTS",
+"op_id": "171294275334",
+"valor": -8960.0
+},
+{
+"fecha": "2026-07-30",
+"descripcion": "PAYOUTS",
+"op_id": "171285517356",
+"valor": -5907.64
+},
+{
+"fecha": "2026-07-30",
+"descripcion": "SETTLEMENT",
+"op_id": "171232730156",
+"valor": 19410.34
+},
+{
+"fecha": "2026-07-28",
+"descripcion": "PAYOUTS",
+"op_id": "170053620815",
+"valor": -550.0
+},
+{
+"fecha": "2026-07-21",
+"descripcion": "PAYOUTS",
+"op_id": "169948199490",
+"valor": -530.0
+},
+{
+"fecha": "2026-07-21",
+"descripcion": "PAYOUTS",
+"op_id": "169068908829",
+"valor": -22000.0
+},
+{
+"fecha": "2026-07-21",
+"descripcion": "SETTLEMENT",
+"op_id": "169042475895",
+"valor": 19185.36
+},
+{
+"fecha": "2026-07-21",
+"descripcion": "PAYOUTS",
+"op_id": "169864490662",
+"valor": -500.0
+},
+{
+"fecha": "2026-07-16",
+"descripcion": "SETTLEMENT",
+"op_id": "168250307319",
+"valor": -734.8
+},
+{
+"fecha": "2026-07-13",
+"descripcion": "SETTLEMENT",
+"op_id": "167782076301",
+"valor": 4200.0
+},
+{
+"fecha": "2026-07-09",
+"descripcion": "PAYOUTS",
+"op_id": "167177646575",
+"valor": -2500.0
+},
+{
+"fecha": "2026-07-09",
+"descripcion": "PAYOUTS",
+"op_id": "168032149624",
+"valor": -530.0
+},
+{
+"fecha": "2026-07-08",
+"descripcion": "PAYOUTS",
+"op_id": "167077986109",
+"valor": -12000.0
+},
+{
+"fecha": "2026-07-08",
+"descripcion": "SETTLEMENT",
+"op_id": "167899186848",
+"valor": 15902.49
+},
+{
+"fecha": "2026-07-07",
+"descripcion": "PAYOUTS",
+"op_id": "167688223478",
+"valor": -4480.0
+},
+{
+"fecha": "2026-07-02",
+"descripcion": "SETTLEMENT",
+"op_id": "166035667831",
+"valor": -2534.8
+},
+{
+"fecha": "2026-07-03",
+"descripcion": "PAYOUTS",
+"op_id": "167036534024",
+"valor": -700.0
+},
+{
+"fecha": "2026-07-02",
+"descripcion": "PAYOUTS",
+"op_id": "166874701602",
+"valor": -4000.0
+},
+{
+"fecha": "2026-07-02",
+"descripcion": "SETTLEMENT",
+"op_id": "166866412902",
+"valor": 8955.85
+},
+{
+"fecha": "2026-07-02",
+"descripcion": "PAYOUTS",
+"op_id": "166002148959",
+"valor": -4480.0
+}
+],
+"archivo": "Estados de cuenta BBVA/2026/julio 26 mercado pago.csv",
+"sha256": "b9a6911ab8c5abcc"
+}
+]
+}
