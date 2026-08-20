@@ -34,6 +34,7 @@ type Fila = Record<string, string>;
 const POR_COMERCIO: Array<{ patron: RegExp; categoria: string; nota?: string }> = [
   { patron: /SKYDROPX|DHL|Lalamove|United Parcel|ESTAFETA|FEDEX|PAQUETEXPRESS/i, categoria: "Envíos" },
   { patron: /XIPECUBICO/i, categoria: "Consumibles de producción", nota: "Xipe Cúbico: insumos de impresión 3D" },
+  { patron: /MUZCOMP/i, categoria: "Resina", nota: "resina de impresión (confirmado Pancho 20/8/26)" },
   { patron: /TIENDADD|DENTAL|DENTIMEX/i, categoria: "Consumibles de producción" },
   { patron: /\bCFE\b/i, categoria: "Energía" },
   { patron: /TELMEX|TELCEL|IZZI|ATT|TOTALPLAY/i, categoria: "Comunicaciones" },
