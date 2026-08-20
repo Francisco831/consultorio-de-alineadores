@@ -54,6 +54,13 @@ const ETAPAS: AcqStage[] = [
   "no_interesado",
 ];
 
+// Un corte que no es una etapa del pipeline sino una lista de trabajo: los
+// ortodoncistas que siguen a @keepsmiling_mex en Instagram y todavía no compraron.
+// Los dos tags los pone scripts/tag-seguidores-ig.ts desde el censo de seguidores:
+// "sigue-instagram" es el hecho, "ig:ortodoncista" la especialidad inferida.
+const TAG_IG = "sigue-instagram";
+const TAG_IG_ORTO = "ig:ortodoncista";
+
 export default async function ProspeccionListaPage({
   searchParams,
 }: {
@@ -73,7 +80,8 @@ export default async function ProspeccionListaPage({
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
   if (q) query = query.ilike("nombre", `%${q}%`);
-  if (f !== "todos" && (ETAPAS as string[]).includes(f))
+  if (f === "ig-orto") query = query.contains("tags", [TAG_IG, TAG_IG_ORTO]);
+  else if (f !== "todos" && (ETAPAS as string[]).includes(f))
     query = query.eq("acquisition_stage", f);
 
   const { data, count, error } = await query;
@@ -111,6 +119,21 @@ export default async function ProspeccionListaPage({
           />
           {f !== "todos" ? <input type="hidden" name="f" value={f} /> : null}
         </form>
+        <Link
+          href={`/prospeccion/lista?${new URLSearchParams({
+            ...(q ? { q } : {}),
+            f: "ig-orto",
+          })}`}
+          className={cn(
+            buttonVariants({
+              variant: f === "ig-orto" ? "secondary" : "outline",
+              size: "sm",
+            }),
+            "h-8 text-[13px]"
+          )}
+        >
+          Ortodoncistas que te siguen en IG
+        </Link>
         <div className="flex flex-wrap gap-1">
           {[{ key: "todos", label: "Todos" }, ...ETAPAS.map((e) => ({ key: e, label: ACQ_STAGE_LABELS[e] }))].map(
             (x) => (
