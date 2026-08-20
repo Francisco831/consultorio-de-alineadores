@@ -18,6 +18,12 @@
  * 'identificado', que es exactamente lo que son: alguien que existe y a quien todavía
  * nadie le habló.
  *
+ * UNA QUE SE ESCAPÓ. El filtro miraba país y acción, pero no las refutaciones del
+ * verificador, y por eso entró @angiebouza —que es personal de KeepSmiling México,
+ * no una doctora— hasta que scripts/borrar-ficha-interna.ts la sacó. Si este
+ * importador se vuelve a correr con datos nuevos, el filtro tiene que descartar
+ * también todo lo refutado, no solo lo que quedó marcado NO_TRABAJAR.
+ *
  * EL PAÍS NO SIEMPRE ESTÁ. 110 de las 137 quedaron con el país sin confirmar porque
  * el nombre de Instagram no lo dice y no pudimos leer las biografías. Van con el tag
  * "pais:por-confirmar" y acción "verificar_pais": es una tarea de un minuto por ficha
