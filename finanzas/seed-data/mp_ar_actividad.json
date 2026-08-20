@@ -1,0 +1,1182 @@
+{
+ "fuente": "mp_actividad.py (transcripcion manual 21/7/26 + updates)",
+ "cobertura": "2026-05-13 → 2026-07-31",
+ "filas": [
+  {
+   "fecha": "2026-07-31",
+   "pagador": "Sofia Maria Navar",
+   "ars": 200000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-31",
+   "pagador": "Gallo Maria Dolores",
+   "ars": 200000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-31",
+   "pagador": "Alicia Graciela Belinky",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-28",
+   "pagador": "Fiorella Tonello",
+   "ars": 70000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-24",
+   "pagador": "Rocio Puig",
+   "ars": -30180,
+   "tipo": "enviada"
+  },
+  {
+   "fecha": "2026-07-24",
+   "pagador": "Abad Gustavo Alberto",
+   "ars": -1711272.4,
+   "tipo": "enviada"
+  },
+  {
+   "fecha": "2026-07-24",
+   "pagador": "Di Giano Maria Eugenia",
+   "ars": -104624,
+   "tipo": "enviada"
+  },
+  {
+   "fecha": "2026-07-24",
+   "pagador": "Di Giano Maria Eugenia",
+   "ars": -568054,
+   "tipo": "enviada"
+  },
+  {
+   "fecha": "2026-07-24",
+   "pagador": "Mariana Franco",
+   "ars": -1416830.28,
+   "tipo": "enviada"
+  },
+  {
+   "fecha": "2026-07-22",
+   "pagador": "Paula Andrea Champetruso",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-22",
+   "pagador": "Mateo Padula",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-22",
+   "pagador": "Jano Pratolongo",
+   "ars": 30000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-22",
+   "pagador": "Iliana Belen Grieco",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-22",
+   "pagador": "Sunilda Godoy Portilho",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-22",
+   "pagador": "Stefania Jeanette Pepe",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-22",
+   "pagador": "Eydelsteyn Cynthia Marcela",
+   "ars": 100000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-22",
+   "pagador": "Mauro Martin Diaz",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-22",
+   "pagador": "Jacana Networks Srl",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-22",
+   "pagador": "Tempelsman Gabriela",
+   "ars": 200000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-22",
+   "pagador": "Botto Camila",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-22",
+   "pagador": "Gaido Lucio Miguel",
+   "ars": 200000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-21",
+   "pagador": "Poccard Ignacio",
+   "ars": 300000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-20",
+   "pagador": "Mariana Beatriz Granoni",
+   "ars": 200000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-17",
+   "pagador": "Agustina Maria Vilela",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-17",
+   "pagador": "Bettina Cecilia Schettini",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-17",
+   "pagador": "Juan Cruz Gehl",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-17",
+   "pagador": "Viviana De Jesus Perez",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-16",
+   "pagador": "Gonzalez Schneidewin Fernando Nicolas",
+   "ars": 100000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-16",
+   "pagador": "Butler Juan Manuel",
+   "ars": 300000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-16",
+   "pagador": "Bascerano Federico Demian",
+   "ars": 610000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-15",
+   "pagador": "Maria Celsa Fernandez Abella",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-15",
+   "pagador": "Maria Jose Ferrari Frigo",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-15",
+   "pagador": "Morena Martinez",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-15",
+   "pagador": "Manuel Mariano Poccard",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-15",
+   "pagador": "Ana Paola Aldinio",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-15",
+   "pagador": "Maria Fernanda Cugat",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-15",
+   "pagador": "Catalina Maria Grillo",
+   "ars": 70000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-15",
+   "pagador": "Rolon Damian Dario",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-15",
+   "pagador": "Milagros Del Rosario Gimenez",
+   "ars": 70000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-15",
+   "pagador": "Teofilo Maria De Elizalde",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-15",
+   "pagador": "Jet Money Srl",
+   "ars": 650000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-14",
+   "pagador": "Paula Saavedra",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-14",
+   "pagador": "Maria Gisela Fretes Marin",
+   "ars": 100000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-14",
+   "pagador": "Martina Rouvier",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-14",
+   "pagador": "Natalia Szalontai",
+   "ars": 2300000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-14",
+   "pagador": "Maria Sol Pastorenze",
+   "ars": 200000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-14",
+   "pagador": "Tomas O Reilly",
+   "ars": 100000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-14",
+   "pagador": "Josefina Lindsell",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-13",
+   "pagador": "Daira Maribel Castellon",
+   "ars": 400000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-10",
+   "pagador": "Martin Nahuel Nisenbaum",
+   "ars": 513400,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-08",
+   "pagador": "Mariana Franco",
+   "ars": -558827.97,
+   "tipo": "enviada"
+  },
+  {
+   "fecha": "2026-07-08",
+   "pagador": "Daira Maribel Castellon",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-08",
+   "pagador": "Jorge Ariel Abuliak",
+   "ars": -1810800,
+   "tipo": "enviada"
+  },
+  {
+   "fecha": "2026-07-08",
+   "pagador": "Cons Prop R Scalabrini Ortiz 3183",
+   "ars": -613868.29,
+   "tipo": "enviada"
+  },
+  {
+   "fecha": "2026-07-08",
+   "pagador": "Flesch Rosana",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-08",
+   "pagador": "Mariana Del Sel",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-08",
+   "pagador": "Luna Zaietz",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-06",
+   "pagador": "Valentina De Sousa",
+   "ars": 200000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-03",
+   "pagador": "Agustina Botto",
+   "ars": 70000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-03",
+   "pagador": "Tedesco Luciana Magali",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-03",
+   "pagador": "Juan Angel Lo Pardo",
+   "ars": 300000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-03",
+   "pagador": "Blas Andres Gomez",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-01",
+   "pagador": "Maria Lucia Lescano",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-01",
+   "pagador": "Maria Celeste Longo",
+   "ars": 40000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-01",
+   "pagador": "Garat Magdalena",
+   "ars": 70000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-01",
+   "pagador": "Romina Giselle Yesica Ventrici Morabito",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-01",
+   "pagador": "Paula Miano",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-01",
+   "pagador": "Elisa Gonzalez Alzaga",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-01",
+   "pagador": "Fiorella Tonello",
+   "ars": 70000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-07-01",
+   "pagador": "Maria Victoria Costa",
+   "ars": 70000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-30",
+   "pagador": "Zoff Ivana Maria",
+   "ars": 55000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-30",
+   "pagador": "Mata Guzman Franchesca Marina",
+   "ars": 60000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-30",
+   "pagador": "Valeria Laura Villafane",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-30",
+   "pagador": "Daniel Sebastian Ortega",
+   "ars": 100000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-30",
+   "pagador": "Hernan Carlos Balboa",
+   "ars": 65000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-30",
+   "pagador": "Florencia Antonela Castillo",
+   "ars": 60000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-30",
+   "pagador": "Fiorella Tonello",
+   "ars": 740000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-30",
+   "pagador": "Dumigan Maria Milagros",
+   "ars": 60000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-29",
+   "pagador": "Marcela Sofia Russo Aulet",
+   "ars": 37500,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-29",
+   "pagador": "Russo Aulet Marcela Sofia",
+   "ars": 950000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-26",
+   "pagador": "Norberto Enrique Sanchez",
+   "ars": 5000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-26",
+   "pagador": "Isolda Maria Tripoli",
+   "ars": 70000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-26",
+   "pagador": "Vanina Laura Hernandez",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-26",
+   "pagador": "Nicolas Cerdeira",
+   "ars": 40000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-24",
+   "pagador": "Josefina Lindsell",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-24",
+   "pagador": "Maria Layla Vieiros",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-24",
+   "pagador": "Carolina Carniglia",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-24",
+   "pagador": "Diaz Mauro Martin",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-24",
+   "pagador": "Loginova Mariia",
+   "ars": 70000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-24",
+   "pagador": "Maria Fernanda Cugat",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-24",
+   "pagador": "Maria Fernanda Cugat",
+   "ars": 166666,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-24",
+   "pagador": "Alfredo Jorge Staudt",
+   "ars": 100000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-24",
+   "pagador": "Ana Paola Aldinio",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-24",
+   "pagador": "Tapia Macarena",
+   "ars": 25000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-24",
+   "pagador": "Manuel Mariano Poccard",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-24",
+   "pagador": "Maria Josefina De Frankenberg",
+   "ars": 635000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-24",
+   "pagador": "Maria Josefina De Frankenberg",
+   "ars": 600000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-24",
+   "pagador": "Esteban Jose Rodrigo Antuna Rodriguez",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-24",
+   "pagador": "Botto Camila",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-23",
+   "pagador": "Rita Stefani",
+   "ars": 200000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-23",
+   "pagador": "Lusso Maria Laura",
+   "ars": 150000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-23",
+   "pagador": "Aguer Maria Paula",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-23",
+   "pagador": "Revah Maria Cecilia",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-23",
+   "pagador": "Carolina Carla Sande",
+   "ars": 70000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-19",
+   "pagador": "Fernando Nahuel Esposito",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-17",
+   "pagador": "Gerardo Antonio Albarracin",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-17",
+   "pagador": "Alex Ernesto Schorr Bracamonte",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-17",
+   "pagador": "Juan Cruz Gehl",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-17",
+   "pagador": "Ignacio Etchegoyhen",
+   "ars": 70000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-17",
+   "pagador": "Mateo Padula",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-16",
+   "pagador": "Aitana Lujan Zerpa Benitez",
+   "ars": 60000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-16",
+   "pagador": "Santiago Maria Slavutzky",
+   "ars": 100000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-12",
+   "pagador": "Flesch Rosana Margarita",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-12",
+   "pagador": "Viviana De Jesus Perez",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-12",
+   "pagador": "Mariana Del Sel",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-12",
+   "pagador": "Tedesco Luciana Magali",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-12",
+   "pagador": "Doriber Carolina Carvajal Zamora",
+   "ars": 200000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-10",
+   "pagador": "Maria Jose Milagros Colimodio Torreiro",
+   "ars": 583333,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-10",
+   "pagador": "Maria Lucia Lescano",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-10",
+   "pagador": "Maria Jose Ferrari Frigo",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-10",
+   "pagador": "Ventrici Morabito Romina Giselle",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-10",
+   "pagador": "Ventrici Morabito Romina Giselle",
+   "ars": 980000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-10",
+   "pagador": "Morena Martinez",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-10",
+   "pagador": "Marcelo Javier De Sousa",
+   "ars": 200000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-10",
+   "pagador": "Juana Gutierrez",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-10",
+   "pagador": "Maria Celsa Fernandez Abella",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-10",
+   "pagador": "Rolon Damian Dario",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-10",
+   "pagador": "Luna Zaietz",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-10",
+   "pagador": "Maria Agustina De Los Santos",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-10",
+   "pagador": "Eleonora Mirta Lambruschini",
+   "ars": 60000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-09",
+   "pagador": "Maria Agustina Alberdi",
+   "ars": 50000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-09",
+   "pagador": "Dumigan Maria Milagros",
+   "ars": 60000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-09",
+   "pagador": "Carolina Rizzi",
+   "ars": 200000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-09",
+   "pagador": "Paula Saavedra",
+   "ars": 50000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-09",
+   "pagador": "Bensadon Ines",
+   "ars": 150000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-08",
+   "pagador": "Fiorella Marianna Acri",
+   "ars": 150000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-05",
+   "pagador": "Maria Soledad Garcia",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-05",
+   "pagador": "Pistone Paula",
+   "ars": 105000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-04",
+   "pagador": "Cons Prop R Scalabrini Ortiz 3183",
+   "ars": -329982.13,
+   "tipo": "enviada"
+  },
+  {
+   "fecha": "2026-06-04",
+   "pagador": "Jorge Ariel Abuliak",
+   "ars": -1810800,
+   "tipo": "enviada"
+  },
+  {
+   "fecha": "2026-06-03",
+   "pagador": "Martin Nahuel Nisenbaum",
+   "ars": 861000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-03",
+   "pagador": "Maria Andrea Hasrun Malvar",
+   "ars": 150000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-02",
+   "pagador": "Zoff Ivana Maria",
+   "ars": 55000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-02",
+   "pagador": "Lautaro Doto",
+   "ars": 70000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-02",
+   "pagador": "Hernan Carlos Balboa",
+   "ars": 65000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-02",
+   "pagador": "Leandro Bernabe O Rourke",
+   "ars": 95000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-06-02",
+   "pagador": "Bensadon Ines",
+   "ars": 150000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-29",
+   "pagador": "Isolda Maria Tripoli",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-29",
+   "pagador": "Botto Agustina",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-29",
+   "pagador": "Gaston Castro",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-27",
+   "pagador": "Maria Victoria Costa",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-27",
+   "pagador": "Mercedes Farrell",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-27",
+   "pagador": "Santiago Maria Slavutzky",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-27",
+   "pagador": "Maria De Los Angeles Rendal",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-27",
+   "pagador": "Mariia Loginova",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-27",
+   "pagador": "Mailen Natalin Mir",
+   "ars": 45000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-27",
+   "pagador": "Jazmin Lujan Aromi",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-26",
+   "pagador": "Doherty Peter",
+   "ars": 60000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-26",
+   "pagador": "Mata Guzman Franchesca Marina",
+   "ars": 60000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-22",
+   "pagador": "Esteban Jose Rodrigo Antuna Rodriguez",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-22",
+   "pagador": "Cecilia Maria Zutrauen",
+   "ars": 135000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-22",
+   "pagador": "Javier Damian Schamber",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-22",
+   "pagador": "Viviana De Jesus Perez",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-22",
+   "pagador": "Leticia Paloma Pacheco Veliz",
+   "ars": 935000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-21",
+   "pagador": "Elizari Maria Ines",
+   "ars": 200000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-20",
+   "pagador": "Maria Jose Milagros Colimodio Torreiro",
+   "ars": 583333,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-20",
+   "pagador": "Ana Paola Aldinio",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-20",
+   "pagador": "Maria Celsa Fernandez Abella",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-20",
+   "pagador": "Josefina Lindsell",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-20",
+   "pagador": "Manuel Mariano Poccard",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-20",
+   "pagador": "Rolon Damian Dario",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-20",
+   "pagador": "Maria Laura Gulino",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-20",
+   "pagador": "Mateo Padula",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-20",
+   "pagador": "Agustina Maria Vilela",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-20",
+   "pagador": "Revah Maria Cecilia",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-19",
+   "pagador": "Mariano Rovetta",
+   "ars": 100000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-19",
+   "pagador": "Belinky Alicia Graciela",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-19",
+   "pagador": "Maquieyra Martin",
+   "ars": 150000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-19",
+   "pagador": "Gallo Maria Dolores",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-19",
+   "pagador": "Paula Garnero",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-19",
+   "pagador": "Bascerano Federico Demian",
+   "ars": 568000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-18",
+   "pagador": "Lucas Ariel Lodeiro",
+   "ars": 100000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-15",
+   "pagador": "Flesch Rosana Margarita",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-15",
+   "pagador": "Magdalena Garat",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-15",
+   "pagador": "Luna Zaietz",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-15",
+   "pagador": "Cecilia Maria Zutrauen",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-15",
+   "pagador": "Benjamin Juan Di Tullio",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-15",
+   "pagador": "Mariana Del Sel",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-15",
+   "pagador": "Gerardo Antonio Albarracin",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-15",
+   "pagador": "Valenzuela Daniela",
+   "ars": 200000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-14",
+   "pagador": "Yanina Piccolo",
+   "ars": 150000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-13",
+   "pagador": "Schorr Alex Ernesto",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-13",
+   "pagador": "Botto Camila",
+   "ars": 30000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-13",
+   "pagador": "Fernando Nahuel Esposito",
+   "ars": 135000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-13",
+   "pagador": "Alberto Rodrigo Carlos",
+   "ars": 35000,
+   "tipo": "recibida"
+  },
+  {
+   "fecha": "2026-05-13",
+   "pagador": "Botto Camila",
+   "ars": 70000,
+   "tipo": "recibida"
+  }
+ ]
+}

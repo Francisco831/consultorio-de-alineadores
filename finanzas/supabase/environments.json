@@ -1,0 +1,7 @@
+{
+  "_leeme": "Qué project_ref de Supabase es cada entorno de FINANZAS. Lo leen scripts/db-migrate.ts y scripts/lib/destino.ts. Un ref que no figure acá se trata como desconocido y exige confirmación escrita aunque se pase --yes. PRODUCCIÓN la exige siempre. El ref es la parte visible de NEXT_PUBLIC_SUPABASE_URL; las claves nunca van acá.",
+  "_estado": "Proyecto creado el 20/8/2026. Conexión verificada; migraciones 0000-0009 pendientes de aplicar.",
+  "_ojo": "Base financiera de DOS empresas. Antes de escribir en cualquier base: --print-target → --dry-run → --apply.",
+  "kgkzbjqxuvdfxxtjowej": "desarrollo",
+  "_regiones": "El proyecto de finanzas vive en us-west-2 (verificado 20/8/2026 probando el pooler). SUPABASE_DB_HOST=aws-0-us-west-2.pooler.supabase.com ahorra los intentos fallidos del autodetector."
+}

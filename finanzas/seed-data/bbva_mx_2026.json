@@ -1,0 +1,2464 @@
+{
+"fuente": "/Users/franciscobasilico/Library/Mobile Documents/com~apple~CloudDocs/Keep Smiling/KS Mexico/Contable",
+"estados": [
+{
+"archivo": "Estados de cuenta Clara/2026/Estado de cuenta bbva enero 2026.pdf",
+"sha256": "d2d0616fc7f1f70e",
+"cuenta": "0118333734",
+"desde": "2026-01-01",
+"hasta": "2026-01-31",
+"control": {
+"abonos": {
+"n": 22,
+"total": 207964.0
+},
+"cargos": {
+"n": 18,
+"total": 235571.13
+},
+"saldo_inicial": 74282.16,
+"saldo_final": 46675.03
+},
+"movimientos": [
+{
+"fecha": "2026-01-02",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1512798293 Ref. 0079639013",
+"cargo": 18000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-01-02",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1580002821 Ref. 0079639018 Estimado Cliente, Su Estado de Cuenta ha sido modificado y ahora tiene más detalle de información. También le informamos que su Contrato ha sido modificado, el cual puede consultarlo en cualquier sucursal o www.bbva.mx Con BBVA adelante. La GAT Real es el rendimiento que obtendría después de descontar la inflación estimada BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 3 / 9 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN",
+"cargo": 12000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-01-02",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANORTE 0020126SUELDO ENERO 26 Ref. 0029688862 072 00072580013228165398 BNET01002601020029688862 ADMINF",
+"cargo": 9000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-01-02",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1590619097 Ref. 0079639035",
+"cargo": 11765.0,
+"abono": null,
+"saldo": 23517.16
+},
+{
+"fecha": "2026-01-05",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1536586592 Ref. 0061062011",
+"cargo": 22000.0,
+"abono": null,
+"saldo": 1517.16
+},
+{
+"fecha": "2026-01-07",
+"cod": "S39",
+"descripcion": "SERV BANCA INTERNET Ref. SERV BCA INTERN",
+"cargo": 450.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-01-07",
+"cod": "S39",
+"descripcion": "SERV BANCA INTERNET Ref. OPS SERV BCA IN",
+"cargo": 26.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-01-07",
+"cod": "S40",
+"descripcion": "IVA COM SERV BCA INTERNET Ref. IVA COM SERV BC",
+"cargo": 76.16,
+"abono": null,
+"saldo": 965.0
+},
+{
+"fecha": "2026-01-08",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 2775955440 Dr German Gonzalez Ref. 0010736023",
+"cargo": null,
+"abono": 6725.0,
+"saldo": null
+},
+{
+"fecha": "2026-01-08",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 9788864PAGO KEEP PX GABRIEL CONTRERAS Ref. 0141538784 014 00014116655071174614 20260108400140BET0000497888640 ORTHOIMPLANTSMILE SC",
+"cargo": null,
+"abono": 10160.0,
+"saldo": null
+},
+{
+"fecha": "2026-01-08",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1512798293 Ref. 0015554013",
+"cargo": 1680.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-01-08",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1590619097 Ref. 0015554018",
+"cargo": 3850.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-01-08",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 2915209536 Ref. 0015554011",
+"cargo": 6960.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-01-08",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANREGIO 0080126ABOGADOS ENERO 26 Ref. 0030969993 058 00058650000149298243 BNET01002601080030969993 TORO NUEVOS",
+"cargo": 4689.3,
+"abono": null,
+"saldo": 670.7
+},
+{
+"fecha": "2026-01-09",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSCOTIABANK 0090126abono cade Ref. 0148265454 044 00044020132010293203 2026010940044B36K0000072772360 HIGUERA SAUCEDA PAUL ISAAC",
+"cargo": null,
+"abono": 20000.0,
+"saldo": 20670.7
+},
+{
+"fecha": "2026-01-10",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 8689462MERCADO*PAGO Ref. 0152885133 722 00722969010951272888 CPO141488689462 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 10000.0,
+"saldo": 30670.7
+},
+{
+"fecha": "2026-01-12",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANAMEX 0120126ABOGADOS ENERO 26 Ref. 0031589826 002 00002180024269154248 BNET01002601120031589826 EDUARDO NUÑEZ",
+"cargo": 15356.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-01-12",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1540530386 Aldo Buccio Medel Ref. 0048944246 BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 4 / 9 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN",
+"cargo": null,
+"abono": 10000.0,
+"saldo": 25314.7
+},
+{
+"fecha": "2026-01-13",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0484263405 1er pago Esmeralda Ref. 0061491935",
+"cargo": null,
+"abono": 13450.0,
+"saldo": null
+},
+{
+"fecha": "2026-01-13",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDONU MEXICO 0130126Transferencia Ref. 0169330000 638 00638180000192918240 NU39CRGPKD5R9EU9R8R3L6VSJ678 DANIELA NAVA ALAMILLA",
+"cargo": null,
+"abono": 4842.0,
+"saldo": 43606.7
+},
+{
+"fecha": "2026-01-14",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOINBURSA 2026011Tx Full Diego K Ref. 0171707063 036 00036180500183250226 036NAPP14012026249944898 ALEJANDRA HARUKO SALAZAR TAKAHASHI",
+"cargo": null,
+"abono": 19000.0,
+"saldo": null
+},
+{
+"fecha": "2026-01-14",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 7530850MERCADO*PAGO Ref. 0175603242 722 00722969010243846249 CPO142077530850 ARTURO EUGENIO ELIAS MONTEMAYOR",
+"cargo": null,
+"abono": 8000.0,
+"saldo": null
+},
+{
+"fecha": "2026-01-14",
+"cod": null,
+"descripcion": "AA7 DEPOSITO EFECTIVO PRACTIC FLORENCIO MENDOZA A845 FOLIO:2888 Ref. ******3734",
+"cargo": null,
+"abono": 9500.0,
+"saldo": 80106.7
+},
+{
+"fecha": "2026-01-16",
+"cod": "C07",
+"descripcion": "DEP.CHEQUES DE OTRO BANCO C07 Ref. 1246204979",
+"cargo": null,
+"abono": 8250.0,
+"saldo": 88356.7
+},
+{
+"fecha": "2026-01-19",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 0000001DRA XILONEN PAC ANGEL ARTURO Ref. 0102310820 014 00014180606155106525 2026011940014BMOVP000456820200 XILONEN DIAZ MENDOZA",
+"cargo": null,
+"abono": 10000.0,
+"saldo": null
+},
+{
+"fecha": "2026-01-19",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 6741282MERCADO*PAGO Ref. 0102763599 722 00722969010951272888 CPO142676741282 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 9500.0,
+"saldo": null
+},
+{
+"fecha": "2026-01-19",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0484443292 Abono Ref. 0058803246",
+"cargo": null,
+"abono": 7263.0,
+"saldo": 115119.7
+},
+{
+"fecha": "2026-01-20",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO STP 0200126CLARA Ref. 0033593363 646 00646180242300028235 BNET01002601200033593363 CLARA",
+"cargo": 46603.57,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-01-20",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1567123678 pijama Mariana Bau Ref. 0054074659",
+"cargo": null,
+"abono": 700.0,
+"saldo": null
+},
+{
+"fecha": "2026-01-20",
+"cod": "X01",
+"descripcion": "IMSS/INF/AFORE VIA ELECT. PAGO SIPARE E0821059106 202512 864646 Ref. 20B162529",
+"cargo": 41261.1,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-01-20",
+"cod": "P14",
+"descripcion": "SAT REF:042608CH910048573404 CIE:0844985 Ref. GUIA:1588544",
+"cargo": 1536.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-01-20",
+"cod": "P14",
+"descripcion": "SAT REF:042608CH430048579406 CIE:0844985 Ref. GUIA:1589891",
+"cargo": 17818.0,
+"abono": null,
+"saldo": 8601.03
+},
+{
+"fecha": "2026-01-22",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 3286078ORTODONCIA Ref. 0117441671 014 00014680655111581635 2026012240014TRAPP000421892600 BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 5 / 9 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN FRANCISCO JAVIER GALLARDO MORA",
+"cargo": null,
+"abono": 3000.0,
+"saldo": null
+},
+{
+"fecha": "2026-01-22",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 5200947TRANSFERENCIA A ORTODONCIA KEE Ref. 0117445234 014 00014680655111581635 2026012240014BMOVP000421910850 FRANCISCO JAVIER GALLARDO MORA",
+"cargo": null,
+"abono": 2250.0,
+"saldo": 13851.03
+},
+{
+"fecha": "2026-01-23",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 1545770MERCADO*PAGO Ref. 0123877043 722 00722969010951272888 CPO143231545770 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 21345.0,
+"saldo": null
+},
+{
+"fecha": "2026-01-23",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0484263405 3er pago Mario Mtz Ref. 0024519074",
+"cargo": null,
+"abono": 6725.0,
+"saldo": 41921.03
+},
+{
+"fecha": "2026-01-27",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOAZTECA 33373413er Pago Jonathan Roldan Ref. 0147376842 127 00127650013474793302 260128075696358566I CUATEPOTZO OLVERA LUIS ALBERTO",
+"cargo": null,
+"abono": 4304.0,
+"saldo": 46225.03
+},
+{
+"fecha": "2026-01-28",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0194724011 Ref. 0004215011",
+"cargo": 22500.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-01-28",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMIFEL 0280126Paciente Rodrigo Cedillo Ref. 0150160348 042 00042180016001896185 20260128400420000MIFB000389520 MARIO BONNABEL NUNEZ",
+"cargo": null,
+"abono": 9500.0,
+"saldo": 33225.03
+},
+{
+"fecha": "2026-01-30",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0484263405 2do pago Esmeralda Ref. 0036979066",
+"cargo": null,
+"abono": 13450.0,
+"saldo": 46675.03
+}
+]
+},
+{
+"archivo": "Estados de cuenta BBVA/2026/Febrero 26 bbva.pdf",
+"sha256": "3318824b7692798c",
+"cuenta": "0118333734",
+"desde": "2026-02-01",
+"hasta": "2026-02-28",
+"control": {
+"abonos": {
+"n": 28,
+"total": 277709.0
+},
+"cargos": {
+"n": 20,
+"total": 201049.33
+},
+"saldo_inicial": 46675.03,
+"saldo_final": 123334.7
+},
+"movimientos": [
+{
+"fecha": "2026-02-03",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1512798293 Ref. 0056721013",
+"cargo": 18000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-02-03",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1580002821 Ref. 0056721018 Estimado Cliente, Su Estado de Cuenta ha sido modificado y ahora tiene más detalle de información. También le informamos que su Contrato ha sido modificado, el cual puede consultarlo en cualquier sucursal o www.bbva.mx Con BBVA adelante. La GAT Real es el rendimiento que obtendría después de descontar la inflación estimada BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 3 / 10 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN",
+"cargo": 12000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-02-03",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANORTE 0030226JESUS Ref. 0036994828 072 00072580013228165398 BNET01002602030036994828 ADMINF",
+"cargo": 9000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-02-03",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 3002590MERCADO*PAGO Ref. 0185422366 722 00722969010951272888 CPO144643002590 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 22000.0,
+"saldo": 29675.03
+},
+{
+"fecha": "2026-02-04",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1590619097 Ref. 0024521011",
+"cargo": 11765.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-02-04",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0477203322 px azamar Ref. 0069599008",
+"cargo": null,
+"abono": 9000.0,
+"saldo": null
+},
+{
+"fecha": "2026-02-04",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 7394421MERCADO*PAGO Ref. 0195489201 722 00722969010951272888 CPO144187394421 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 12000.0,
+"saldo": 38910.03
+},
+{
+"fecha": "2026-02-05",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0050226Daniel Alejandro Reyes Jaime Ref. 0196630520 002 00002180701884360031 085901902690303661 CLAUDIA JULIET,LOPEZ/ZARRABAL",
+"cargo": null,
+"abono": 21900.0,
+"saldo": 60810.03
+},
+{
+"fecha": "2026-02-06",
+"cod": "S39",
+"descripcion": "SERV BANCA INTERNET Ref. ADMON RENTA",
+"cargo": 450.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-02-06",
+"cod": "S39",
+"descripcion": "SERV BANCA INTERNET Ref. OPS SERV BCA IN",
+"cargo": 26.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-02-06",
+"cod": "S40",
+"descripcion": "IVA COM SERV BCA INTERNET Ref. IVA COM SERV BC",
+"cargo": 76.16,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-02-06",
+"cod": "C02",
+"descripcion": "DEPOSITO EN EFECTIVO Ref. 2305 OROPEZA",
+"cargo": null,
+"abono": 10000.0,
+"saldo": null
+},
+{
+"fecha": "2026-02-06",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0484443292 2opago Ref. 0037204932",
+"cargo": null,
+"abono": 4842.0,
+"saldo": null
+},
+{
+"fecha": "2026-02-06",
+"cod": "C02",
+"descripcion": "DEPOSITO EN EFECTIVO Ref. 2307",
+"cargo": null,
+"abono": 26900.0,
+"saldo": null
+},
+{
+"fecha": "2026-02-06",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1536586592 sueldo Ref. 0032721013",
+"cargo": 22500.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-02-06",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1590619097 Ref. 0032721020",
+"cargo": 5040.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-02-06",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1512798293 Ref. 0032721025",
+"cargo": 1680.0,
+"abono": null,
+"saldo": 72779.87
+},
+{
+"fecha": "2026-02-09",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0000001DR JUAN KURI PACIENTE MARIANA Ref. 0119545869 002 00002180701386440637 085908052170304061 JUAN,KURI/MORENO",
+"cargo": null,
+"abono": 16947.0,
+"saldo": null
+},
+{
+"fecha": "2026-02-09",
+"cod": "P31",
+"descripcion": "BANCO ACTINVER SA IB13173 DOMICILIACION C Ref. PBI061115SC6 BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 4 / 10 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN",
+"cargo": 50000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-02-09",
+"cod": "P31",
+"descripcion": "BANCO ACTINVER SA IB13173 DOMICILIACION C Ref. PBI061115SC6",
+"cargo": 1478.44,
+"abono": null,
+"saldo": 38248.43
+},
+{
+"fecha": "2026-02-10",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 5303352MERCADO*PAGO Ref. 0126416832 722 00722969010951272888 CPO145705303352 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 14000.0,
+"saldo": null
+},
+{
+"fecha": "2026-02-10",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANORTE 0100226ESCANEOS Ref. 0038843576 072 00072180001867124526 BNET01002602100038843576 CEDIRAMA",
+"cargo": 4116.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-02-10",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANREGIO 0100226ABOGADOS FEB 26 Ref. 0038847172 058 00058650000149298243 BNET01002602100038847172 TORO NUEVOS",
+"cargo": 4689.3,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-02-10",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 2915209536 Ref. 0010368031",
+"cargo": 7600.0,
+"abono": null,
+"saldo": 35843.13
+},
+{
+"fecha": "2026-02-12",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANAMEX 0120226ALQUILER OFICINA Ref. 0039336238 002 00002180024269154248 BNET01002602120039336238 EDUARDO NUÃEZ",
+"cargo": 15517.75,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-02-12",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANAMEX 0120226COMPLEMENTO DEPOSITO Ref. 0039336729 002 00002180024269154248 BNET01002602120039336729 EDUARDO NUÃEZ",
+"cargo": 922.0,
+"abono": null,
+"saldo": 19403.38
+},
+{
+"fecha": "2026-02-13",
+"cod": "X01",
+"descripcion": "IMSS/INF/AFORE VIA ELECT. PAGO SIPARE E0821059106 202601 307383 Ref. 44B142928",
+"cargo": 7754.68,
+"abono": null,
+"saldo": 11648.7
+},
+{
+"fecha": "2026-02-15",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1523039648 Lucia Dosal Gutier Ref. 0043143449",
+"cargo": null,
+"abono": 1900.0,
+"saldo": 13548.7
+},
+{
+"fecha": "2026-02-17",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 2775955440 Jessica Ledezma Ref. 0090579770",
+"cargo": null,
+"abono": 19000.0,
+"saldo": 32548.7
+},
+{
+"fecha": "2026-02-18",
+"cod": "P14",
+"descripcion": "SAT REF:042617OG420048899446 CIE:0844985 Ref. GUIA:5758715",
+"cargo": 26898.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-02-18",
+"cod": "P14",
+"descripcion": "SAT REF:042617ON930048893438 CIE:0844985 Ref. GUIA:5759380",
+"cargo": 1536.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-02-18",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 9231368PAGO KEEP PX DIANA ARROYO Ref. 0174755209 014 00014116655071174614 20260218400140BET0000492313680 ORTHOIMPLANTSMILE SC",
+"cargo": null,
+"abono": 10160.0,
+"saldo": null
+},
+{
+"fecha": "2026-02-18",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 6616775MERCADO*PAGO Ref. 0175015433 722 00722969010951272888 CPO146096616775 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 4500.0,
+"saldo": null
+},
+{
+"fecha": "2026-02-18",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 5 / 10 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN BNET 1544161058 Jorge Alberto V B Ref. 0072889336",
+"cargo": null,
+"abono": 13450.0,
+"saldo": 32224.7
+},
+{
+"fecha": "2026-02-19",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0457407610 dra Michelle Arreo Ref. 0032363462",
+"cargo": null,
+"abono": 13450.0,
+"saldo": 45674.7
+},
+{
+"fecha": "2026-02-20",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 2756222MERCADO*PAGO Ref. 0187448828 722 00722969070981737249 CPO147102756222 MIGUEL ANGEL FERNANDEZ MARTINEZ",
+"cargo": null,
+"abono": 2500.0,
+"saldo": null
+},
+{
+"fecha": "2026-02-20",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1539430776 curso Marzo Ref. 0068253681",
+"cargo": null,
+"abono": 2500.0,
+"saldo": 50674.7
+},
+{
+"fecha": "2026-02-21",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 7513611DR JESUSORTIZ TX IVETTE CASTA Ref. 0192745848 014 00014180606127378527 2026022140014BMOVP000442455530 JESUS ORTIZ TAPIA",
+"cargo": null,
+"abono": 5000.0,
+"saldo": 55674.7
+},
+{
+"fecha": "2026-02-24",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 1836258MERCADO*PAGO Ref. 0108179878 722 00722969010951272888 CPO147640836258 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 5200.0,
+"saldo": null
+},
+{
+"fecha": "2026-02-24",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 1176024MERCADO*PAGO Ref. 0108240472 722 00722969010951272888 CPO147641176024 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 7600.0,
+"saldo": null
+},
+{
+"fecha": "2026-02-24",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 8381138MERCADO*PAGO Ref. 0108568312 722 00722969010243846249 CPO147648381138 ARTURO EUGENIO ELIAS MONTEMAYOR",
+"cargo": null,
+"abono": 6865.0,
+"saldo": null
+},
+{
+"fecha": "2026-02-24",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 8830749ROSELLA CARDENAS Ref. 0109040539 014 00014362605526843922 2026022440014TRAPP000415245870 ROSELLA ESTEFANIA CARDENAS TELLO",
+"cargo": null,
+"abono": 6600.0,
+"saldo": 81939.7
+},
+{
+"fecha": "2026-02-25",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 2895834325 Abono de tratamien Ref. 0028457571",
+"cargo": null,
+"abono": 2475.0,
+"saldo": null
+},
+{
+"fecha": "2026-02-25",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 6318119MERCADO*PAGO Ref. 0112761512 722 00722969010951272888 CPO147056318119 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 12600.0,
+"saldo": 97014.7
+},
+{
+"fecha": "2026-02-26",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1579005514 Irazu Ref. 0060484720",
+"cargo": null,
+"abono": 6900.0,
+"saldo": null
+},
+{
+"fecha": "2026-02-26",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1579005514 itzel Ref. 0016759030",
+"cargo": null,
+"abono": 6900.0,
+"saldo": null
+},
+{
+"fecha": "2026-02-26",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0477203322 px azamar Ref. 0000945824",
+"cargo": null,
+"abono": 3105.0,
+"saldo": 113919.7
+},
+{
+"fecha": "2026-02-27",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0484443292 Paquete Ref. 0066619535 BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 6 / 10 No. Cuenta 0118333734 No. Cliente D0659706",
+"cargo": null,
+"abono": 9415.0,
+"saldo": 123334.7
+}
+]
+},
+{
+"archivo": "Estados de cuenta BBVA/2026/Marzo 26 bbva.pdf",
+"sha256": "9f1b262e4de26a25",
+"cuenta": "0118333734",
+"desde": "2026-03-01",
+"hasta": "2026-03-31",
+"control": {
+"abonos": {
+"n": 29,
+"total": 273255.0
+},
+"cargos": {
+"n": 21,
+"total": 274455.94
+},
+"saldo_inicial": 123334.7,
+"saldo_final": 122133.76
+},
+"movimientos": [
+{
+"fecha": "2026-03-02",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 2678904MERCADO*PAGO Ref. 0144364342 722 00722969010951272888 CPO148512678904 Estimado Cliente, Su Estado de Cuenta ha sido modificado y ahora tiene más detalle de información. También le informamos que su Contrato ha sido modificado, el cual puede consultarlo en cualquier sucursal o www.bbva.mx Con BBVA adelante. La GAT Real es el rendimiento que obtendría después de descontar la inflación estimada BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 3 / 10 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN ORTODONCIA KEEP",
+"cargo": null,
+"abono": 20000.0,
+"saldo": 143334.7
+},
+{
+"fecha": "2026-03-03",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1580002821 Ref. 0004949011",
+"cargo": 12000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-03",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1590619097 Ref. 0004949019",
+"cargo": 11764.6,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-03",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1512798293 Ref. 0004949024",
+"cargo": 11212.28,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-03",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1536586592 Ref. 0004949029",
+"cargo": 21500.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-03",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 2915209536 Ref. 0004949034",
+"cargo": 7600.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-03",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0194724011 Ref. 0004949039",
+"cargo": 22500.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-03",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANAMEX 0030326ALQUILER OFICINA Ref. 0044354699 002 00002180024269154248 BNET01002603030044354699 EDUARDO NUÑEZ",
+"cargo": 15517.75,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-03",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANORTE 0030326JESUS Ref. 0044355216 072 00072580013228165398 BNET01002603030044355216 ADMINF",
+"cargo": 9000.0,
+"abono": null,
+"saldo": 32240.07
+},
+{
+"fecha": "2026-03-04",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 8429672PAGO MAGA VICTORIA Ref. 0156320800 014 00014910605960911529 2026030440014BMOVP000408214010 MARIA MAGA VICTORIA JIMENEZ",
+"cargo": null,
+"abono": 19000.0,
+"saldo": null
+},
+{
+"fecha": "2026-03-04",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 9465454PAGO KEEP PX ERICK MENDOZA GL Ref. 0157221301 014 00014116655071174614 20260304400140BET0000494654540 ORTHOIMPLANTSMILE SC",
+"cargo": null,
+"abono": 20320.0,
+"saldo": null
+},
+{
+"fecha": "2026-03-04",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 4425202MERCADO*PAGO Ref. 0158273511 722 00722969010951272888 CPO148854425202 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 15000.0,
+"saldo": 86560.07
+},
+{
+"fecha": "2026-03-05",
+"cod": "S39",
+"descripcion": "SERV BANCA INTERNET Ref. ADMON RENTA",
+"cargo": 450.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-05",
+"cod": "S39",
+"descripcion": "SERV BANCA INTERNET Ref. OPS SERV BCA IN",
+"cargo": 32.5,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-05",
+"cod": "S40",
+"descripcion": "IVA COM SERV BCA INTERNET Ref. IVA COM SERV BC",
+"cargo": 77.2,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-05",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0050326px sebatian heenandez morales Ref. 0161673569 002 00002610700553270583 085902762160306464 MARA DELY,GUZMAN/LUNA",
+"cargo": null,
+"abono": 6000.0,
+"saldo": null
+},
+{
+"fecha": "2026-03-05",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOHSBC BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 4 / 10 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN 0050326Transferencia SPEI Ref. 0162498539 021 00021180040710156307 HSBC429233 DANIEL HORACIO TRABUCCO",
+"cargo": null,
+"abono": 700.0,
+"saldo": 92700.37
+},
+{
+"fecha": "2026-03-06",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 3668287TRANSFERENCIA A KEEPSMILING Ref. 0168925222 014 00014180605132010172 2026030640014BMOV0000466753230 ANA LILIA RODRIGUEZ RODRIGUEZ",
+"cargo": null,
+"abono": 17500.0,
+"saldo": null
+},
+{
+"fecha": "2026-03-06",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 2895834325 abono de tx Ref. 0091625397",
+"cargo": null,
+"abono": 2775.0,
+"saldo": 112975.37
+},
+{
+"fecha": "2026-03-09",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1536586592 Ref. 0046726011",
+"cargo": 4200.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-09",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1512798293 Ref. 0046726016",
+"cargo": 3920.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-09",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1590619097 Ref. 0046726021",
+"cargo": 3332.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-09",
+"cod": "P31",
+"descripcion": "BANCO ACTINVER SA IB13173 DOMICILIACION C Ref. PBI061115SC6",
+"cargo": 50000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-09",
+"cod": "P31",
+"descripcion": "BANCO ACTINVER SA IB13173 DOMICILIACION C Ref. PBI061115SC6",
+"cargo": 761.31,
+"abono": null,
+"saldo": 50762.06
+},
+{
+"fecha": "2026-03-10",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANORTE 0260310Rosella cardenas Ref. 0189885285 072 00072362012197671792 38432P02202603105064688682 ROSELLA ESTEFANIA CARDENAS TELLO",
+"cargo": null,
+"abono": 6600.0,
+"saldo": null
+},
+{
+"fecha": "2026-03-10",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 5654827PAGO CASO RAUL KOBASHI Ref. 0192718926 014 00014180606187336334 2026031040014BMOVP000417950530 DENIS ANAYANSI CUEVAS ROJO",
+"cargo": null,
+"abono": 18830.0,
+"saldo": 76192.06
+},
+{
+"fecha": "2026-03-11",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0110326ulises zamudio fanny zolli Ref. 0195897666 002 00002180700011124986 085904619270307060 ULISES,ZAMUDIO/BURGOS",
+"cargo": null,
+"abono": 2500.0,
+"saldo": 78692.06
+},
+{
+"fecha": "2026-03-12",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0000001DR JUAN KURI PACIENTE LUIS MAT Ref. 0100072531 002 00002180701386440637 085900870410307161 JUAN,KURI/MORENO",
+"cargo": null,
+"abono": 13200.0,
+"saldo": null
+},
+{
+"fecha": "2026-03-12",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0113112152 Scanner Ks Ref. 0078697016",
+"cargo": 46860.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-12",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANREGIO 0120326ABOGADOS MARZO 26 Ref. 0046514233 058 00058650000149298243 BNET01002603120046514233 TORO NUEVOS",
+"cargo": 4689.3,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-12",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 7400007PAGO CASO ALINEADORES CINTHIA Ref. 0103525107 014 BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 5 / 10 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN 00014180606187336334 2026031240014BMOVP000410346600 DENIS ANAYANSI CUEVAS ROJO",
+"cargo": null,
+"abono": 18830.0,
+"saldo": 59172.76
+},
+{
+"fecha": "2026-03-13",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMIFEL 0000001ANTONIO GOMEZ ARENAS Ref. 0107276364 042 00042180010041856055 20260313400420000MIFB000061166 ANTONIO GOMEZ ARENAS",
+"cargo": null,
+"abono": 2500.0,
+"saldo": null
+},
+{
+"fecha": "2026-03-13",
+"cod": "X01",
+"descripcion": "IMSS/INF/AFORE VIA ELECT. PAGO SIPARE E0821059106 202602 697216 Ref. 72B123017",
+"cargo": 39318.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-13",
+"cod": "P14",
+"descripcion": "SAT REF:04261VTN370049205478 CIE:0844985 Ref. GUIA:7297432",
+"cargo": 1628.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-13",
+"cod": "P14",
+"descripcion": "SAT REF:04261VTE750049204451 CIE:0844985 Ref. GUIA:7298938",
+"cargo": 8093.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-03-13",
+"cod": null,
+"descripcion": "AA7 DEPOSITO EFECTIVO PRACTIC KARLA OROPEZA B303 FOLIO:7359 Ref. ******3734",
+"cargo": null,
+"abono": 3450.0,
+"saldo": 16083.76
+},
+{
+"fecha": "2026-03-18",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 6689437MERCADO*PAGO Ref. 0139586079 722 00722969010951272888 CPO150196689437 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 7400.0,
+"saldo": null
+},
+{
+"fecha": "2026-03-18",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0466778348 curso keep Smile Ref. 0083313186",
+"cargo": null,
+"abono": 1900.0,
+"saldo": null
+},
+{
+"fecha": "2026-03-18",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOHSBC 0180326Acreditacion keepsmilling Ref. 0140281281 021 00021180064689374733 HSBC544012 JESSICA HERNANDEZ GARCIA",
+"cargo": null,
+"abono": 1900.0,
+"saldo": null
+},
+{
+"fecha": "2026-03-18",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 3666477MERCADO*PAGO Ref. 0140667250 722 00722969010951272888 CPO150223666477 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 9000.0,
+"saldo": 36283.76
+},
+{
+"fecha": "2026-03-19",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1544105122 Dulce Islas Ref. 0046780168",
+"cargo": null,
+"abono": 1900.0,
+"saldo": 38183.76
+},
+{
+"fecha": "2026-03-20",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 1987618MERCADO*PAGO Ref. 0148467577 722 00722969010951272888 CPO151141987618 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 10000.0,
+"saldo": 48183.76
+},
+{
+"fecha": "2026-03-21",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 2895834325 finiquito de tx Ref. 0027968881",
+"cargo": null,
+"abono": 3000.0,
+"saldo": 51183.76
+},
+{
+"fecha": "2026-03-25",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 2775955440 Elizabeth Guerrero Ref. 0089222716",
+"cargo": null,
+"abono": 13200.0,
+"saldo": null
+},
+{
+"fecha": "2026-03-25",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 7610870PAGO KEEP PX ERIKA ROMERO Ref. 0177241397 014 00014116655071174614 20260325400140BET0000476108700 ORTHOIMPLANTSMILE SC",
+"cargo": null,
+"abono": 8260.0,
+"saldo": 72643.76
+},
+{
+"fecha": "2026-03-27",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 6 / 10 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN 0526543PAGO TRABAJO AIDA NEGRETE Ref. 0189492323 014 00014180606187336334 2026032740014BMOVP000437580160 DENIS ANAYANSI CUEVAS ROJO",
+"cargo": null,
+"abono": 18830.0,
+"saldo": null
+},
+{
+"fecha": "2026-03-27",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0270326Florencio Mendoza Ref. 0191247240 002 00002744701131920285 085905679124308661 FLORENCIO,MENDOZA/IBARRA",
+"cargo": null,
+"abono": 8070.0,
+"saldo": null
+},
+{
+"fecha": "2026-03-27",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 6418955MERCADO*PAGO Ref. 0191806068 722 00722969010951272888 CPO151456418955 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 14000.0,
+"saldo": 113543.76
+},
+{
+"fecha": "2026-03-31",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANORTE 0260331Rosella cardenas Ref. 0115694177 072 00072362012197671792 38432P06202603315140913497 ROSELLA ESTEFANIA CARDENAS TELLO",
+"cargo": null,
+"abono": 3500.0,
+"saldo": null
+},
+{
+"fecha": "2026-03-31",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANORTE 0260331Paciente Javier Bertrand Ref. 0116970726 072 00072180012224768912 38432P04202603315141748489 MARIO BONNABEL NUNEZ",
+"cargo": null,
+"abono": 5090.0,
+"saldo": 122133.76
+}
+]
+},
+{
+"archivo": "Estados de cuenta BBVA/2026/Abril 26 bbva.pdf",
+"sha256": "2bec6ffa3134f740",
+"cuenta": "0118333734",
+"desde": "2026-04-01",
+"hasta": "2026-04-30",
+"control": {
+"abonos": {
+"n": 13,
+"total": 150985.5
+},
+"cargos": {
+"n": 15,
+"total": 178640.99
+},
+"saldo_inicial": 122133.76,
+"saldo_final": 94478.27
+},
+"movimientos": [
+{
+"fecha": "2026-04-01",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0194724011 Ref. 0021144016",
+"cargo": 22500.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-04-01",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1580002821 Ref. 0021144021 Estimado Cliente, Su Estado de Cuenta ha sido modificado y ahora tiene más detalle de información. También le informamos que su Contrato ha sido modificado, el cual puede consultarlo en cualquier sucursal o www.bbva.mx Con BBVA adelante. La GAT Real es el rendimiento que obtendría después de descontar la inflación estimada BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 3 / 8 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN",
+"cargo": 12000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-04-01",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1590619097 Ref. 0021144026",
+"cargo": 11764.6,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-04-01",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1536586592 Ref. 0021144031",
+"cargo": 22000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-04-01",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANAMEX 0010426ALQUILER OFICINA Ref. 0026864655 002 00002180024269154248 BNET01002604010026864655 EDUARDO NUÑEZ",
+"cargo": 15517.75,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-04-01",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANORTE 0010426SUELDO Ref. 0026865674 072 00072580013228165398 BNET01002604010026865674 ADMINF",
+"cargo": 9000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-04-01",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 2915209536 Ref. 0027743027",
+"cargo": 7600.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-04-01",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1512798293 Ref. 0027743032",
+"cargo": 11782.9,
+"abono": null,
+"saldo": 9968.51
+},
+{
+"fecha": "2026-04-07",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANORTE 0260407Pac Adela Gonzalez Aviles Ref. 0153855211 072 00072180012224768912 38432P06202604075164371124 MARIO BONNABEL NUNEZ",
+"cargo": null,
+"abono": 4702.5,
+"saldo": null
+},
+{
+"fecha": "2026-04-07",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 1816905MERCADO*PAGO Ref. 0153982221 722 00722969010951272888 CPO152940816905 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 15000.0,
+"saldo": 29671.01
+},
+{
+"fecha": "2026-04-08",
+"cod": "P31",
+"descripcion": "BANCO ACTINVER SA IB13173 DOMICILIACION C Ref. PBI061115SC6",
+"cargo": 6408.14,
+"abono": null,
+"saldo": 23262.87
+},
+{
+"fecha": "2026-04-09",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 7611465MERCADO*PAGO Ref. 0164949019 722 00722969010951272888 CPO153267611465 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 17480.0,
+"saldo": null
+},
+{
+"fecha": "2026-04-09",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 1936001MERCADO*PAGO Ref. 0166363019 722 00722969010951272888 CPO153301936001 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 9000.0,
+"saldo": 49742.87
+},
+{
+"fecha": "2026-04-10",
+"cod": "S39",
+"descripcion": "SERV BANCA INTERNET Ref. ADMON RENTA",
+"cargo": 450.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-04-10",
+"cod": "S39",
+"descripcion": "SERV BANCA INTERNET Ref. OPS SERV BCA IN",
+"cargo": 19.5,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-04-10",
+"cod": "S40",
+"descripcion": "IVA COM SERV BCA INTERNET Ref. IVA COM SERV BC",
+"cargo": 75.12,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-04-10",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1541978136 de Mariza Munoz Ref. 0077254193",
+"cargo": null,
+"abono": 6350.0,
+"saldo": null
+},
+{
+"fecha": "2026-04-10",
+"cod": "P31",
+"descripcion": "BANCO ACTINVER SA IB13173 DOMICILIACION C Ref. PBI061115SC6 BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 4 / 8 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN",
+"cargo": 50000.0,
+"abono": null,
+"saldo": 5548.25
+},
+{
+"fecha": "2026-04-13",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0130426px sebastian hernadez. morales Ref. 0191189564 002 00002610700553270583 085900697350310360 MARA DELY,GUZMAN/LUNA",
+"cargo": null,
+"abono": 9000.0,
+"saldo": 14548.25
+},
+{
+"fecha": "2026-04-14",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1590619097 Ref. 0033934020",
+"cargo": 700.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-04-14",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0485275245 Px SabineOsorio Ref. 0047818823",
+"cargo": null,
+"abono": 17553.0,
+"saldo": 31401.25
+},
+{
+"fecha": "2026-04-16",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 7197766MERCADO*PAGO Ref. 0109171891 722 00722969010951272888 CPO155087197766 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 12000.0,
+"saldo": 43401.25
+},
+{
+"fecha": "2026-04-21",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1545045568 Irma Paola Rodrigu Ref. 0037059655",
+"cargo": null,
+"abono": 13450.0,
+"saldo": 56851.25
+},
+{
+"fecha": "2026-04-24",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1512798293 Ref. 0055986011",
+"cargo": 8822.98,
+"abono": null,
+"saldo": 48028.27
+},
+{
+"fecha": "2026-04-27",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 8746200PAGO KEEP PX SEBASTIAN MTZ Ref. 0172316259 014 00014116655071174614 20260427400140BET0000487462000 ORTHOIMPLANTSMILE SC",
+"cargo": null,
+"abono": 13200.0,
+"saldo": 61228.27
+},
+{
+"fecha": "2026-04-28",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0280426paulina zdybel dr ulises zamud Ref. 0180651328 002 00002180700011124986 085902404330311867 ULISES,ZAMUDIO/BURGOS",
+"cargo": null,
+"abono": 10750.0,
+"saldo": null
+},
+{
+"fecha": "2026-04-28",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0280426honorarios dentales Ref. 0181286091 002 00002637903742131637 085904190790311864 ALBINO,LOPEZ/LOPEZ",
+"cargo": null,
+"abono": 11500.0,
+"saldo": null
+},
+{
+"fecha": "2026-04-28",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0280426servicio dental larissa Ref. 0181365753 002 00002637903742201512 085904395000311869 REYNA AURORA,LOPEZ/TOLEDO",
+"cargo": null,
+"abono": 11000.0,
+"saldo": 94478.27
+}
+]
+},
+{
+"archivo": "Estados de cuenta BBVA/mayo 26 bbva.pdf",
+"sha256": "0aff99ce1eaf0366",
+"cuenta": "0118333734",
+"desde": "2026-05-01",
+"hasta": "2026-05-31",
+"control": {
+"abonos": {
+"n": 22,
+"total": 214195.0
+},
+"cargos": {
+"n": 18,
+"total": 194349.88
+},
+"saldo_inicial": 94478.27,
+"saldo_final": 114323.39
+},
+"movimientos": [
+{
+"fecha": "2026-05-04",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0194724011 Ref. 0026621014",
+"cargo": 22500.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-05-04",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1580002821 Ref. 0026621020 Estimado Cliente, Su Estado de Cuenta ha sido modificado y ahora tiene más detalle de información. También le informamos que su Contrato ha sido modificado, el cual puede consultarlo en cualquier sucursal o www.bbva.mx Con BBVA adelante. La GAT Real es el rendimiento que obtendría después de descontar la inflación estimada BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 3 / 9 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN",
+"cargo": 12000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-05-04",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1590619097 Ref. 0026621025",
+"cargo": 11764.6,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-05-04",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1536586592 Ref. 0026621030",
+"cargo": 22000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-05-04",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANORTE 0040526SUELDO Ref. 0034653741 072 00072580013228165398 BNET01002605040034653741 ADMINF",
+"cargo": 9000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-05-04",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANREGIO 0040526ABOGADOS ABRIL 26 Ref. 0034654085 058 00058650000149298243 BNET01002605040034654085 TORO NUEVOS",
+"cargo": 4689.3,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-05-04",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANREGIO 0040526ABOGADOS MAYO 26 Ref. 0034654290 058 00058650000149298243 BNET01002605040034654290 TORO NUEVOS",
+"cargo": 4689.3,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-05-04",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 0000002DRA XILONEN DIAZ Ref. 0118548596 014 00014180606155106525 2026050440014BMOVP000435086780 XILONEN DIAZ MENDOZA",
+"cargo": null,
+"abono": 10950.0,
+"saldo": null
+},
+{
+"fecha": "2026-05-04",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 1089138MERCADO*PAGO Ref. 0122471751 722 00722969010951272888 CPO157761089138 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 16500.0,
+"saldo": 35285.07
+},
+{
+"fecha": "2026-05-06",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANORTE 0260506Rosella cardenas Ref. 0131889861 072 00072362012197671792 3843CP04202605065274207597 ROSELLA ESTEFANIA CARDENAS TELLO",
+"cargo": null,
+"abono": 19500.0,
+"saldo": 54785.07
+},
+{
+"fecha": "2026-05-07",
+"cod": "S39",
+"descripcion": "SERV BANCA INTERNET Ref. ADMON RENTA",
+"cargo": 450.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-05-07",
+"cod": "S39",
+"descripcion": "SERV BANCA INTERNET Ref. OPS SERV BCA IN",
+"cargo": 13.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-05-07",
+"cod": "S40",
+"descripcion": "IVA COM SERV BCA INTERNET Ref. IVA COM SERV BC",
+"cargo": 74.08,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-05-07",
+"cod": "P31",
+"descripcion": "BANCO ACTINVER SA IB13173 DOMICILIACION C Ref. PBI061115SC6",
+"cargo": 25479.91,
+"abono": null,
+"saldo": 28768.08
+},
+{
+"fecha": "2026-05-11",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANAMEX 0110526ALQUILER OFICINA Ref. 0036382047 002 00002180024269154248 BNET01002605110036382047 EDUARDO NUÑEZ",
+"cargo": 15517.75,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-05-11",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 2915209536 Ref. 0027706019",
+"cargo": 7600.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-05-11",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 4 / 9 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN BNET 1590619097 Ref. 0027706026",
+"cargo": 518.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-05-11",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSCOTIABANK 0110526Mariana Castaneda Ref. 0159927639 044 00044320010012057984 2026051140044B36L0000461183328 CASTANEDA PIMIENTA MARIANA",
+"cargo": null,
+"abono": 13450.0,
+"saldo": null
+},
+{
+"fecha": "2026-05-11",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 3405242MERCADO*PAGO Ref. 0164737997 722 00722969010951272888 CPO158893405242 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 11500.0,
+"saldo": 30082.33
+},
+{
+"fecha": "2026-05-12",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 0000002ALINEADORES DRA XILONEN Ref. 0167628051 014 00014180606155106525 2026051240014BMOVP000450049140 XILONEN DIAZ MENDOZA",
+"cargo": null,
+"abono": 20000.0,
+"saldo": null
+},
+{
+"fecha": "2026-05-12",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0120526fanny zolly doc ulises zamudio Ref. 0168433758 002 00002180700011124986 085909338920313269 ULISES,ZAMUDIO/BURGOS",
+"cargo": null,
+"abono": 2500.0,
+"saldo": 52582.33
+},
+{
+"fecha": "2026-05-13",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMIFEL 0130526Pac Isabela Ref. 0172597974 042 00042180016001896185 20260513400420000MIFB000512809 MARIO BONNABEL NUNEZ",
+"cargo": null,
+"abono": 4750.0,
+"saldo": null
+},
+{
+"fecha": "2026-05-13",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMIFEL 0130526Pac Lyliane Ref. 0172604665 042 00042180016001896185 20260513400420000MIFB000512904 MARIO BONNABEL NUNEZ",
+"cargo": null,
+"abono": 4750.0,
+"saldo": null
+},
+{
+"fecha": "2026-05-13",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMIFEL 0130526Gerardo Cedillo Ref. 0172632051 042 00042180016001896185 20260513400420000MIFB000513153 MARIO BONNABEL NUNEZ",
+"cargo": null,
+"abono": 4750.0,
+"saldo": null
+},
+{
+"fecha": "2026-05-13",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0130526Florencio Mendoza Ref. 0174157287 002 00002744701131920285 085905733564313368 FLORENCIO,MENDOZA/IBARRA",
+"cargo": null,
+"abono": 9415.0,
+"saldo": 76247.33
+},
+{
+"fecha": "2026-05-14",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0477203322 px Miguelina Ref. 0079960448",
+"cargo": null,
+"abono": 5000.0,
+"saldo": null
+},
+{
+"fecha": "2026-05-14",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 8847325MERCADO*PAGO Ref. 0181795802 722 00722969010951272888 CPO158568847325 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 14750.0,
+"saldo": 95997.33
+},
+{
+"fecha": "2026-05-15",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0000001DR JUAN KURI PACIENTE ANDRADE Ref. 0184087607 002 00002180701386440637 BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 5 / 9 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN 085901458360313566 JUAN,KURI/MORENO",
+"cargo": null,
+"abono": 17000.0,
+"saldo": 112997.33
+},
+{
+"fecha": "2026-05-19",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0190526 Impresionalineadores Ref. 0112129489 002 00002180050251312415 085902703880313960 JUSTO PASTOR,FERNANDEZ/FUERTES",
+"cargo": null,
+"abono": 4800.0,
+"saldo": null
+},
+{
+"fecha": "2026-05-19",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 3431310MERCADO*PAGO Ref. 0115239367 722 00722969010951272888 CPO160083431310 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 10000.0,
+"saldo": 127797.33
+},
+{
+"fecha": "2026-05-22",
+"cod": "P14",
+"descripcion": "SAT REF:04263SSF930049848467 CIE:0844985 Ref. GUIA:0955677",
+"cargo": 6901.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-05-22",
+"cod": "P14",
+"descripcion": "SAT REF:04263SSQ590049846402 CIE:0844985 Ref. GUIA:0956731",
+"cargo": 1728.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-05-22",
+"cod": "X01",
+"descripcion": "IMSS/INF/AFORE VIA ELECT. PAGO SIPARE E0821059106 202604 091916 Ref. 142B143427",
+"cargo": 41338.07,
+"abono": null,
+"saldo": 77830.26
+},
+{
+"fecha": "2026-05-27",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 3702190MERCADO*PAGO Ref. 0160782398 722 00722969010951272888 CPO161283702190 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 18500.0,
+"saldo": null
+},
+{
+"fecha": "2026-05-27",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1583167795 Transf a ORTODONCI Ref. 0081710318",
+"cargo": null,
+"abono": 1570.0,
+"saldo": 97900.26
+},
+{
+"fecha": "2026-05-28",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 0000002SALDO ALINEADORES Ref. 0167051415 014 00014180606155106525 2026052840014BMOVP000410759560 XILONEN DIAZ MENDOZA",
+"cargo": null,
+"abono": 5350.0,
+"saldo": 103250.26
+},
+{
+"fecha": "2026-05-29",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 9022683PAGO A KEEP PX CARLOS RIZZOLI Ref. 0172132888 014 00014116655071174614 20260529400140BET0000490226830 ORTHOIMPLANTSMILE SC",
+"cargo": null,
+"abono": 10160.0,
+"saldo": null
+},
+{
+"fecha": "2026-05-29",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 8242457MERCADO*PAGO Ref. 0175637331 722 00722969010951272888 CPO160808242457 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 4000.0,
+"saldo": null
+},
+{
+"fecha": "2026-05-29",
+"cod": "X01",
+"descripcion": "IMSS/INF/AFORE VIA ELECT. PAGO SIPARE E0821059106 202603 024559 Ref. 149B171630",
+"cargo": 8086.87,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-05-29",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0290526Dra Mara Guzman Ref. 0178255700 002",
+"cargo": null,
+"abono": 5000.0,
+"saldo": 114323.39
+}
+]
+},
+{
+"archivo": "Estados de cuenta BBVA/2026/junio 26 bbva.pdf",
+"sha256": "4918e2e125e13120",
+"cuenta": "0118333734",
+"desde": "2026-06-01",
+"hasta": "2026-06-30",
+"control": {
+"abonos": {
+"n": 22,
+"total": 222968.07
+},
+"cargos": {
+"n": 19,
+"total": 174223.89
+},
+"saldo_inicial": 114323.39,
+"saldo_final": 163067.57
+},
+"movimientos": [
+{
+"fecha": "2026-06-01",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 3642337MERCADO*PAGO Ref. 0189087348 722 00722969010951272888 CPO161093642337 Estimado Cliente, Su Estado de Cuenta ha sido modificado y ahora tiene más detalle de información. También le informamos que su Contrato ha sido modificado, el cual puede consultarlo en cualquier sucursal o www.bbva.mx Con BBVA adelante. La GAT Real es el rendimiento que obtendría después de descontar la inflación estimada BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 3 / 9 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN ORTODONCIA KEEP",
+"cargo": null,
+"abono": 13000.0,
+"saldo": null
+},
+{
+"fecha": "2026-06-01",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 2787191MERCADO*PAGO Ref. 0195623872 722 00722969010951272888 CPO161242787191 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 30000.0,
+"saldo": 157323.39
+},
+{
+"fecha": "2026-06-02",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0194724011 Ref. 0045892011",
+"cargo": 22500.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-06-02",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1580002821 Ref. 0045892016",
+"cargo": 12000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-06-02",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1536586592 Ref. 0045892021",
+"cargo": 22000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-06-02",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1590619097 Ref. 0045892026",
+"cargo": 11764.6,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-06-02",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 2915209536 Ref. 0045892031",
+"cargo": 7600.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-06-02",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANAMEX 0020626ALQUILER OFICINA Ref. 0042316032 002 00002180024269154248 BNET01002606020042316032 EDUARDO NUÑEZ",
+"cargo": 15517.75,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-06-02",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANORTE 0020626JESUS Ref. 0042316446 072 00072580013228165398 BNET01002606020042316446 ADMINF",
+"cargo": 9000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-06-02",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANREGIO 0020626ABOGADOS Ref. 0042316996 058 00058650000149298243 BNET01002606020042316996 TORO NUEVOS",
+"cargo": 4689.3,
+"abono": null,
+"saldo": 52251.74
+},
+{
+"fecha": "2026-06-03",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0030626Paloma Patricia Zepeda Ayala Ref. 0109081020 002 00002743901652352146 085901896940315468 MARTHA PATRICIA,AYALA/COTA",
+"cargo": null,
+"abono": 13450.0,
+"saldo": 65701.74
+},
+{
+"fecha": "2026-06-04",
+"cod": "S39",
+"descripcion": "SERV BANCA INTERNET Ref. ADMON RENTA",
+"cargo": 450.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-06-04",
+"cod": "S39",
+"descripcion": "SERV BANCA INTERNET Ref. OPS SERV BCA IN",
+"cargo": 26.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-06-04",
+"cod": "S40",
+"descripcion": "IVA COM SERV BCA INTERNET Ref. IVA COM SERV BC",
+"cargo": 76.16,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-06-04",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 2915209536 Ref. 0022537012",
+"cargo": 3766.41,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-06-04",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1536586592 Ref. 0022537017",
+"cargo": 3500.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-06-04",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1590619097 Ref. 0022537022",
+"cargo": 3318.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-06-04",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANREGIO BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 4 / 9 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN 0040626DIF AB Ref. 0042863884 058 00058650000149298243 BNET01002606040042863884 TORO NUEVOS",
+"cargo": 468.06,
+"abono": null,
+"saldo": 54097.11
+},
+{
+"fecha": "2026-06-05",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0484263405 Esther Jalife comp Ref. 0074694420",
+"cargo": null,
+"abono": 1900.0,
+"saldo": null
+},
+{
+"fecha": "2026-06-05",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0000001primer pago pac karen sulvaran Ref. 0121717457 002 00002905093836371958 085904035840315667 GUILLERMO,GARCIA/GARDU@O",
+"cargo": null,
+"abono": 13450.0,
+"saldo": 69447.11
+},
+{
+"fecha": "2026-06-08",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0080626florencio mendoza Ref. 0135382440 002 00002744701131920285 085903467084315965 FLORENCIO,MENDOZA/IBARRA",
+"cargo": null,
+"abono": 9415.0,
+"saldo": null
+},
+{
+"fecha": "2026-06-08",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 6267653MAGA VICTORIA PAGO1 Ref. 0135796560 014 00014910605960911529 2026060840014BMOVP000465304700 MARIA MAGA VICTORIA JIMENEZ",
+"cargo": null,
+"abono": 10760.0,
+"saldo": 89622.11
+},
+{
+"fecha": "2026-06-09",
+"cod": "P31",
+"descripcion": "BANCO ACTINVER SA IB13173 DOMICILIACION C Ref. PBI061115SC6",
+"cargo": 44695.68,
+"abono": null,
+"saldo": 44926.43
+},
+{
+"fecha": "2026-06-15",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0469064184 Px Elena V Dr Ervi Ref. 0004511424",
+"cargo": null,
+"abono": 8128.0,
+"saldo": null
+},
+{
+"fecha": "2026-06-15",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 2963358PAGO ALINEADORES MELISSA GOLUB Ref. 0184003326 014 00014180606187336334 2026061540014BMOVP000467650540 DENIS ANAYANSI CUEVAS ROJO",
+"cargo": null,
+"abono": 20000.0,
+"saldo": 73054.43
+},
+{
+"fecha": "2026-06-16",
+"cod": "Y45",
+"descripcion": "MORA SPEI NORMABANXICO Ref. COMPENSACION DE",
+"cargo": null,
+"abono": 0.07,
+"saldo": 73054.5
+},
+{
+"fecha": "2026-06-17",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 0000001MAURICIO HDZ Ref. 0192418304 014 00014180606155106525 2026061740014BMOVP000443333920 XILONEN DIAZ MENDOZA",
+"cargo": null,
+"abono": 10000.0,
+"saldo": null
+},
+{
+"fecha": "2026-06-17",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 5117752MERCADO*PAGO Ref. 0196087538 722 00722969010951272888 CPO164625117752 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 19000.0,
+"saldo": 102054.5
+},
+{
+"fecha": "2026-06-18",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 6968070MERCADO*PAGO Ref. 0100810650 722 00722969010951272888 CPO164746968070 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 7000.0,
+"saldo": null
+},
+{
+"fecha": "2026-06-18",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1511298941 Gastos medicos Lar Ref. 0074242077 BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 5 / 9 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN",
+"cargo": null,
+"abono": 11000.0,
+"saldo": 120054.5
+},
+{
+"fecha": "2026-06-20",
+"cod": "P14",
+"descripcion": "SAT REF:042646M4100050129466 CIE:0844985 Ref. GUIA:4162122",
+"cargo": 5648.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-06-20",
+"cod": "P14",
+"descripcion": "SAT REF:042646MN240050125406 CIE:0844985 Ref. GUIA:4162149",
+"cargo": 1639.0,
+"abono": null,
+"saldo": 112767.5
+},
+{
+"fecha": "2026-06-22",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0477203322 miguelina Ref. 0048581774",
+"cargo": null,
+"abono": 5000.0,
+"saldo": 117767.5
+},
+{
+"fecha": "2026-06-24",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0484263405 Esther Jalife segu Ref. 0099976838",
+"cargo": null,
+"abono": 4975.0,
+"saldo": 122742.5
+},
+{
+"fecha": "2026-06-25",
+"cod": "X01",
+"descripcion": "IMSS/INF/AFORE VIA ELECT. PAGO SIPARE E0821059106 202605 169674 Ref. 176B122917",
+"cargo": 5564.93,
+"abono": null,
+"saldo": 117177.57
+},
+{
+"fecha": "2026-06-26",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0260626honorarios dentales Ref. 0146524827 002 00002637903742131637 085906038180317764 ALBINO,LOPEZ/LOPEZ",
+"cargo": null,
+"abono": 11500.0,
+"saldo": null
+},
+{
+"fecha": "2026-06-26",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0260626pago final pac karen sulvaran Ref. 0147628231 002 00002905093836371958 085909350520317762 GUILLERMO,GARCIA/GARDU@O",
+"cargo": null,
+"abono": 8070.0,
+"saldo": 136747.57
+},
+{
+"fecha": "2026-06-29",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1545045568 Gerardo Misael Gon Ref. 0097126380",
+"cargo": null,
+"abono": 13450.0,
+"saldo": null
+},
+{
+"fecha": "2026-06-29",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 5097470TRANSFERENCIA A ORTODONCIA KEE Ref. 0167150949 014 00014680655111581635 2026062940014BMOVP000449122340 FRANCISCO JAVIER GALLARDO MORA",
+"cargo": null,
+"abono": 1900.0,
+"saldo": null
+},
+{
+"fecha": "2026-06-29",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0290626anticipo alineadores Ref. 0167998364 002 00002617700504963664 085902133280318062 CEYLA,CRUZ/GUTIERREZ",
+"cargo": null,
+"abono": 7160.0,
+"saldo": null
+},
+{
+"fecha": "2026-06-29",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0000012tratamiento Gibran Olivier Ref. 0168230609 002 00002670022861388050 085900422704318062 MARCELA,VAZQUEZ/NOGUERA",
+"cargo": null,
+"abono": 3810.0,
+"saldo": 163067.57
+}
+]
+},
+{
+"archivo": "Estados de cuenta BBVA/julio 26 bbva.pdf",
+"sha256": "c09360802628d908",
+"cuenta": "0118333734",
+"desde": "2026-07-01",
+"hasta": "2026-07-31",
+"control": {
+"abonos": {
+"n": 24,
+"total": 253590.0
+},
+"cargos": {
+"n": 18,
+"total": 237936.39
+},
+"saldo_inicial": 163067.57,
+"saldo_final": 178721.18
+},
+"movimientos": [
+{
+"fecha": "2026-07-01",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0194724011 Ref. 0088179026",
+"cargo": 22500.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-07-01",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1580002821 Ref. 0088179031 Estimado Cliente, Su Estado de Cuenta ha sido modificado y ahora tiene más detalle de información. También le informamos que su Contrato ha sido modificado, el cual puede consultarlo en cualquier sucursal o www.bbva.mx Con BBVA adelante. La GAT Real es el rendimiento que obtendría después de descontar la inflación estimada BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 3 / 10 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN",
+"cargo": 12000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-07-01",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1536586592 Ref. 0088179036",
+"cargo": 22000.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-07-01",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 1590619097 Ref. 0088179041",
+"cargo": 11764.6,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-07-01",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 2915209536 Ref. 0088179046",
+"cargo": 7600.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-07-01",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANORTE 0010726SUELDO Ref. 0049871733 072 00072580013228165398 BNET01002607010049871733 ADMINF",
+"cargo": 9000.0,
+"abono": null,
+"saldo": 78202.97
+},
+{
+"fecha": "2026-07-02",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 4701602MERCADO*PAGO Ref. 0188970285 722 00722969010951272888 CPO166874701602 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 4000.0,
+"saldo": 82202.97
+},
+{
+"fecha": "2026-07-03",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0469064184 Ervin px Andrea V Ref. 0092968854",
+"cargo": null,
+"abono": 6000.0,
+"saldo": 88202.97
+},
+{
+"fecha": "2026-07-06",
+"cod": "S39",
+"descripcion": "SERV BANCA INTERNET Ref. ADMON RENTA",
+"cargo": 450.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-07-06",
+"cod": "S39",
+"descripcion": "SERV BANCA INTERNET Ref. OPS SERV BCA IN",
+"cargo": 26.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-07-06",
+"cod": "S40",
+"descripcion": "IVA COM SERV BCA INTERNET Ref. IVA COM SERV BC",
+"cargo": 76.16,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-07-06",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0477203322 majo pacheco Ref. 0023815947",
+"cargo": null,
+"abono": 4800.0,
+"saldo": 92450.81
+},
+{
+"fecha": "2026-07-07",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANAMEX 0070726ALQUILER OFICINA Ref. 0026233325 002 00002180024269154248 BNET01002607070026233325 EDUARDO NUÑEZ",
+"cargo": 15517.75,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-07-07",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANREGIO 0070726ABOGADOS JULIO Ref. 0026234329 058 00058650000149298243 BNET01002607070026234329 TORO NUEVOS",
+"cargo": 5180.56,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-07-07",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 9335523PAGO MAGA VICTORIA Ref. 0122129419 014 00014910605960911529 2026070740014BMOVP000414264820 MARIA MAGA VICTORIA JIMENEZ",
+"cargo": null,
+"abono": 10760.0,
+"saldo": 82512.5
+},
+{
+"fecha": "2026-07-08",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 7986109MERCADO*PAGO Ref. 0127815964 722 00722969010951272888 CPO167077986109 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 12000.0,
+"saldo": null
+},
+{
+"fecha": "2026-07-08",
+"cod": "P31",
+"descripcion": "BANCO ACTINVER SA IB13173 DOMICILIACION C Ref. PBI061115SC6",
+"cargo": 33067.02,
+"abono": null,
+"saldo": 61445.48
+},
+{
+"fecha": "2026-07-09",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0485275245 Px tellez perez Ref. 0097648569 BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 4 / 10 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN",
+"cargo": null,
+"abono": 16140.0,
+"saldo": null
+},
+{
+"fecha": "2026-07-09",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago 7646575MERCADO*PAGO Ref. 0131085817 722 00722969010951272888 CPO167177646575 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 2500.0,
+"saldo": 80085.48
+},
+{
+"fecha": "2026-07-13",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0000001CASO SERGIO ANDRADE DR JUAN KU Ref. 0154200574 002 00002180701386440637 085903135040319465 JUAN,KURI/MORENO",
+"cargo": null,
+"abono": 2000.0,
+"saldo": 82085.48
+},
+{
+"fecha": "2026-07-14",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANORTE 0260714pac Gerardo Cedillo Ref. 0160695859 072 00072180012224768912 38432P01202607145534291729 MARIO BONNABEL NUNEZ",
+"cargo": null,
+"abono": 4750.0,
+"saldo": null
+},
+{
+"fecha": "2026-07-14",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANORTE 0260714pac Isabela Salcedo Ref. 0160710692 072 00072180012224768912 38432P04202607145534301720 MARIO BONNABEL NUNEZ",
+"cargo": null,
+"abono": 4750.0,
+"saldo": null
+},
+{
+"fecha": "2026-07-14",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANORTE 0260714pac Lilyane Perez Ref. 0160723478 072 00072180012224768912 38432P04202607145534308868 MARIO BONNABEL NUNEZ",
+"cargo": null,
+"abono": 4750.0,
+"saldo": 96335.48
+},
+{
+"fecha": "2026-07-16",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0477203322 ivanna Molina Ref. 0029902326",
+"cargo": null,
+"abono": 5000.0,
+"saldo": 101335.48
+},
+{
+"fecha": "2026-07-17",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOBANAMEX 0000001DR JUAN KURI CASO ALEXA ESCALA Ref. 0180343734 002 00002180701386440637 085901531890319864 JUAN,KURI/MORENO",
+"cargo": null,
+"abono": 17500.0,
+"saldo": null
+},
+{
+"fecha": "2026-07-17",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 0000001ABAD ZUNIGA Ref. 0182097162 014 00014180606155106525 2026071740014BMOVP000413973010 XILONEN DIAZ MENDOZA",
+"cargo": null,
+"abono": 10000.0,
+"saldo": 128835.48
+},
+{
+"fecha": "2026-07-18",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 9645867PAGO ALINEADORES MERCEDES SUAS Ref. 0188187747 014 00014180606187336334 2026071840014BMOVP000453708540 DENIS ANAYANSI CUEVAS ROJO",
+"cargo": null,
+"abono": 18500.0,
+"saldo": 147335.48
+},
+{
+"fecha": "2026-07-21",
+"cod": "P14",
+"descripcion": "SAT REF:04264ZJK320050449466 CIE:0844985 Ref. GUIA:8159269",
+"cargo": 5648.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-07-21",
+"cod": "P14",
+"descripcion": "SAT REF:04264ZJW230050445481 CIE:0844985 Ref. GUIA:8160074",
+"cargo": 1628.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-07-21",
+"cod": "X01",
+"descripcion": "IMSS/INF/AFORE VIA ELECT. PAGO SIPARE E0821059106 202606 188789 Ref. 202B145552",
+"cargo": 33016.3,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-07-21",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOMercado Pago BBVA MEXICO, S.A., INSTITUCION DE BANCA MULTIPLE, GRUPO FINANCIERO BBVA MEXICO Av. Paseo de la Reforma 510, Col. Juárez, Alcaldía Cuauhtémoc, C.P. 06600, Ciudad de México. México R.F.C. BBA830831LJ2 Estado de Cuenta MAESTRA PYME BBVA PAGINA 5 / 10 No. Cuenta 0118333734 No. Cliente D0659706 FECHA SALDO OPER LIQ COD. DESCRIPCIÓN REFERENCIA CARGOS ABONOS OPERACIÓN LIQUIDACIÓN 8908829MERCADO*PAGO Ref. 0108305365 722 00722969010951272888 CPO169068908829 ORTODONCIA KEEP",
+"cargo": null,
+"abono": 22000.0,
+"saldo": 129043.18
+},
+{
+"fecha": "2026-07-23",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOINBURSA 2026072Alfredo Ref. 0117847072 036 00036180500183250226 036NAPP23072026287486890 ALEJANDRA HARUKO SALAZAR TAKAHASHI",
+"cargo": null,
+"abono": 18500.0,
+"saldo": 147543.18
+},
+{
+"fecha": "2026-07-27",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 5320584DRJESUSORTIZ PX GABRIELA BRAMB Ref. 0139890239 014 00014180606127378527 2026072740014BMOVP000463404100 JESUS ORTIZ TAPIA",
+"cargo": null,
+"abono": 18500.0,
+"saldo": null
+},
+{
+"fecha": "2026-07-27",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 2539549CAMILO ANDRES GLZ PAGO DE ALIN Ref. 0140245393 014 00014180606187336334 2026072740014BMOVP000465526960 DENIS ANAYANSI CUEVAS ROJO",
+"cargo": null,
+"abono": 18500.0,
+"saldo": 184543.18
+},
+{
+"fecha": "2026-07-28",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0485275245 Px abigail mtz Ref. 0012152417",
+"cargo": null,
+"abono": 16140.0,
+"saldo": null
+},
+{
+"fecha": "2026-07-28",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 4985584DRA MARA GUZMAN PX ROMINA Ref. 0147020315 014 00014610606168935554 2026072840014BMOVP000430037190 MARA DELY GUZMAN LUNA",
+"cargo": null,
+"abono": 10000.0,
+"saldo": 210683.18
+},
+{
+"fecha": "2026-07-29",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANORTE 0290726ROCIO PUIG Ref. 0031634832 072 00072180001566329554 BNET01002607290031634832 ADMINF",
+"cargo": 27494.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-07-29",
+"cod": "T17",
+"descripcion": "SPEI ENVIADO BANORTE 0290726ACTUALIZACION KEEPSMILING Ref. 0031644262 072 00072180001566329554 BNET01002607290031644262 ADMINF",
+"cargo": 8468.0,
+"abono": null,
+"saldo": null
+},
+{
+"fecha": "2026-07-29",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0194724011 Ref. 0060797020",
+"cargo": 22500.0,
+"abono": null,
+"saldo": 152221.18
+},
+{
+"fecha": "2026-07-30",
+"cod": "N06",
+"descripcion": "PAGO CUENTA DE TERCERO BNET 0477203322 px Ernesto Ref. 0084504753",
+"cargo": null,
+"abono": 5000.0,
+"saldo": null
+},
+{
+"fecha": "2026-07-30",
+"cod": null,
+"descripcion": "AA7 DEPOSITO EFECTIVO PRACTIC JUL30 11:18 PRAC 4759 FOLIO:9597 Ref. ******3734",
+"cargo": null,
+"abono": 16500.0,
+"saldo": 173721.18
+},
+{
+"fecha": "2026-07-31",
+"cod": "T20",
+"descripcion": "SPEI RECIBIDOSANTANDER 2464519PACIENTE FRANCISCO LOPEZ OIO P Ref. 0163585127 014 00014650655106988862 2026073140014TRAPP000462538800 GABRIEL HORNEDO GUILLEN",
+"cargo": null,
+"abono": 5000.0,
+"saldo": 178721.18
+}
+]
+}
+]
+}
