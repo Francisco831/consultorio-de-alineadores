@@ -390,6 +390,105 @@ export default function HerramientasPage() {
         </div>
       </Seccion>
 
+      <Seccion id="instagram" titulo="12 · Prospección por Instagram (censo 20/8)">
+        <p className={S.p}>
+          El censo de los 1.402 seguidores de @keepsmiling_mex dejó{" "}
+          <strong>147 fichas nuevas</strong> en el CRM y marcó a las que ya
+          existían. La regla de este canal es distinta a la del outbound: acá{" "}
+          <strong>el doctor ya levantó la mano</strong> —te sigue— así que el
+          primer mensaje no tiene que explicar quién sos, tiene que dar una razón
+          para responder.
+        </p>
+
+        <h3 className={S.h2}>Dónde están</h3>
+        <ul className="ml-4 list-disc space-y-1">
+          <li className={S.li}>
+            <strong>Por acreditarse → chip “Ortodoncistas que te siguen en IG”</strong>:
+            115 ortodoncistas que te siguen y no compraron.
+          </li>
+          <li className={S.li}>
+            <strong>Doctores → chip “Te siguen en IG”</strong>: 41 acreditados. A
+            estos no se les vende: se les pide contenido y casos.
+          </li>
+          <li className={S.li}>
+            El handle está en la ficha, arriba, al lado del bloque de WhatsApp.
+            Para la mayoría de estos 147 <strong>es el único canal que hay</strong>.
+          </li>
+        </ul>
+
+        <h3 className={S.h2}>Los tres mensajes</h3>
+        <p className={S.muted}>
+          Cortos a propósito. Un DM largo en Instagram no se lee, y el objetivo
+          del primer mensaje no es vender: es que conteste.
+        </p>
+
+        <div className="space-y-1">
+          <p className="text-sm font-medium">
+            A · Ortodoncista que te sigue (los 15 de acción “DM presentación”)
+          </p>
+          <blockquote className={S.quote}>
+            Hola Dra. [Nombre], soy [tu nombre] de KeepSmiling México. Vi que nos
+            sigue y quería presentarme en persona. Somos fabricantes de
+            alineadores, latinoamericanos, y trabajamos muy de cerca con
+            ortodoncistas en [su ciudad]. ¿Le interesa que le mande cómo
+            trabajamos y los precios? Sin compromiso.
+          </blockquote>
+          <p className={S.muted}>
+            Personalizá <strong>la ciudad</strong>: está en el nombre de la
+            cuenta (Mty, GDL, Querétaro, Hermosillo, Xalapa, Cancún). Es lo único
+            que hace que el mensaje no parezca copiado.
+          </p>
+        </div>
+
+        <div className="space-y-1">
+          <p className="text-sm font-medium">
+            B · Clínica multiespecialidad (los 16 de “invitar a KeepDay”)
+          </p>
+          <blockquote className={S.quote}>
+            Hola, soy [tu nombre] de KeepSmiling México. Vi que nos siguen.
+            Hacemos un KeepDay —una jornada con casos en vivo— y suele servir
+            mucho a clínicas donde varios profesionales tocan ortodoncia.
+            ¿Les mando la info de la próxima fecha?
+          </blockquote>
+          <p className={S.muted}>
+            En una clínica la compra se decide a varias manos: el DM individual
+            rinde poco, la invitación grupal rinde mucho.
+          </p>
+        </div>
+
+        <div className="space-y-1">
+          <p className="text-sm font-medium">
+            C · Cuenta con audiencia (colegios, facultades, referentes)
+          </p>
+          <blockquote className={S.quote}>
+            Hola, soy [tu nombre] de KeepSmiling México. Seguimos lo que publican
+            y nos gustaría acercarnos: damos formación en ortodoncia con
+            alineadores y podemos aportar una charla o un caso comentado, sin
+            costo. ¿Con quién puedo hablarlo?
+          </blockquote>
+          <p className={S.muted}>
+            Acá NO se vende. El Colegio de Ortodoncia de Chihuahua, la Facultad
+            de Odontología de la UANL y el posgrado de la UJAT le hablan a cientos
+            de ortodoncistas cada uno: valen como puerta, no como cliente.
+          </p>
+        </div>
+
+        <div className={S.warn}>
+          <strong>109 fichas tienen el país sin confirmar</strong> (tag{" "}
+          <code>pais:por-confirmar</code>). El nombre de Instagram no dice de
+          dónde son y la cuenta mexicana la sigue mucha gente de la red argentina
+          de la marca. Antes de escribirles: abrir el perfil, mirar la bio, y si
+          no es de México sacarle el tag <code>sigue-instagram</code>. Es un
+          minuto por ficha y sin eso el resto del canal no se puede medir.
+        </div>
+
+        <div className={S.bad}>
+          Nunca abrir con precio en un DM. El canal es de relación: precio recién
+          cuando pidieron la información, y siempre por WhatsApp o mail, donde
+          queda registro en el CRM.
+        </div>
+      </Seccion>
+
       <p className="text-xs text-muted-foreground">
         Fuente: kit comercial LATAM (Plan Comercial 2026, Manual KeepDay v2,
         Playbook KOS y Comercial 2025, comparativo de precios) + 62 mails de
