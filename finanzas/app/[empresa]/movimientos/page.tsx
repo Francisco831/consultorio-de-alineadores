@@ -107,6 +107,23 @@ export default async function MovimientosPage({
     throw new Error(`Error consultando movimientos: ${error.message}`);
   }
 
+  // comprobantes adjuntos (Drive) de los movimientos visibles
+  const idsPagina = (movimientos ?? []).map((m) => m.id);
+  const { data: docs } = idsPagina.length
+    ? await supabase
+        .from("documents")
+        .select("entity_id, storage_path, filename")
+        .eq("company_id", ctx.companyId)
+        .eq("entity_type", "movement")
+        .in("entity_id", idsPagina)
+    : { data: [] as { entity_id: string; storage_path: string; filename: string }[] };
+  const docsPorMov = new Map<string, { storage_path: string; filename: string }[]>();
+  for (const d of docs ?? []) {
+    const lista = docsPorMov.get(d.entity_id);
+    if (lista) lista.push(d);
+    else docsPorMov.set(d.entity_id, [d]);
+  }
+
   const total = count ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -301,6 +318,20 @@ export default async function MovimientosPage({
                           {mv.source === "crm_sync" ? "CRM" : mv.source}
                         </span>
                       ) : null}
+                      {(docsPorMov.get(mv.id) ?? [])
+                        .filter((d) => d.storage_path.startsWith("http"))
+                        .map((d) => (
+                          <a
+                            key={d.storage_path}
+                            href={d.storage_path}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={`Comprobante: ${d.filename}`}
+                            className="ml-1.5 align-middle no-underline opacity-70 hover:opacity-100"
+                          >
+                            📎
+                          </a>
+                        ))}
                     </TableCell>
                     <TableCell className="hidden max-w-[180px] truncate md:table-cell">{cp ?? "—"}</TableCell>
                     <TableCell className="hidden lg:table-cell">
