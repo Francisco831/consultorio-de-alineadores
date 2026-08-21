@@ -5,6 +5,10 @@
  *   npx tsx scripts/sync-pagos-planilla.ts                  # baja del Apps Script (PLANILLA_MX_URL/SECRET)
  *   npx tsx scripts/sync-pagos-planilla.ts --xlsx ~/Downloads/"Administración México.xlsx"
  *   … ambos aceptan --apply (sin él, dry-run) y --yes.
+ *   --cron: corrida programada (launchd). Omite la confirmación interactiva de
+ *   destino — la aprobó Pancho el 21/8/26 al programarla — pero los gates de
+ *   deriva y mes cerrado siguen activos, y el resultado (ok o error) queda en
+ *   sync_runs (source planilla_pagos) para que el silencio no esconda fallas.
  *
  * Claves adminmx:{fila}:{slot} idénticas al import original: correrlo dos veces
  * es no-op. Gates antes de escribir:
@@ -33,6 +37,7 @@ type Pago = {
 };
 
 const APPLY = process.argv.includes("--apply");
+const CRON = process.argv.includes("--cron");
 const PARSED = resolve(__dirname, "../data/pagos_planilla.json");
 const SEED_FINANZAS = resolve(__dirname, "../../finanzas/seed-data/payments_mx.json");
 
@@ -143,10 +148,14 @@ async function main() {
   if (nuevos.length > 15) console.log(`  … y ${nuevos.length - 15} más`);
 
   if (!APPLY) { console.log("\nDRY-RUN (sin --apply no escribe)."); return; }
-  await confirmarDestino({
-    accion: `sync pagos planilla: ${nuevos.length} altas + ${editados.length} ediciones`,
-    auto: process.argv.includes("--yes"),
-  });
+  if (CRON) {
+    console.log("  (corrida programada: guard interactivo omitido, gates activos)");
+  } else {
+    await confirmarDestino({
+      accion: `sync pagos planilla: ${nuevos.length} altas + ${editados.length} ediciones`,
+      auto: process.argv.includes("--yes"),
+    });
+  }
 
   if (nuevos.length) {
     const filas = nuevos.map((p) => ({
@@ -168,8 +177,25 @@ async function main() {
   }
 
   writeFileSync(SEED_FINANZAS, JSON.stringify(frescos, null, 1));
+  await db.from("sync_runs").insert({
+    source: "planilla_pagos", finished_at: new Date().toISOString(), status: "ok",
+    rows_upserted: nuevos.length + editados.length,
+    log: { pagos_planilla: frescos.length, nuevos: nuevos.length, editados: editados.length, cron: CRON },
+  });
   console.log(`✓ CRM al día (${nuevos.length} altas, ${editados.length} ediciones) · parse copiado a finanzas/seed-data/payments_mx.json`);
   console.log("Siguiente: en finanzas/, npx tsx scripts/import-payments-mx.ts --apply  (y reconcile-ledger.ts acá si hay doctores nuevos)");
 }
 
-main().catch((e) => { console.error(e.message ?? e); process.exit(1); });
+main().catch(async (e) => {
+  console.error(e.message ?? e);
+  if (CRON) {
+    try {
+      const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+      await db.from("sync_runs").insert({
+        source: "planilla_pagos", finished_at: new Date().toISOString(), status: "error",
+        log: { error: String(e.message ?? e).slice(0, 500), cron: true },
+      });
+    } catch { /* si ni esto anda, queda el log de launchd */ }
+  }
+  process.exit(1);
+});
