@@ -42,7 +42,22 @@ async function main() {
     };
   });
 
-  const r = vincular(raw.files, raw.folders, candidatos);
+  // overrides confirmados a mano (typos revisados): fileId → movementIds
+  let overrides: { fileId: string; movementIds: string[]; nota?: string }[] = [];
+  try {
+    overrides = JSON.parse(readFileSync(resolve(__dirname, "../seed-data/comprobantes_overrides.json"), "utf8"));
+  } catch { /* sin overrides */ }
+  const idsOverride = new Set(overrides.map((o) => o.fileId));
+
+  const r = vincular(raw.files.filter((f) => !idsOverride.has(f.id)), raw.folders, candidatos);
+  for (const o of overrides) {
+    const f = raw.files.find((x) => x.id === o.fileId);
+    if (!f) continue;
+    r.vinculos.push({
+      fileId: f.id, titulo: f.title, url: f.url, mime: f.mime,
+      fecha: "", carpeta: "override", movementIds: o.movementIds, corrimiento: 0, via: "carpeta",
+    });
+  }
 
   // idempotencia: documents no tiene unique natural — dedup contra lo ya cargado
   const existentes = await fetchAllRows<{ entity_id: string; storage_path: string }>(
@@ -76,9 +91,20 @@ async function main() {
     console.log(`  ambiguos (matchean 2+ pacientes, NO se vinculan): ${r.ambiguos.length}`);
     for (const a of r.ambiguos) console.log(`    · ${a.titulo} (${a.fecha}): ${a.pacientes.join(" / ")}`);
   }
-  if (r.sinMatch.length) {
-    console.log(`  SIN fila en caja (comprobante huérfano): ${r.sinMatch.length}`);
-    for (const s of r.sinMatch) console.log(`    · ${s.titulo} — carpeta ${s.carpeta}`);
+  const recientes = r.sinMatch.filter((s) => s.motivo === "caja_reciente");
+  const sinFila = r.sinMatch.filter((s) => s.motivo === "sin_fila");
+  if (recientes.length) {
+    console.log(`  caja aún no cargada (se resuelven solos): ${recientes.length}`);
+    for (const s of recientes) console.log(`    · ${s.titulo} — carpeta ${s.carpeta}`);
+  }
+  if (sinFila.length) {
+    console.log(`  SIN fila en caja (comprobante huérfano): ${sinFila.length}`);
+    for (const s of sinFila) {
+      const pista = s.posible
+        ? ` — ¿es "${s.posible.paciente}" (${s.posible.fecha}, score ${s.posible.score})? movs: ${s.posible.movementIds.join(",")} fileId: ${s.fileId}`
+        : "";
+      console.log(`    · ${s.titulo} — carpeta ${s.carpeta}${pista}`);
+    }
   }
   if (r.fueraDeCarpeta.length) {
     console.log(`  fuera de carpeta diaria (ignorados): ${r.fueraDeCarpeta.length}`);

@@ -2,7 +2,7 @@
 // por día "D-M-YY", adentro un archivo por paciente) con los movimientos de
 // ingreso de la caja AR. El título del archivo es el nombre del paciente; la
 // fecha de la carpeta, el día del pago.
-import { nameScore, tokens, tokEq } from "../conciliacion/matcher";
+import { nameScore, tokens, tokEq, similarity } from "../conciliacion/matcher";
 
 /** true si TODOS los tokens del nombre aparecen en el título del archivo. */
 function contenidoEnTitulo(nombre: string, titulo: string): boolean {
@@ -43,12 +43,36 @@ export type Vinculo = {
   via: "carpeta" | "subida"; // qué fecha ancló el match
 };
 
+export type Posible = {
+  paciente: string;
+  fecha: string;
+  score: number;
+  movementIds: string[];
+};
+
+export type SinMatch = {
+  titulo: string;
+  fecha: string;
+  carpeta: string;
+  url: string;
+  fileId: string;
+  // caja_reciente: la caja de esos días aún no se cargó — se resuelve solo
+  motivo: "caja_reciente" | "sin_fila";
+  // mejor candidato del día con fuzzy laxo: typos que el match estricto no une
+  posible?: Posible;
+};
+
 export type ResultadoVinculos = {
   vinculos: Vinculo[];
-  sinMatch: { titulo: string; fecha: string; carpeta: string; url: string }[];
+  sinMatch: SinMatch[];
   ambiguos: { titulo: string; fecha: string; pacientes: string[] }[];
   fueraDeCarpeta: ArchivoDrive[];
 };
+
+/** tokens ordenados (sin stopwords/dígitos) — para similitud de nombre entero. */
+function claveLaxa(s: string): string {
+  return [...tokens(s)].sort().join(" ");
+}
 
 /** "19-8-26" | "19-08-26" | "3/7/26" → ISO; null si el título no es una fecha. */
 export function fechaDeCarpeta(titulo: string): string | null {
@@ -130,7 +154,37 @@ export function vincular(
     const corrimiento = hit?.corrimiento ?? 0;
 
     if (!candidatos.length) {
-      out.sinMatch.push({ titulo: a.title, fecha: carpeta.fecha, carpeta: carpeta.titulo, url: a.url });
+      const reciente = carpeta.fecha > limiteConsolidado;
+      let posible: Posible | undefined;
+      if (!reciente) {
+        // barrido laxo por fecha: mejor parecido del día (y ±tolerancia)
+        let best: { m: MovIngreso; score: number } | null = null;
+        for (let delta = 0; delta <= toleranciaDias; delta++) {
+          for (const signo of delta === 0 ? [0] : [-1, 1]) {
+            for (const m of porFecha.get(sumarDias(carpeta.fecha, delta * signo)) ?? []) {
+              const score = Math.max(
+                nameScore(titulo, m.paciente),
+                similarity(claveLaxa(titulo), claveLaxa(m.paciente))
+              );
+              if (score >= 0.55 && (!best || score > best.score)) best = { m, score };
+            }
+          }
+        }
+        if (best) {
+          const { m, score } = best;
+          const hermanos = (porFecha.get(m.occurred_on) ?? []).filter((x) => x.pacienteKey === m.pacienteKey);
+          posible = {
+            paciente: m.paciente,
+            fecha: m.occurred_on,
+            score: Math.round(score * 100) / 100,
+            movementIds: hermanos.map((x) => x.id),
+          };
+        }
+      }
+      out.sinMatch.push({
+        titulo: a.title, fecha: carpeta.fecha, carpeta: carpeta.titulo, url: a.url,
+        fileId: a.id, motivo: reciente ? "caja_reciente" : "sin_fila", posible,
+      });
       continue;
     }
 

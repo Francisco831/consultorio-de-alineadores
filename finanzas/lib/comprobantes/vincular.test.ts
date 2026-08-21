@@ -134,3 +134,29 @@ test("en la ventana reciente (caja aún incompleta) no hay corrimiento", () => {
   assert.equal(r.vinculos.length, 0);
   assert.equal(r.sinMatch.length, 1);
 });
+
+test("huérfano con typo fuerte propone el candidato del día (posible)", () => {
+  const r = vincular(
+    [archivo({ title: "Slavustky Santiago .jpeg" })],
+    CARPETAS,
+    [
+      mov({ paciente: "Slavutsky Santiago", pacienteKey: "slav" }),
+      mov({ id: "m2", occurred_on: "2026-08-25", paciente: "Otra Persona", pacienteKey: "z" }),
+    ]
+  );
+  assert.equal(r.vinculos.length, 0);
+  assert.equal(r.sinMatch[0].motivo, "sin_fila");
+  assert.ok(r.sinMatch[0].posible);
+  assert.equal(r.sinMatch[0].posible!.paciente, "Slavutsky Santiago");
+  assert.deepEqual(r.sinMatch[0].posible!.movementIds, ["m1"]);
+});
+
+test("huérfano reciente se marca caja_reciente y sin posible", () => {
+  const r = vincular(
+    [archivo({ parent: "c2", title: "Nadie Conocido" })],
+    [...CARPETAS, { id: "c2", title: "21-8-26" }],
+    [mov({ occurred_on: "2026-08-21" })]
+  );
+  assert.equal(r.sinMatch[0].motivo, "caja_reciente");
+  assert.equal(r.sinMatch[0].posible, undefined);
+});

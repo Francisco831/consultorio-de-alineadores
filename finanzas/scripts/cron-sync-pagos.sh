@@ -41,6 +41,11 @@ npx tsx scripts/sugerir-matches.ts --empresa mx --yes --apply >> "$LOG" 2>&1
 npx tsx scripts/sugerir-matches.ts --empresa ar --yes --apply >> "$LOG" 2>&1
 echo "-- matcher: listo" >> "$LOG"
 
+# comprobantes AR del Drive -> pagos (con el inventario que haya; el refresco
+# del inventario lo hace la tarea programada via MCP)
+npx tsx scripts/vincular-comprobantes.ts --yes --apply >> "$LOG" 2>&1
+echo "-- comprobantes AR: exit $?" >> "$LOG"
+
 if grep -q '^MP_ACCESS_TOKEN_MX=' .env.local 2>/dev/null; then
   npx tsx scripts/mp-sync.ts --empresa mx --apply --yes >> "$LOG" 2>&1
   echo "-- MP api: exit $?" >> "$LOG"
