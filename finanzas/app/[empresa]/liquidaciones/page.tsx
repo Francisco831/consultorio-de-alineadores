@@ -40,6 +40,27 @@ export default async function LiquidacionesPage({
   const periodo = sp.p && periodos.includes(sp.p) ? sp.p : periodos[0];
   const delPeriodo = filas.filter((f) => f.period === periodo);
 
+  // detalle línea por línea del período: cada cobro con su paciente y costo KS
+  type Item = {
+    settlement_id: string; base_amount: number; ks_cost: number; currency: string; label: string | null;
+    movement: { occurred_on: string; counterparty: { display_name: string } | null } | null;
+  };
+  const { data: itemsRaw } = delPeriodo.length
+    ? await supabase
+        .from("settlement_items")
+        .select("settlement_id, base_amount, ks_cost, currency, label, movement:movements(occurred_on, counterparty:counterparties(display_name))")
+        .in("settlement_id", delPeriodo.map((f) => f.id))
+        .limit(2000)
+    : { data: [] };
+  const itemsPorSet = new Map<string, Item[]>();
+  for (const it of (itemsRaw ?? []) as unknown as Item[]) {
+    if (!itemsPorSet.has(it.settlement_id)) itemsPorSet.set(it.settlement_id, []);
+    itemsPorSet.get(it.settlement_id)!.push(it);
+  }
+  for (const arr of itemsPorSet.values()) {
+    arr.sort((a, b) => (a.movement?.occurred_on ?? "").localeCompare(b.movement?.occurred_on ?? ""));
+  }
+
   const totalPeriodo = delPeriodo.reduce(
     (a, f) => a + Number((f.totals as Totales)?.ARS?.due ?? 0), 0
   );
@@ -89,12 +110,12 @@ export default async function LiquidacionesPage({
                 </tr>
               </thead>
               <tbody>
-                {delPeriodo.map((f) => {
+                {delPeriodo.flatMap((f) => {
                   const t = (f.totals as Totales) ?? {};
                   const ars = t.ARS ?? {};
                   const nombre = (f.professional as unknown as { display_name?: string } | null)?.display_name ?? "—";
                   const est = ESTADO[f.status] ?? ESTADO.draft;
-                  return (
+                  return [
                     <tr key={f.id} className="border-b last:border-0">
                       <td className="px-4 py-2.5 font-medium">{nombre}</td>
                       <td className="fig px-2 py-2.5 text-right">
@@ -136,8 +157,53 @@ export default async function LiquidacionesPage({
                           />
                         ) : null}
                       </td>
-                    </tr>
-                  );
+                    </tr>,
+                    (itemsPorSet.get(f.id) ?? []).length > 0 ? (
+                      <tr key={`${f.id}-detalle`} className="border-b last:border-0">
+                        <td colSpan={9} className="bg-muted/20 px-4 py-0">
+                          <details className="group py-2">
+                            <summary className="cursor-pointer select-none text-xs font-medium text-muted-foreground hover:text-foreground">
+                              Ver las {itemsPorSet.get(f.id)!.length} líneas de {nombre.split(" ")[0]}
+                              <span className="ml-1 inline-block transition-transform group-open:rotate-90">›</span>
+                            </summary>
+                            <table className="mt-2 w-full text-[12px]">
+                              <thead>
+                                <tr className="text-left text-[11px] text-muted-foreground">
+                                  <th className="w-20 px-2 py-1 font-medium">Fecha</th>
+                                  <th className="px-2 py-1 font-medium">Paciente</th>
+                                  <th className="px-2 py-1 font-medium">Concepto</th>
+                                  <th className="px-2 py-1 text-right font-medium">Cobrado</th>
+                                  <th className="px-2 py-1 text-right font-medium">Costo KS</th>
+                                  <th className="px-2 py-1 text-right font-medium">Neto</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {itemsPorSet.get(f.id)!.map((it, i) => {
+                                  const pac = (it.movement?.counterparty as { display_name?: string } | null)?.display_name ?? "—";
+                                  return (
+                                    <tr key={i} className="border-t border-border/50">
+                                      <td className="fig px-2 py-1 text-muted-foreground">
+                                        {it.movement?.occurred_on?.slice(8, 10)}/{it.movement?.occurred_on?.slice(5, 7)}
+                                      </td>
+                                      <td className="max-w-[180px] truncate px-2 py-1 font-medium">{pac}</td>
+                                      <td className="max-w-[300px] truncate px-2 py-1 text-muted-foreground">{it.label ?? "—"}</td>
+                                      <td className="fig px-2 py-1 text-right">{formatMoney(Number(it.base_amount), it.currency, locale)}</td>
+                                      <td className="fig px-2 py-1 text-right text-muted-foreground">
+                                        {Number(it.ks_cost) ? `−${formatMoney(Number(it.ks_cost), it.currency, locale)}` : "—"}
+                                      </td>
+                                      <td className="fig px-2 py-1 text-right">
+                                        {formatMoney(Number(it.base_amount) - Number(it.ks_cost), it.currency, locale)}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </details>
+                        </td>
+                      </tr>
+                    ) : null,
+                  ];
                 })}
               </tbody>
               <tfoot>

@@ -92,7 +92,7 @@ async function main() {
       seq: m.meta?.seq ?? 0,
     }));
 
-  const { costoArs, costoUsd, sinCostear } = costearCuotas(cobrosAlineadores, {
+  const { costoArs, costoUsd, etiquetas, sinCostear } = costearCuotas(cobrosAlineadores, {
     precioDefault: {
       list_price: Number(precio.list_price), discount_pct: Number(precio.discount_pct),
     },
@@ -123,11 +123,18 @@ async function main() {
 
   // ---------- comparación contra el script viejo ----------
   const refPorClave = new Map(referencia.map((r) => [`${r.periodo}|${r.doctora}`, r]));
+  // la referencia es una foto vieja (se validó Δ$0 en su momento): los períodos
+  // que no cubre (agosto en adelante) no se comparan, y los cobros cargados
+  // TARDE en la caja hacen crecer un mes legítimamente — solo una REGRESIÓN
+  // (calculado < referencia) frena el guardado.
+  const maxRef = referencia.reduce((a, r) => (r.periodo > a ? r.periodo : a), "");
   let iguales = 0;
   const difs: string[] = [];
+  const crecidos: string[] = [];
   const retirosNuevos: string[] = [];
   for (const l of calculadas) {
     if (aparte.has(l.doctora)) continue;         // Coni: cuenta propia, fuera
+    if (l.periodo > maxRef) continue;            // mes posterior a la foto
     const r = refPorClave.get(`${l.periodo}|${l.doctora}`);
     if (!r) {
       // Puede ser legítima: si no cobró nada ese mes pero se le pagó un retiro
@@ -159,18 +166,29 @@ async function main() {
         `(el script viejo veía ${r.retiros.toLocaleString("es-AR")})`
       );
     }
-    const malos = campos.filter(([, a, b]) => Math.abs(a - b) >= 1);
-    if (malos.length) {
+    const distintos = campos.filter(([, a, b]) => Math.abs(a - b) >= 1);
+    const bajo = campos.some(([c, a, b]) => c.startsWith("cobrado") && a < b - 1);
+    if (bajo) {
       difs.push(
         `${l.periodo} ${l.doctora}: ` +
-        malos.map(([c, a, b]) => `${c} calculado ${a.toLocaleString("es-AR")} vs referencia ${b.toLocaleString("es-AR")}`).join(" · ")
+        distintos.map(([c, a, b]) => `${c} calculado ${a.toLocaleString("es-AR")} vs referencia ${b.toLocaleString("es-AR")}`).join(" · ")
       );
+    } else if (distintos.length) {
+      crecidos.push(
+        `${l.periodo} ${l.doctora}: ` +
+        distintos.map(([c, a, b]) => `${c} ${b.toLocaleString("es-AR")} → ${a.toLocaleString("es-AR")}`).join(" · ")
+      );
+      iguales++;
     } else iguales++;
   }
 
   console.log(`\nLiquidaciones calculadas: ${calculadas.length} · comparables con la referencia: ${iguales + difs.length}`);
-  console.log(`  ✓ idénticas al script viejo: ${iguales}`);
-  console.log(`  ${difs.length ? "✗" : "✓"} con diferencias: ${difs.length}`);
+  console.log(`  ✓ idénticas o crecidas por cargas tardías: ${iguales}`);
+  console.log(`  ${difs.length ? "✗" : "✓"} con REGRESIONES: ${difs.length}`);
+  if (crecidos.length) {
+    console.log(`\n  Crecidas contra la foto vieja (cargas tardías en la caja — esperado):`);
+    for (const c of crecidos) console.log(`     ${c}`);
+  }
   if (retirosNuevos.length) {
     console.log(`\n  Retiros que el script viejo no veía (salieron por Mercado Pago):`);
     for (const r of retirosNuevos) console.log(`     ${r}`);
@@ -193,23 +211,50 @@ async function main() {
     .eq("company_id", companyId).eq("kind", "professional");
   const idPorNombre = new Map((cps ?? []).map((c) => [c.display_name, c.id]));
 
-  let guardadas = 0;
+  // una liquidación confirmada/pagada está CONGELADA: el recálculo no la toca
+  const { data: existentes } = await db.from("professional_settlements")
+    .select("id, professional_id, period, status").eq("company_id", companyId);
+  const estadoPorClave = new Map((existentes ?? []).map((e) => [`${e.professional_id}|${e.period}`, e]));
+
+  let guardadas = 0, congeladas = 0, itemsTotal = 0;
   for (const l of calculadas) {
     if (aparte.has(l.doctora)) continue;
     const profId = idPorNombre.get(l.doctora);
     if (!profId) continue;
-    const { error } = await db.from("professional_settlements").upsert({
+    const previa = estadoPorClave.get(`${profId}|${l.periodo}`);
+    if (previa && previa.status !== "draft") { congeladas++; continue; }
+    const { data: set, error } = await db.from("professional_settlements").upsert({
       company_id: companyId, professional_id: profId, period: l.periodo,
       status: "draft", pct: pctPorDoctora.get(l.doctora) ?? 40,
       totals: {
         ARS: { collected: l.cobradoArs, ks_cost: l.gastosTratamiento, base: l.baseArs, due: l.liquidacionArs, withdrawn: l.retiros, balance: l.saldo },
         USD: { collected: l.cobradoUsd, due: l.liquidacionUsd },
       },
-    }, { onConflict: "company_id,professional_id,period" });
+    }, { onConflict: "company_id,professional_id,period" }).select("id").single();
     if (error) throw new Error(`settlement ${l.periodo}/${l.doctora}: ${error.message}`);
     guardadas++;
+
+    // ---- detalle línea por línea: cada cobro del mes con su costo KS ----
+    const cobrosDelMes = movs.filter((m) =>
+      m.kind === "income" && m.meta?.doctora === l.doctora &&
+      m.occurred_on.slice(0, 7) === l.periodo);
+    await db.from("settlement_items").delete().eq("settlement_id", set!.id);
+    if (cobrosDelMes.length) {
+      const filas = cobrosDelMes.map((m) => ({
+        company_id: companyId, settlement_id: set!.id, movement_id: m.id,
+        base_amount: Number(m.amount), currency: m.currency,
+        ks_cost: m.currency === "USD" ? (costoUsd.get(m.id) ?? 0) : (costoArs.get(m.id) ?? 0),
+        label: [m.meta?.motivo, etiquetas.get(m.id)].filter(Boolean).join(" · ") || null,
+      }));
+      for (let i = 0; i < filas.length; i += 500) {
+        const { error: e2 } = await db.from("settlement_items").insert(filas.slice(i, i + 500));
+        if (e2) throw new Error(`items ${l.periodo}/${l.doctora}: ${e2.message}`);
+      }
+      itemsTotal += filas.length;
+    }
   }
-  console.log(`\n✓ ${guardadas} liquidaciones guardadas (en borrador, listas para revisar y confirmar).`);
+  console.log(`\n✓ ${guardadas} liquidaciones guardadas con ${itemsTotal} líneas de detalle` +
+    (congeladas ? ` · ${congeladas} confirmadas/pagadas sin tocar` : "") + ".");
 }
 
 main().catch((e) => { console.error(e.message ?? e); process.exit(1); });
