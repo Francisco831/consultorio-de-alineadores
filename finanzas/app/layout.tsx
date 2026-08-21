@@ -26,7 +26,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${rethinkSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      {/* suppressHydrationWarning: las extensiones del navegador (Grammarly y
+          cía.) inyectan atributos en el body antes de que React hidrate y el
+          overlay de dev lo reporta como error; no es nuestro. */}
+      <body suppressHydrationWarning className="min-h-full flex flex-col">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           {children}
           <Toaster />
