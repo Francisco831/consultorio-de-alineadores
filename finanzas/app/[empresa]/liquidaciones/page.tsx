@@ -4,6 +4,8 @@ import { formatMoney } from "@/lib/money";
 import { todayIn } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { ConfirmarLiquidacion } from "@/components/compromisos/liquidacion-controles";
+import { COMISION_POR_TRATAMIENTO } from "@/lib/liquidaciones/comision-claudia";
+import { comisionClaudiaPorMes } from "@/lib/liquidaciones/comision-claudia-query";
 
 type Totales = {
   ARS?: { collected?: number; ks_cost?: number; base?: number; due?: number; withdrawn?: number; balance?: number };
@@ -64,6 +66,12 @@ export default async function LiquidacionesPage({
   const totalPeriodo = delPeriodo.reduce(
     (a, f) => a + Number((f.totals as Totales)?.ARS?.due ?? 0), 0
   );
+
+  // Claudia no liquida 40%: cobra $100.000 por tratamiento nuevo, pero se paga
+  // en la misma tanda mensual — por eso aparece acá además de en Sueldos
+  const claudiaMes = ctx.config.slug === "ar" && periodo
+    ? (await comisionClaudiaPorMes(supabase, ctx.companyId)).get(periodo) ?? null
+    : null;
 
   return (
     <div className="mx-auto max-w-[1100px] space-y-5">
@@ -216,6 +224,25 @@ export default async function LiquidacionesPage({
               </tfoot>
             </table>
           </div>
+          {claudiaMes ? (
+            <div className="rounded-xl border bg-card p-4 shadow-sm">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <div>
+                  <span className="text-sm font-semibold">Comisión Claudia — {periodo}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {claudiaMes.cantidad} tratamiento{claudiaMes.cantidad === 1 ? "" : "s"} nuevo{claudiaMes.cantidad === 1 ? "" : "s"} × {formatMoney(COMISION_POR_TRATAMIENTO, "ARS", locale)}
+                  </span>
+                </div>
+                <span className="fig text-lg font-semibold text-emerald-700 dark:text-emerald-400">
+                  {formatMoney(claudiaMes.comision, "ARS", locale)}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">{claudiaMes.pacientes.join(" · ")}</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Además de su sueldo — el detalle histórico vive en Sueldos.
+              </p>
+            </div>
+          ) : null}
           <p className="text-xs text-muted-foreground">
             Los saldos negativos son doctoras que ya retiraron más de lo que les
             correspondía ese mes: se compensan con el mes siguiente.
