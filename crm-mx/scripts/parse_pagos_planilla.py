@@ -35,7 +35,13 @@ def cargar_grilla(args):
         data = json.load(f)
     if data.get("tab") != TAB:
         sys.exit(f"el JSON no es de la hoja {TAB!r}: {str(data)[:120]}")
-    return data["values"]
+    # las fechas pueden venir como timestamp ISO UTC ("2022-04-22T03:00:00.000Z",
+    # medianoche GMT-3/-6): el día calendario es el del string, se corta directo
+    iso_ts = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:")
+    return [
+        [c[:10] if isinstance(c, str) and iso_ts.match(c) else c for c in row]
+        for row in data["values"]
+    ]
 
 
 def parse_payments(rows):
