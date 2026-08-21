@@ -25,10 +25,17 @@ echo "-- planilla→CRM: exit $CRM_RC" >> "$LOG"
 cd "$REPO/finanzas" || exit 1
 if [ $CRM_RC -eq 0 ]; then
   npx tsx scripts/import-payments-mx.ts --apply --yes >> "$LOG" 2>&1
-  echo "-- CRM→finanzas: exit $?" >> "$LOG"
+  echo "-- CRM→finanzas pagos: exit $?" >> "$LOG"
+  npx tsx scripts/import-casos-mx.ts --apply --yes >> "$LOG" 2>&1
+  echo "-- CRM→finanzas casos: exit $?" >> "$LOG"
 else
   echo "-- CRM→finanzas: salteado (falló la etapa anterior)" >> "$LOG"
 fi
+
+# sugerencias de conciliación para que la cola amanezca lista
+npx tsx scripts/sugerir-matches.ts --empresa mx --yes --apply >> "$LOG" 2>&1
+npx tsx scripts/sugerir-matches.ts --empresa ar --yes --apply >> "$LOG" 2>&1
+echo "-- matcher: listo" >> "$LOG"
 
 if grep -q '^MP_ACCESS_TOKEN_MX=' .env.local 2>/dev/null; then
   npx tsx scripts/mp-sync.ts --empresa mx --apply --yes >> "$LOG" 2>&1

@@ -32,15 +32,24 @@ export default async function HoyPage({
 
   const alertas = await calcularAlertas(supabase, { companyId: ctx.companyId, config: ctx.config });
 
+  // contabilidades separadas (caja Coni): fuera de los números del negocio,
+  // se muestran en su propio cuadro al pie
+  const { data: cuentasSep } = await supabase
+    .from("accounts").select("id, name, currency")
+    .eq("company_id", ctx.companyId).eq("separate_books", true);
+  const idsSep = (cuentasSep ?? []).map((a) => a.id);
+
   const [{ data: balances }, { data: resumen }, { data: ultimos }, { data: porPagar }, { data: porCobrar }] = await Promise.all([
     supabase.from("v_account_balances").select("*").eq("company_id", ctx.companyId),
     supabase.from("v_monthly_summary").select("month, currency, income, expense, result")
       .eq("company_id", ctx.companyId).order("month"),
-    supabase.from("movements")
-      .select("id, occurred_on, kind, amount, currency, description, status, counterparty:counterparties(display_name), category:categories(name)")
-      .eq("company_id", ctx.companyId).neq("status", "void")
-      .order("occurred_on", { ascending: false }).order("created_at", { ascending: false })
-      .limit(10),
+    (() => {
+      let q = supabase.from("movements")
+        .select("id, occurred_on, kind, amount, currency, description, status, counterparty:counterparties(display_name), category:categories(name)")
+        .eq("company_id", ctx.companyId).neq("status", "void");
+      if (idsSep.length) q = q.not("account_id", "in", `(${idsSep.join(",")})`);
+      return q.order("occurred_on", { ascending: false }).order("created_at", { ascending: false }).limit(10);
+    })(),
     supabase.from("v_payables_buckets").select("id, concept, counterparty_name, currency, balance, due_on, bucket")
       .eq("company_id", ctx.companyId).in("bucket", ["vencido", "hoy", "semana"])
       .order("due_on").limit(6),
@@ -50,8 +59,10 @@ export default async function HoyPage({
 
   // ---- Disponibilidad: un bucket por moneda, JAMÁS sumados entre sí
   const porMoneda = new Map<string, Balance[]>();
+  const sepBalances = ((balances ?? []) as Balance[]).filter((b) => idsSep.includes(b.account_id));
   for (const b of (balances ?? []) as Balance[]) {
     if (!b.is_active) continue;
+    if (idsSep.includes(b.account_id)) continue;
     if (!porMoneda.has(b.currency)) porMoneda.set(b.currency, []);
     porMoneda.get(b.currency)!.push(b);
   }
@@ -193,6 +204,27 @@ export default async function HoyPage({
             </div>
           ) : null}
         </div>
+        {sepBalances.length ? (
+          <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50/50 p-4 dark:border-violet-900 dark:bg-violet-950/30">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">
+                Caja Coni — contabilidad separada
+              </span>
+              <Link href={`/${empresa}/movimientos?f=coni`} className="text-xs font-medium text-violet-700 hover:underline dark:text-violet-300">
+                Ver movimientos →
+              </Link>
+            </div>
+            <div className="flex flex-wrap gap-6">
+              {sepBalances.map((b) => (
+                <div key={b.account_id} className="text-sm">
+                  <span className="text-muted-foreground">{b.name}: </span>
+                  <span className="fig font-semibold">{formatMoney(Number(b.balance), b.currency, locale)}</span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">No suma en la disponibilidad ni en los ingresos del consultorio.</p>
+          </div>
+        ) : null}
       </section>
 
       {/* ---- fila 2: este mes ---- */}
@@ -378,8 +410,15 @@ export default async function HoyPage({
                       <td className="hidden px-2 py-2 text-muted-foreground sm:table-cell">
                         {cat ?? (esTransfer ? "Transferencia" : "—")}
                       </td>
-                      <td className={cn("fig w-36 px-4 py-2 text-right font-medium")}>
-                        {signo < 0 ? "−" : ""}{formatMoney(Number(mv.amount), mv.currency, locale)}
+                      <td
+                        className={cn(
+                          "fig w-36 px-4 py-2 text-right font-medium",
+                          !esTransfer && mv.kind === "expense" && "text-red-600 dark:text-red-400",
+                          !esTransfer && mv.kind === "income" && "text-emerald-600 dark:text-emerald-400",
+                          esTransfer && "text-muted-foreground"
+                        )}
+                      >
+                        {signo < 0 ? "−" : "+"}{formatMoney(Number(mv.amount), mv.currency, locale)}
                       </td>
                     </tr>
                   );

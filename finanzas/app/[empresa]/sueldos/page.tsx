@@ -1,7 +1,11 @@
 import { requireEmpresa } from "@/lib/empresa-context";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/money";
+import { formatDateShort } from "@/lib/dates";
 import { cn } from "@/lib/utils";
+import {
+  COMISION_POR_TRATAMIENTO, comisionPorMes, tratamientosNuevos,
+} from "@/lib/liquidaciones/comision-claudia";
 
 type Item = {
   id: string; currency: string; gross: number; deductions: number; net: number;
@@ -49,6 +53,34 @@ export default async function SueldosPage({
     { gross: 0, net: 0, contrib: 0, costo: 0 }
   );
   const moneda = filas[0]?.currency ?? ctx.config.monedaPrincipal;
+
+  // ---- Comisión Claudia (solo consultorio AR): $100.000 por tratamiento nuevo
+  let claudia: { mes: string; cantidad: number; comision: number; pacientes: string[] }[] = [];
+  if (ctx.config.slug === "ar") {
+    const { data: catAlin } = await supabase
+      .from("categories").select("id")
+      .eq("company_id", ctx.companyId).eq("name", "Alineadores").maybeSingle();
+    if (catAlin) {
+      const { data: pagosAlin } = await supabase
+        .from("movements")
+        .select("occurred_on, counterparty_id, description, counterparty:counterparties(display_name), account:accounts!movements_account_company_fk(separate_books)")
+        .eq("company_id", ctx.companyId).eq("kind", "income")
+        .eq("category_id", catAlin.id).neq("status", "void")
+        .limit(2000);
+      const nuevos = tratamientosNuevos(
+        (pagosAlin ?? []).map((pg) => ({
+          occurred_on: pg.occurred_on,
+          counterparty_id: pg.counterparty_id,
+          paciente: (pg.counterparty as { display_name?: string } | null)?.display_name ?? null,
+          separada: Boolean((pg.account as { separate_books?: boolean } | null)?.separate_books),
+          descripcion: pg.description,
+        }))
+      );
+      claudia = [...comisionPorMes(nuevos)]
+        .map(([mes, v]) => ({ mes, ...v }))
+        .sort((a, b) => b.mes.localeCompare(a.mes));
+    }
+  }
 
   return (
     <div className="mx-auto max-w-[1100px] space-y-5">
@@ -124,6 +156,50 @@ export default async function SueldosPage({
           </div>
         </>
       )}
+
+      {claudia.length ? (
+        <section>
+          <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Comisión Claudia — tratamientos nuevos
+          </h2>
+          <p className="mb-3 text-xs text-muted-foreground">
+            {formatMoney(COMISION_POR_TRATAMIENTO, "ARS", locale)} por cada primera seña/cuota de
+            Alineadores, además del sueldo. Los pacientes de la caja Coni no cuentan.
+          </p>
+          <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr className="border-b text-left text-xs text-muted-foreground">
+                  <th className="px-4 py-2 font-medium">Mes</th>
+                  <th className="px-2 py-2 text-center font-medium">Tratamientos nuevos</th>
+                  <th className="px-4 py-2 text-right font-medium">Comisión</th>
+                </tr>
+              </thead>
+              <tbody>
+                {claudia.map((c) => (
+                  <tr key={c.mes} className="border-b align-top last:border-0">
+                    <td className="fig px-4 py-2 font-medium">{c.mes}</td>
+                    <td className="px-2 py-2 text-center">
+                      <details>
+                        <summary className="cursor-pointer select-none">
+                          <span className="fig font-semibold">{c.cantidad}</span>{" "}
+                          <span className="text-xs text-muted-foreground">(ver pacientes)</span>
+                        </summary>
+                        <div className="mx-auto mt-1 max-w-[420px] text-left text-xs text-muted-foreground">
+                          {c.pacientes.join(" · ")}
+                        </div>
+                      </details>
+                    </td>
+                    <td className="fig px-4 py-2 text-right font-semibold text-emerald-700 dark:text-emerald-400">
+                      {formatMoney(c.comision, "ARS", locale)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

@@ -91,18 +91,63 @@ def parse_payments(rows):
     return payments, undated
 
 
+def parse_casos(rows):
+    """Una fila = un caso(-etapa) con su precio pactado. VALOR (lista menos
+    descuentos) es el monto fijo del caso; 0 = caso sin precio o bonificado."""
+    header = [cell_str(c) for c in rows[0]]
+    def col(nombre):
+        return next(i for i, c in enumerate(header) if c.strip().upper() == nombre)
+    c_id2, c_tipo, c_etapa = col("ID"), col("TIPO"), col("ETAPA")
+    id_cols = [i for i, c in enumerate(header) if c.strip().upper() == "ID"]
+    c_id = id_cols[1] if len(id_cols) > 1 else id_cols[0]
+    c_envio = next(i for i, c in enumerate(header) if "ENV" in c.upper())
+    c_pac, c_prof = col("PACIENTE"), col("PROFESIONAL")
+    c_dc = next(i for i, c in enumerate(header) if "D/C" in c.upper())
+    c_imp = col("IMPORTE")
+    c_cat = next(i for i, c in enumerate(header) if c.strip().upper() == "CATEGORÍA" or c.strip().upper() == "CATEGORIA")
+    c_valor = col("VALOR")
+    pagos_idx = [i for i, c in enumerate(header) if re.fullmatch(r"\d\s*°\s*PAGO", c.strip(), re.I)]
+    casos = []
+    for rix, row in enumerate(rows[1:], start=2):
+        cells = list(row) + [None] * max(0, len(header) - len(row))
+        case_id = cell_str(cells[c_id])
+        if not case_id or case_id.upper() == "ID":
+            continue
+        casos.append({
+            "fila": rix,
+            "case_id": case_id,
+            "tipo": cell_str(cells[c_tipo]) or None,
+            "etapa": cell_str(cells[c_etapa]) or None,
+            "paciente": cell_str(cells[c_pac]) or None,
+            "profesional": cell_str(cells[c_prof]) or None,
+            "fecha": to_date(cells[c_dc]) or to_date(cells[c_envio]),
+            "categoria": cell_str(cells[c_cat]) or None,
+            "importe_lista": to_amount(cells[c_imp]),
+            "valor": to_amount(cells[c_valor]) or 0,
+            # suma de los 5 slots CON o SIN fecha: es el cobrado real del caso
+            # (los movements de finanzas solo arrancan en 2026)
+            "pagado": round(sum(to_amount(cells[i]) or 0 for i in pagos_idx), 2),
+        })
+    return casos
+
+
 def main():
     ap = argparse.ArgumentParser()
     src = ap.add_mutually_exclusive_group(required=True)
     src.add_argument("--xlsx")
     src.add_argument("--json")
     ap.add_argument("--out", default=os.path.join(os.path.dirname(__file__), "../data/pagos_planilla.json"))
+    ap.add_argument("--out-casos", default=os.path.join(os.path.dirname(__file__), "../data/casos_planilla.json"))
     args = ap.parse_args()
 
     rows = cargar_grilla(args)
     payments, undated = parse_payments(rows)
     with open(args.out, "w") as f:
         json.dump(payments, f, ensure_ascii=False, indent=1)
+    casos = parse_casos(rows)
+    with open(args.out_casos, "w") as f:
+        json.dump(casos, f, ensure_ascii=False, indent=1)
+    print(f"{len(casos)} casos -> {os.path.normpath(args.out_casos)}")
 
     por_mes = {}
     for p in payments:

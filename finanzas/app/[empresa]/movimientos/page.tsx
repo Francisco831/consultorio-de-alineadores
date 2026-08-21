@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireEmpresa } from "@/lib/empresa-context";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/money";
-import { formatDateShort } from "@/lib/dates";
+import { formatDateShort, todayIn, monthStartIn } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import {
@@ -39,7 +39,7 @@ export default async function MovimientosPage({
   params, searchParams,
 }: {
   params: Promise<{ empresa: string }>;
-  searchParams: Promise<{ q?: string; f?: string; cuenta?: string; p?: string; sort?: string; dir?: string }>;
+  searchParams: Promise<{ q?: string; f?: string; cuenta?: string; cp?: string; p?: string; sort?: string; dir?: string; desde?: string; hasta?: string }>;
 }) {
   const { empresa } = await params;
   const sp = await searchParams;
@@ -51,6 +51,15 @@ export default async function MovimientosPage({
   const page = Math.max(1, Number(sp.p) || 1);
   const sortKey = SORTS[sp.sort ?? ""] ? sp.sort! : "fecha";
   const dir = sp.dir === "asc" ? "asc" : "desc";
+  const esFecha = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined);
+  const desde = esFecha(sp.desde);
+  const hasta = esFecha(sp.hasta);
+
+  // contabilidades separadas (caja Coni): fuera del listado salvo su propia pestaña
+  const { data: cuentasSep } = await supabase
+    .from("accounts").select("id, name")
+    .eq("company_id", ctx.companyId).eq("separate_books", true);
+  const idsSep = (cuentasSep ?? []).map((a) => a.id);
 
   let query = supabase
     .from("movements")
@@ -62,14 +71,23 @@ export default async function MovimientosPage({
     )
     .eq("company_id", ctx.companyId);
 
-  if (f === "ingresos") query = query.eq("kind", "income").neq("status", "void");
+  if (f === "coni") query = query.neq("status", "void");
+  else if (f === "ingresos") query = query.eq("kind", "income").neq("status", "void");
   else if (f === "gastos") query = query.eq("kind", "expense").neq("status", "void");
   else if (f === "transferencias") query = query.in("kind", ["transfer_in", "transfer_out"]).neq("status", "void");
   else if (f === "pendientes") query = query.eq("status", "pending");
   else query = query.neq("status", "void");
 
+  if (f === "coni") {
+    query = idsSep.length ? query.in("account_id", idsSep) : query.eq("account_id", "00000000-0000-0000-0000-000000000000");
+  } else if (idsSep.length && !sp.cuenta) {
+    query = query.not("account_id", "in", `(${idsSep.join(",")})`);
+  }
   if (sp.cuenta) query = query.eq("account_id", sp.cuenta);
+  if (sp.cp) query = query.eq("counterparty_id", sp.cp);
   if (sp.q) query = query.ilike("description", `%${sp.q}%`);
+  if (desde) query = query.gte("occurred_on", desde);
+  if (hasta) query = query.lte("occurred_on", hasta);
 
   const from = (page - 1) * PAGE_SIZE;
   const { data: movimientos, count, error } = await query
@@ -86,7 +104,7 @@ export default async function MovimientosPage({
 
   const urlCon = (cambios: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
-    const estado = { q: sp.q, f: sp.f, cuenta: sp.cuenta, sort: sp.sort, dir: sp.dir, ...cambios };
+    const estado = { q: sp.q, f: sp.f, cuenta: sp.cuenta, cp: sp.cp, sort: sp.sort, dir: sp.dir, desde: sp.desde, hasta: sp.hasta, ...cambios };
     for (const [k, v] of Object.entries(estado)) if (v) p.set(k, v);
     const qs = p.toString();
     return `/${empresa}/movimientos${qs ? `?${qs}` : ""}`;
@@ -120,6 +138,28 @@ export default async function MovimientosPage({
             {fl.label}
           </Link>
         ))}
+        {idsSep.length ? (
+          <Link
+            href={urlCon({ f: f === "coni" ? undefined : "coni", p: undefined })}
+            className={cn(
+              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+              f === "coni"
+                ? "border-violet-600 bg-violet-600 text-white"
+                : "border-violet-300 bg-card text-violet-700 hover:bg-violet-50 dark:border-violet-800 dark:text-violet-300 dark:hover:bg-violet-950"
+            )}
+            title="Contabilidad separada — no suma en los números del consultorio"
+          >
+            Caja Coni
+          </Link>
+        ) : null}
+        {sp.cp ? (
+          <Link
+            href={urlCon({ cp: undefined, p: undefined })}
+            className="rounded-full border border-dashed px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-accent"
+          >
+            Contraparte filtrada ✕
+          </Link>
+        ) : null}
         {sp.cuenta ? (
           <Link
             href={urlCon({ cuenta: undefined, p: undefined })}
@@ -128,6 +168,55 @@ export default async function MovimientosPage({
             Cuenta filtrada ✕
           </Link>
         ) : null}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        {(() => {
+          const tz = ctx.config.timezone;
+          const hoy = todayIn(tz);
+          const inicioMes = monthStartIn(tz);
+          const d = new Date(`${hoy}T12:00:00Z`);
+          const hace7 = new Date(d); hace7.setUTCDate(d.getUTCDate() - 6);
+          const semana = hace7.toISOString().slice(0, 10);
+          const mesPasadoFin = new Date(`${inicioMes}T12:00:00Z`); mesPasadoFin.setUTCDate(0);
+          const mesPasadoIni = `${mesPasadoFin.toISOString().slice(0, 7)}-01`;
+          const presets = [
+            { label: "Hoy", desde: hoy, hasta: hoy },
+            { label: "7 días", desde: semana, hasta: hoy },
+            { label: "Este mes", desde: inicioMes, hasta: hoy },
+            { label: "Mes pasado", desde: mesPasadoIni, hasta: mesPasadoFin.toISOString().slice(0, 10) },
+          ];
+          return presets.map((pr) => {
+            const activo = desde === pr.desde && hasta === pr.hasta;
+            return (
+              <Link
+                key={pr.label}
+                href={urlCon({ desde: activo ? undefined : pr.desde, hasta: activo ? undefined : pr.hasta, p: undefined })}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                  activo
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "bg-card text-muted-foreground hover:bg-accent"
+                )}
+              >
+                {pr.label}
+              </Link>
+            );
+          });
+        })()}
+        <form action={`/${empresa}/movimientos`} className="flex items-center gap-1.5">
+          {sp.f ? <input type="hidden" name="f" value={sp.f} /> : null}
+          {sp.q ? <input type="hidden" name="q" value={sp.q} /> : null}
+          <input type="date" name="desde" defaultValue={desde ?? ""} className="h-7 rounded-md border bg-card px-2 text-xs" aria-label="Desde" />
+          <span className="text-xs text-muted-foreground">→</span>
+          <input type="date" name="hasta" defaultValue={hasta ?? ""} className="h-7 rounded-md border bg-card px-2 text-xs" aria-label="Hasta" />
+          <button type="submit" className="h-7 rounded-md border px-2 text-xs font-medium hover:bg-accent">Filtrar</button>
+          {desde || hasta ? (
+            <Link href={urlCon({ desde: undefined, hasta: undefined, p: undefined })} className="text-xs text-muted-foreground hover:text-foreground">
+              ✕ fechas
+            </Link>
+          ) : null}
+        </form>
       </div>
 
       <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
@@ -197,8 +286,15 @@ export default async function MovimientosPage({
                         {ESTADO_LABEL[mv.status]}
                       </span>
                     </TableCell>
-                    <TableCell className="fig text-right font-medium">
-                      {negativo ? "−" : ""}{formatMoney(Number(mv.amount), mv.currency, locale)}
+                    <TableCell
+                      className={cn(
+                        "fig text-right font-medium",
+                        mv.status !== "void" && !esTransfer && mv.kind === "expense" && "text-red-600 dark:text-red-400",
+                        mv.status !== "void" && !esTransfer && mv.kind === "income" && "text-emerald-600 dark:text-emerald-400",
+                        esTransfer && "text-muted-foreground"
+                      )}
+                    >
+                      {negativo ? "−" : mv.kind === "income" ? "+" : ""}{formatMoney(Number(mv.amount), mv.currency, locale)}
                     </TableCell>
                     <TableCell>
                       <RowActions empresa={ctx.config.slug} movementId={mv.id} status={mv.status} source={mv.source} />

@@ -31,13 +31,16 @@ import { EMPRESAS, type EmpresaSlug } from "@/lib/empresas";
 // COMPROMISOS (Por pagar · Por cobrar · Sueldos · Impuestos · Calendario)
 // ANÁLISIS (Cash Flow · Presupuesto · Costos* · Reportes)
 // DIRECTORIO (Proveedores · Clientes)
-function nav(base: string, labelCostos: string): { href: string; label: string; icon: LucideIcon; grupo?: string }[] {
+function nav(base: string, labelCostos: string, empresa: EmpresaSlug): { href: string; label: string; icon: LucideIcon; grupo?: string }[] {
   return [
     { href: `${base}/hoy`, label: "Hoy", icon: Sun },
     { href: `${base}/movimientos`, label: "Movimientos", icon: ArrowLeftRight, grupo: "Diario" },
     { href: `${base}/movimientos/conciliar`, label: "Conciliación", icon: Landmark, grupo: "Diario" },
     { href: `${base}/pagar`, label: "Por pagar", icon: CreditCard, grupo: "Compromisos" },
     { href: `${base}/cobrar`, label: "Por cobrar", icon: HandCoins, grupo: "Compromisos" },
+    ...(empresa === "mx"
+      ? [{ href: `${base}/casos`, label: "Casos", icon: HandCoins, grupo: "Compromisos" as const }]
+      : [{ href: `${base}/pacientes`, label: "Pacientes", icon: Users, grupo: "Compromisos" as const }]),
     { href: `${base}/impuestos`, label: "Impuestos", icon: Receipt, grupo: "Compromisos" },
     { href: `${base}/sueldos`, label: "Sueldos", icon: Users, grupo: "Compromisos" },
     { href: `${base}/liquidaciones`, label: "Liquidaciones", icon: Percent, grupo: "Compromisos" },
@@ -54,7 +57,7 @@ function nav(base: string, labelCostos: string): { href: string; label: string; 
 
 export function AppSidebar({ empresa }: { empresa: EmpresaSlug }) {
   const pathname = usePathname();
-  const items = nav(`/${empresa}`, EMPRESAS[empresa].labelCostos);
+  const items = nav(`/${empresa}`, EMPRESAS[empresa].labelCostos, empresa);
   return (
     <aside className="flex h-screen w-52 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
       <CompanySwitcher actual={empresa} />

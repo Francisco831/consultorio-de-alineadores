@@ -40,6 +40,8 @@ const APPLY = process.argv.includes("--apply");
 const CRON = process.argv.includes("--cron");
 const PARSED = resolve(__dirname, "../data/pagos_planilla.json");
 const SEED_FINANZAS = resolve(__dirname, "../../finanzas/seed-data/payments_mx.json");
+const CASOS = resolve(__dirname, "../data/casos_planilla.json");
+const SEED_CASOS = resolve(__dirname, "../../finanzas/seed-data/casos_mx.json");
 
 function argValor(nombre: string): string | undefined {
   const i = process.argv.indexOf(`--${nombre}`);
@@ -177,6 +179,7 @@ async function main() {
   }
 
   writeFileSync(SEED_FINANZAS, JSON.stringify(frescos, null, 1));
+  try { writeFileSync(SEED_CASOS, readFileSync(CASOS)); } catch { /* parse viejo sin casos */ }
   await db.from("sync_runs").insert({
     source: "planilla_pagos", finished_at: new Date().toISOString(), status: "ok",
     rows_upserted: nuevos.length + editados.length,
