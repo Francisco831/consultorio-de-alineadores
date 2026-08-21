@@ -57,6 +57,35 @@ export default async function HoyPage({
       .eq("company_id", ctx.companyId).order("days_overdue", { ascending: false }).limit(6),
   ]);
 
+  // ---- Últimos movimientos POR CUENTA (desplegable de Disponibilidad)
+  const { data: recientesRaw } = await supabase
+    .from("movements")
+    .select("id, occurred_on, kind, amount, currency, description, account_id, transfer_group_id, counterparty:counterparties(display_name)")
+    .eq("company_id", ctx.companyId).neq("status", "void")
+    .order("occurred_on", { ascending: false }).order("created_at", { ascending: false })
+    .limit(600);
+  type Reciente = NonNullable<typeof recientesRaw>[number];
+  const porCuentaReciente = new Map<string, Reciente[]>();
+  for (const m of recientesRaw ?? []) {
+    const arr = porCuentaReciente.get(m.account_id) ?? [];
+    if (arr.length < 8) { arr.push(m); porCuentaReciente.set(m.account_id, arr); }
+  }
+  // pareja de cada transferencia: grupo → cuentas involucradas
+  const gruposTransfer = [...new Set((recientesRaw ?? [])
+    .filter((m) => m.transfer_group_id).map((m) => m.transfer_group_id as string))];
+  const parPorGrupo = new Map<string, { account_id: string; kind: string }[]>();
+  if (gruposTransfer.length) {
+    const { data: patas } = await supabase
+      .from("movements").select("transfer_group_id, account_id, kind")
+      .eq("company_id", ctx.companyId).in("transfer_group_id", gruposTransfer.slice(0, 200));
+    for (const pt of patas ?? []) {
+      const arr = parPorGrupo.get(pt.transfer_group_id as string) ?? [];
+      arr.push({ account_id: pt.account_id, kind: pt.kind });
+      parPorGrupo.set(pt.transfer_group_id as string, arr);
+    }
+  }
+  const nombreCuenta = new Map<string, string>();
+
   // ---- Ingresos por cuenta, mes a mes (pedido de Pancho 21/8)
   const { data: ingresosRaw } = await supabase
     .from("movements")
@@ -70,6 +99,7 @@ export default async function HoyPage({
     const info = new Map((await supabase
       .from("accounts").select("id, name, currency, ks_custody, separate_books")
       .eq("company_id", ctx.companyId)).data?.map((a) => [a.id, a]) ?? []);
+    for (const [id, a] of info) nombreCuenta.set(id, a.name);
     for (const m of ingresosRaw ?? []) {
       const acc = info.get(m.account_id);
       if (!acc || acc.separate_books) continue;          // Coni tiene su propio cuadro
@@ -206,25 +236,75 @@ export default async function HoyPage({
                   </span>
                 </div>
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                  {cuentas.map((c) => (
-                    <Link
-                      key={c.account_id}
-                      href={`/${empresa}/movimientos?cuenta=${c.account_id}`}
-                      className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition-colors hover:bg-accent"
-                    >
-                      <span className="flex items-center gap-2 truncate">
-                        {c.pending_count > 0 ? (
-                          <span title={`${c.pending_count} pendientes`} className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
-                        ) : null}
-                        <span className={cn("truncate", !c.include_in_totals && "text-muted-foreground")}>
-                          {c.name}
-                        </span>
-                      </span>
-                      <span className="fig font-medium">
-                        {formatMoney(Number(c.balance), moneda, locale)}
-                      </span>
-                    </Link>
-                  ))}
+                  {cuentas.map((c) => {
+                    const recientes = (porCuentaReciente.get(c.account_id) ?? [])
+                      .filter((m) => m.currency === moneda);
+                    return (
+                      <details key={c.account_id} className="group rounded-lg border text-sm transition-colors open:bg-accent/30">
+                        <summary className="flex cursor-pointer select-none items-center justify-between px-3 py-2 hover:bg-accent">
+                          <span className="flex items-center gap-2 truncate">
+                            <span className="text-[10px] text-muted-foreground transition-transform group-open:rotate-90">›</span>
+                            {c.pending_count > 0 ? (
+                              <span title={`${c.pending_count} pendientes`} className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                            ) : null}
+                            <span className={cn("truncate", !c.include_in_totals && "text-muted-foreground")}>
+                              {c.name}
+                            </span>
+                          </span>
+                          <span className="fig font-medium">
+                            {formatMoney(Number(c.balance), moneda, locale)}
+                          </span>
+                        </summary>
+                        <div className="border-t px-3 py-2">
+                          {recientes.length === 0 ? (
+                            <p className="py-1 text-xs text-muted-foreground">Sin movimientos recientes.</p>
+                          ) : (
+                            <div className="space-y-1">
+                              {recientes.map((m) => {
+                                const esTransfer = m.kind === "transfer_in" || m.kind === "transfer_out";
+                                const negativo = m.kind === "expense" || m.kind === "transfer_out";
+                                let etiqueta = m.description
+                                  || (m.counterparty as { display_name?: string } | null)?.display_name
+                                  || "—";
+                                if (esTransfer && m.transfer_group_id) {
+                                  const otra = (parPorGrupo.get(m.transfer_group_id) ?? [])
+                                    .find((pt) => pt.account_id !== m.account_id);
+                                  const otroNombre = otra ? nombreCuenta.get(otra.account_id) : null;
+                                  if (otroNombre) {
+                                    etiqueta = m.kind === "transfer_in"
+                                      ? `Transferencia desde ${otroNombre}`
+                                      : `Transferencia hacia ${otroNombre}`;
+                                  }
+                                }
+                                return (
+                                  <div key={m.id} className="flex items-center gap-2 text-[11px]">
+                                    <span className="fig w-10 shrink-0 text-muted-foreground">
+                                      {m.occurred_on.slice(8, 10)}/{m.occurred_on.slice(5, 7)}
+                                    </span>
+                                    <span className={cn("min-w-0 flex-1 truncate", esTransfer && "italic text-muted-foreground")}>
+                                      {etiqueta}
+                                    </span>
+                                    <span className={cn("fig shrink-0 text-right",
+                                      !esTransfer && m.kind === "income" && "text-emerald-600 dark:text-emerald-400",
+                                      !esTransfer && m.kind === "expense" && "text-red-600 dark:text-red-400",
+                                      esTransfer && "text-muted-foreground")}>
+                                      {negativo ? "−" : "+"}{formatMoney(Number(m.amount), moneda, locale)}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          <Link
+                            href={`/${empresa}/movimientos?cuenta=${c.account_id}`}
+                            className="mt-2 inline-block text-[11px] font-medium text-primary hover:underline"
+                          >
+                            Ver todos y filtrar →
+                          </Link>
+                        </div>
+                      </details>
+                    );
+                  })}
                 </div>
               </div>
             );
