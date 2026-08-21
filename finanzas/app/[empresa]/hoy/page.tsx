@@ -57,6 +57,37 @@ export default async function HoyPage({
       .eq("company_id", ctx.companyId).order("days_overdue", { ascending: false }).limit(6),
   ]);
 
+  // ---- Ingresos por cuenta, mes a mes (pedido de Pancho 21/8)
+  const { data: ingresosRaw } = await supabase
+    .from("movements")
+    .select("occurred_on, amount, currency, account_id")
+    .eq("company_id", ctx.companyId).eq("kind", "income").neq("status", "void")
+    .gte("occurred_on", "2026-01-01")
+    .limit(5000);
+  type CuentaMes = { nombre: string; currency: string; ksCustody: boolean; meses: Map<string, number>; total: number };
+  const porCuenta = new Map<string, CuentaMes>();
+  {
+    const info = new Map((await supabase
+      .from("accounts").select("id, name, currency, ks_custody, separate_books")
+      .eq("company_id", ctx.companyId)).data?.map((a) => [a.id, a]) ?? []);
+    for (const m of ingresosRaw ?? []) {
+      const acc = info.get(m.account_id);
+      if (!acc || acc.separate_books) continue;          // Coni tiene su propio cuadro
+      const k = m.account_id + "|" + m.currency;
+      const c = porCuenta.get(k) ?? {
+        nombre: acc.name, currency: m.currency, ksCustody: Boolean(acc.ks_custody),
+        meses: new Map<string, number>(), total: 0,
+      };
+      const mes = m.occurred_on.slice(0, 7);
+      c.meses.set(mes, (c.meses.get(mes) ?? 0) + Number(m.amount));
+      c.total += Number(m.amount);
+      porCuenta.set(k, c);
+    }
+  }
+  const cuadros = [...porCuenta.values()].sort((a, b) => b.total - a.total);
+  const mesesDelAnio = ["2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09","2026-10","2026-11","2026-12"]
+    .filter((m) => m <= periodo || cuadros.some((c) => c.meses.has(m)));
+
   // ---- Disponibilidad: un bucket por moneda, JAMÁS sumados entre sí
   const porMoneda = new Map<string, Balance[]>();
   const sepBalances = ((balances ?? []) as Balance[]).filter((b) => idsSep.includes(b.account_id));
@@ -305,6 +336,54 @@ export default async function HoyPage({
           })}
         </div>
       </section>
+
+      {/* ---- ingresos por cuenta ---- */}
+      {cuadros.length ? (
+        <section>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Qué entra por cuenta, mes a mes
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {cuadros.map((c) => {
+              const max = Math.max(...mesesDelAnio.map((m) => c.meses.get(m) ?? 0), 1);
+              return (
+                <div key={c.nombre + c.currency} className="rounded-xl border bg-card p-4 shadow-sm">
+                  <div className="mb-2 flex items-baseline justify-between">
+                    <span className="text-sm font-semibold">
+                      {c.nombre}
+                      <span className="ml-1 text-xs font-normal text-muted-foreground">{c.currency}</span>
+                      {c.ksCustody ? (
+                        <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                          en KS
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="fig text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                      {formatMoney(c.total, c.currency, locale)}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    {mesesDelAnio.map((m) => {
+                      const v = c.meses.get(m) ?? 0;
+                      const nombreMesCorto = new Intl.DateTimeFormat(locale, { timeZone: "UTC", month: "short" })
+                        .format(new Date(`${m}-15T12:00:00Z`));
+                      return (
+                        <div key={m} className="flex items-center gap-2 text-[11px]">
+                          <span className="w-8 shrink-0 text-muted-foreground">{nombreMesCorto}</span>
+                          <div className="h-3 flex-1 overflow-hidden rounded-sm bg-secondary/60">
+                            <div className="h-full rounded-sm bg-emerald-500/80" style={{ width: `${Math.round((v / max) * 100)}%` }} />
+                          </div>
+                          <span className="fig w-24 shrink-0 text-right">{v ? formatMoney(v, c.currency, locale) : "—"}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
       {/* ---- fila 3: qué vence y quién debe ---- */}
       {(porPagar ?? []).length > 0 || (porCobrar ?? []).length > 0 ? (
