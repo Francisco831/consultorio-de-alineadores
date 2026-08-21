@@ -92,10 +92,26 @@ async function main() {
       seq: m.meta?.seq ?? 0,
     }));
 
+  // tipo real de tratamiento por paciente (Noloco → seed-data/tipos_tratamiento_ar.json)
+  const { data: listaKs } = await db.from("ks_price_list").select("*").eq("company_id", companyId);
+  const precioPorClave = new Map(
+    (listaKs ?? []).map((r) => [`${r.audience}/${r.scope}/${r.arcades}`,
+      { list_price: Number(r.list_price), discount_pct: Number(r.discount_pct) }]));
+  const precioPorPaciente = new Map<string, { list_price: number; discount_pct: number }>();
+  try {
+    const tipos = JSON.parse(readFileSync(resolve(__dirname, "../seed-data/tipos_tratamiento_ar.json"), "utf8"));
+    for (const [clave, t] of Object.entries<{ audience: string; scope: string; arcades: number }>(tipos.tipos ?? {})) {
+      const pr = precioPorClave.get(`${t.audience}/${t.scope}/${t.arcades}`);
+      if (pr) precioPorPaciente.set(clave, pr);
+    }
+    console.log(`Tipos de tratamiento desde Noloco: ${precioPorPaciente.size} pacientes con precio propio`);
+  } catch { console.log("(sin tipos_tratamiento_ar.json: todos al precio default)"); }
+
   const { costoArs, costoUsd, etiquetas, sinCostear } = costearCuotas(cobrosAlineadores, {
     precioDefault: {
       list_price: Number(precio.list_price), discount_pct: Number(precio.discount_pct),
     },
+    precioPorPaciente,
     planPorPaciente: PLAN_PACIENTE,
     etapaAdicional: ETAPA_ADICIONAL,
   });

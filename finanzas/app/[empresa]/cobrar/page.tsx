@@ -4,6 +4,7 @@ import { formatMoney } from "@/lib/money";
 import { formatDateShort, todayIn } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { CobrarBoton, NuevaDeudaClienteDialog } from "@/components/compromisos/cobrar-controles";
+import { planesPacientes } from "@/lib/liquidaciones/planes-pacientes";
 
 type Aging = {
   id: string; counterparty_name: string; concept: string; currency: string;
@@ -30,6 +31,34 @@ export default async function CobrarPage({
   const ctx = await requireEmpresa(empresa);
   const supabase = await createClient();
   const { locale } = ctx.config;
+
+  // Planes de pacientes derivados de la caja (solo consultorio AR)
+  let planes: ReturnType<typeof planesPacientes> = [];
+  if (ctx.config.slug === "ar") {
+    const { data: catAlin } = await supabase.from("categories").select("id")
+      .eq("company_id", ctx.companyId).eq("name", "Alineadores").maybeSingle();
+    if (catAlin) {
+      const { data: pagosAlin } = await supabase
+        .from("movements")
+        .select("occurred_on, amount, currency, description, meta, counterparty:counterparties(display_name), account:accounts!movements_account_company_fk(separate_books)")
+        .eq("company_id", ctx.companyId).eq("kind", "income")
+        .eq("category_id", catAlin.id).neq("status", "void").limit(2000);
+      planes = planesPacientes(
+        (pagosAlin ?? [])
+          .filter((m) => !(m.account as { separate_books?: boolean } | null)?.separate_books)
+          .map((m) => ({
+            paciente: (m.counterparty as { display_name?: string } | null)?.display_name ?? "",
+            fecha: m.occurred_on,
+            ars: m.currency === "USD" ? 0 : Number(m.amount),
+            usd: m.currency === "USD" ? Number(m.amount) : 0,
+            motivo: `${m.description ?? ""} ${(m.meta as { obs?: string } | null)?.obs ?? ""}`,
+            doctora: (m.meta as { doctora?: string } | null)?.doctora ?? null,
+          }))
+      );
+    }
+  }
+  const planesConDeuda = planes.filter((pl) => pl.pendienteCuotas > 0);
+  const totalPendienteEstimado = planesConDeuda.reduce((a, pl) => a + pl.pendienteEstimadoArs, 0);
 
   const [{ data: filas }, { data: cuentas }] = await Promise.all([
     supabase.from("v_receivables_aging").select("*")
@@ -139,6 +168,72 @@ export default async function CobrarPage({
           );
         })
       )}
+
+      {planes.length ? (
+        <section>
+          <div className="mb-2 flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Planes de pacientes — pagado y lo que falta
+            </h2>
+            <span className="fig text-sm font-semibold text-red-600 dark:text-red-400">
+              faltan ≈ {formatMoney(totalPendienteEstimado, "ARS", locale)}
+            </span>
+          </div>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Derivado de la caja (“cuota X de Y”). El pendiente es un estimado con la
+            última cuota conocida — las cuotas se ajustan, así que es piso.
+          </p>
+          <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr className="border-b text-left text-xs text-muted-foreground">
+                  <th className="px-4 py-2 font-medium">Paciente</th>
+                  <th className="hidden px-2 py-2 font-medium md:table-cell">Doctora</th>
+                  <th className="px-2 py-2 font-medium">Cuotas</th>
+                  <th className="px-2 py-2 text-right font-medium">Pagado</th>
+                  <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">Última cuota</th>
+                  <th className="px-4 py-2 text-right font-medium">Falta (est.)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {planesConDeuda.map((pl) => {
+                  const pct = Math.min(100, Math.round((pl.cuotasPagadas / pl.plan) * 100));
+                  return (
+                    <tr key={pl.paciente + pl.ultimoPago} className="border-b last:border-0">
+                      <td className="max-w-[220px] truncate px-4 py-2 font-medium">{pl.paciente}</td>
+                      <td className="hidden px-2 py-2 text-muted-foreground md:table-cell">{pl.doctora ?? "—"}</td>
+                      <td className="px-2 py-2">
+                        <div className="flex items-center gap-2">
+                          <span className="fig whitespace-nowrap text-xs">{pl.cuotasPagadas} de {pl.plan}</span>
+                          <div className="h-1.5 w-20 overflow-hidden rounded-full bg-secondary">
+                            <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.max(pct, 4)}%` }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="fig px-2 py-2 text-right text-emerald-700 dark:text-emerald-400">
+                        {formatMoney(pl.pagadoArs, "ARS", locale)}
+                        {pl.pagadoUsd ? <div className="text-[11px] text-muted-foreground">+ {formatMoney(pl.pagadoUsd, "USD", locale)}</div> : null}
+                      </td>
+                      <td className="fig hidden px-2 py-2 text-right text-muted-foreground sm:table-cell">
+                        {pl.ultimaCuotaArs ? formatMoney(pl.ultimaCuotaArs, "ARS", locale) : "—"}
+                      </td>
+                      <td className="fig px-4 py-2 text-right font-semibold text-red-600 dark:text-red-400">
+                        {formatMoney(pl.pendienteEstimadoArs, "ARS", locale)}
+                        <span className="ml-1 text-[11px] font-normal text-muted-foreground">({pl.pendienteCuotas} cuota{pl.pendienteCuotas === 1 ? "" : "s"})</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {planesConDeuda.length === 0 ? (
+                  <tr><td colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                    Todos los planes conocidos están al día.
+                  </td></tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

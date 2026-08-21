@@ -83,3 +83,20 @@ test("el retiro ya cobrado se descuenta del saldo", () => {
   assert.equal(l[0].retiros, 300000);
   assert.equal(l[0].saldo, 100000);
 });
+
+test("precio por paciente (tipos Noloco): MEDIUM carga su precio, el resto el default", () => {
+  {
+    const r = costearCuotas(
+      [
+        { id: "a", paciente: "Tonello Fiorella", fecha: "2026-08-01", ars: 500000, usd: 0, motivo: "cuota 1 de 4", texto: "cuota 1 de 4", seq: 1 },
+        { id: "b", paciente: "Otro Paciente", fecha: "2026-08-01", ars: 500000, usd: 0, motivo: "cuota 1 de 4", texto: "cuota 1 de 4", seq: 2 },
+      ],
+      {
+        precioDefault: { list_price: 2731000, discount_pct: 40 },
+        precioPorPaciente: new Map([["fiorella tonello", { list_price: 1748000, discount_pct: 40 }]]),
+      }
+    );
+    assert.equal(r.costoArs.get("a"), Math.round((1748000 * 0.6) / 4));  // 262.200
+    assert.equal(r.costoArs.get("b"), Math.round((2731000 * 0.6) / 4));  // 409.650
+  }
+});

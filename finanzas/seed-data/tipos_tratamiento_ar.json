@@ -1,0 +1,205 @@
+{
+ "actualizado": null,
+ "tipos": {
+  "gulino laura maria": {
+   "paciente": "GULINO MARIA LAURA",
+   "case": "BF037",
+   "doctora": "Gonzalez Zuazquita Monica",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "cerdeira nicolas": {
+   "paciente": "Cerdeira Nicolás",
+   "case": "BH461",
+   "doctora": "Puig Rocio",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "morabito romina": {
+   "paciente": "Morabito Romina",
+   "case": "BJ633",
+   "doctora": "Franco Mariana",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "belart sofia": {
+   "paciente": "Belart Sofia",
+   "case": "BI533",
+   "doctora": "Gonzalez Zuazquita Monica",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "garat magdalena": {
+   "paciente": "Garat Magdalena",
+   "case": "BQ384",
+   "doctora": "Gonzalez Zuazquita Monica",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "colimodio jose maria": {
+   "paciente": "Maria José Colimodio",
+   "case": "BK416",
+   "doctora": "Matelli Mariana Guadalupe",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "helena zidar": {
+   "paciente": "Zidar Helena",
+   "case": "BW451",
+   "doctora": "Matelli Mariana Guadalupe",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "perez viviana": {
+   "paciente": "Perez Viviana",
+   "case": "BT889",
+   "doctora": "Gonzalez Zuazquita Monica",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "teresita vidal": {
+   "paciente": "Vidal Teresita",
+   "case": "BN144",
+   "doctora": "Franco Mariana",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "pampuri silvana": {
+   "paciente": "Pampuri Silvana",
+   "case": "BN435",
+   "doctora": "Di Giano Eugenia",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "badiola ramiro": {
+   "paciente": "Badiola Ramiro",
+   "case": "BN409",
+   "doctora": "Matelli Mariana Guadalupe",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "fiorella tonello": {
+   "paciente": "Tonello Fiorella",
+   "case": "BP632",
+   "doctora": "Franco Mariana",
+   "audience": "adultos",
+   "scope": "medium",
+   "arcades": 2
+  },
+  "colimodio maria": {
+   "paciente": "Colimodio Maria",
+   "case": "BK416",
+   "doctora": "Matelli Mariana Guadalupe",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "magdalena olmos": {
+   "paciente": "Olmos Magdalena",
+   "case": "BQ184",
+   "doctora": "Basilico Constanza",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "evelin herrera": {
+   "paciente": "Evelin Herrera",
+   "case": "BQ994",
+   "doctora": "Franco Mariana",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "gallo gaston": {
+   "paciente": "Gallo Gaston",
+   "case": "BR342",
+   "doctora": "Matelli Mariana Guadalupe",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "donatis luz": {
+   "paciente": "De Donatis Luz",
+   "case": "BO843",
+   "doctora": "Franco Mariana",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "ponce sarahi": {
+   "paciente": "Ponce Sarahi",
+   "case": "BE987",
+   "doctora": "Puig Rocio",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "russo sofia": {
+   "paciente": "Russo Sofia",
+   "case": "BT937",
+   "doctora": "Franco Mariana",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "martin nisenbaum": {
+   "paciente": "Nisenbaum Martín",
+   "case": "BT246",
+   "doctora": "Gonzalez Zuazquita Monica",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "natalia szalontai": {
+   "paciente": "Szalontai Natalia",
+   "case": "BU677",
+   "doctora": "Matelli Mariana Guadalupe",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "agustina natale": {
+   "paciente": "Agustina Di Natale",
+   "case": "BX159",
+   "doctora": "Heredia Castelli Virginia",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "macarena tapia": {
+   "paciente": "TApia Macarena",
+   "case": "BU398",
+   "doctora": "Matelli Mariana Guadalupe",
+   "audience": "adultos",
+   "scope": "medium",
+   "arcades": 2
+  },
+  "patricia vicent": {
+   "paciente": "VICENT PATRICIA",
+   "case": "BW036",
+   "doctora": "Matelli Mariana Guadalupe",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "bustos lucio": {
+   "paciente": "Lucio Bustos",
+   "case": "BW559",
+   "doctora": "Gonzalez Zuazquita Monica",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  }
+ }
+}

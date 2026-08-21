@@ -32,6 +32,10 @@ else
   echo "-- CRM→finanzas: salteado (falló la etapa anterior)" >> "$LOG"
 fi
 
+# tipos de tratamiento desde Noloco (para el costo KS por paciente)
+npx tsx scripts/tipos-tratamiento-noloco.ts --yes --apply >> "$LOG" 2>&1
+echo "-- tipos Noloco: exit $?" >> "$LOG"
+
 # sugerencias de conciliación para que la cola amanezca lista
 npx tsx scripts/sugerir-matches.ts --empresa mx --yes --apply >> "$LOG" 2>&1
 npx tsx scripts/sugerir-matches.ts --empresa ar --yes --apply >> "$LOG" 2>&1

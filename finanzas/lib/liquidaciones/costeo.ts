@@ -56,10 +56,17 @@ export function costearCuotas(
   cobros: CobroAlineador[],
   opts: {
     precioDefault: PrecioKS;
+    precioPorPaciente?: Map<string, PrecioKS>;
     planPorPaciente?: Record<string, number>;
     etapaAdicional?: Set<string>;
   }
 ): ResultadoCosteo {
+  // precio por paciente (tipo real de tratamiento desde Noloco); sin entrada,
+  // cae al default Full 2 maxilares adultos
+  const costoDe = (k: string) => {
+    const pr = opts.precioPorPaciente?.get(k) ?? opts.precioDefault;
+    return pr.list_price * (1 - pr.discount_pct / 100);
+  };
   const costoArs = new Map<string, number>();
   const costoUsd = new Map<string, number>();
   const etiquetas = new Map<string, string>();
@@ -79,7 +86,6 @@ export function costearCuotas(
     planExplicito.set(clavePaciente(nombre), n);
   }
 
-  const costoTotal = opts.precioDefault.list_price * (1 - opts.precioDefault.discount_pct / 100);
   const yaCosteadas = new Set<string>();
 
   for (const c of [...cobros].sort((a, b) => a.seq - b.seq)) {
@@ -122,7 +128,7 @@ export function costearCuotas(
     }
     yaCosteadas.add(cuotaId);
 
-    const share = (costoTotal / totalCuotas) * nShares;
+    const share = (costoDe(k) / totalCuotas) * nShares;
     if (c.ars > 0) {
       costoArs.set(c.id, Math.round(share));
       etiquetas.set(c.id, `costo KS $${Math.round(share).toLocaleString("es-AR")} (${nShares}/${totalCuotas}${inferido ? " — plan inferido" : ""})`);
