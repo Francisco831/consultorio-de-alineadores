@@ -8,7 +8,11 @@
 //     OJO: el supuesto falla con pagos TARDÍOS — los comprobantes de Pagos/
 //     mostraron que marzo se pagó el 22/5 y abril recién el 6/8. Esas dos
 //     correcciones se aplicaron a mano el 20/8 (ver git); si este seed se
-//     recorre desde cero hay que reponerlas.
+//     recorre desde cero hay que reponerlas. Ídem las del 21/8: SIPARE julio
+//     pagado 14/8 ($5.484,29, período 202607), SAT julio pagado 19/8 ($3.913,
+//     con nota de posible segundo pago faltante) y estimados SIPARE impares
+//     (sep/nov) bajados a 5.484,29 tras la salida de Angélica — los tres
+//     recién van a aparecer en el extracto de agosto.
 //   · futuro: obligaciones 'estimated' hasta fin de año con la mediana
 //     histórica. IMSS alterna: los períodos pares cierran bimestre de
 //     INFONAVIT y saltan de ~8k a ~40k. El monto final lo pone el contador.
