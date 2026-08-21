@@ -30,40 +30,44 @@ export default async function HoyPage({
     ? (mes as string)
     : currentPeriodIn(ctx.config.timezone);
 
-  const alertas = await calcularAlertas(supabase, { companyId: ctx.companyId, config: ctx.config });
-
-  // contabilidades separadas (caja Coni): fuera de los números del negocio,
-  // se muestran en su propio cuadro al pie
-  const { data: cuentasSep } = await supabase
-    .from("accounts").select("id, name, currency")
-    .eq("company_id", ctx.companyId).eq("separate_books", true);
-  const idsSep = (cuentasSep ?? []).map((a) => a.id);
-
-  const [{ data: balances }, { data: resumen }, { data: ultimos }, { data: porPagar }, { data: porCobrar }] = await Promise.all([
+  // TODO junto y en paralelo: cada await secuencial es un viaje más a la base
+  const [
+    alertas,
+    { data: cuentasInfo },
+    { data: balances },
+    { data: resumen },
+    { data: ultimosRaw },
+    { data: porPagar },
+    { data: porCobrar },
+    { data: recientesRaw },
+    { data: mensualCuenta },
+  ] = await Promise.all([
+    calcularAlertas(supabase, { companyId: ctx.companyId, config: ctx.config }),
+    supabase.from("accounts").select("id, name, currency, ks_custody, separate_books")
+      .eq("company_id", ctx.companyId),
     supabase.from("v_account_balances").select("*").eq("company_id", ctx.companyId),
     supabase.from("v_monthly_summary").select("month, currency, income, expense, result")
       .eq("company_id", ctx.companyId).order("month"),
-    (() => {
-      let q = supabase.from("movements")
-        .select("id, occurred_on, kind, amount, currency, description, status, counterparty:counterparties(display_name), category:categories(name)")
-        .eq("company_id", ctx.companyId).neq("status", "void");
-      if (idsSep.length) q = q.not("account_id", "in", `(${idsSep.join(",")})`);
-      return q.order("occurred_on", { ascending: false }).order("created_at", { ascending: false }).limit(10);
-    })(),
+    supabase.from("movements")
+      .select("id, occurred_on, kind, amount, currency, description, status, account_id, counterparty:counterparties(display_name), category:categories(name)")
+      .eq("company_id", ctx.companyId).neq("status", "void")
+      .order("occurred_on", { ascending: false }).order("created_at", { ascending: false }).limit(24),
     supabase.from("v_payables_buckets").select("id, concept, counterparty_name, currency, balance, due_on, bucket")
       .eq("company_id", ctx.companyId).in("bucket", ["vencido", "hoy", "semana"])
       .order("due_on").limit(6),
     supabase.from("v_receivables_aging").select("id, counterparty_name, concept, currency, balance, bucket, days_overdue")
       .eq("company_id", ctx.companyId).order("days_overdue", { ascending: false }).limit(6),
+    supabase.from("movements")
+      .select("id, occurred_on, kind, amount, currency, description, account_id, transfer_group_id, counterparty:counterparties(display_name)")
+      .eq("company_id", ctx.companyId).neq("status", "void")
+      .order("occurred_on", { ascending: false }).order("created_at", { ascending: false }).limit(600),
+    supabase.from("v_monthly_income_by_account").select("account_id, account_name, ks_custody, separate_books, month, currency, income")
+      .eq("company_id", ctx.companyId).gte("month", "2026-01-01"),
   ]);
+  const idsSep = (cuentasInfo ?? []).filter((a) => a.separate_books).map((a) => a.id);
+  const ultimos = (ultimosRaw ?? []).filter((m) => !idsSep.includes(m.account_id)).slice(0, 10);
 
   // ---- Últimos movimientos POR CUENTA (desplegable de Disponibilidad)
-  const { data: recientesRaw } = await supabase
-    .from("movements")
-    .select("id, occurred_on, kind, amount, currency, description, account_id, transfer_group_id, counterparty:counterparties(display_name)")
-    .eq("company_id", ctx.companyId).neq("status", "void")
-    .order("occurred_on", { ascending: false }).order("created_at", { ascending: false })
-    .limit(600);
   type Reciente = NonNullable<typeof recientesRaw>[number];
   const porCuentaReciente = new Map<string, Reciente[]>();
   for (const m of recientesRaw ?? []) {
@@ -84,35 +88,23 @@ export default async function HoyPage({
       parPorGrupo.set(pt.transfer_group_id as string, arr);
     }
   }
-  const nombreCuenta = new Map<string, string>();
 
-  // ---- Ingresos por cuenta, mes a mes (pedido de Pancho 21/8)
-  const { data: ingresosRaw } = await supabase
-    .from("movements")
-    .select("occurred_on, amount, currency, account_id")
-    .eq("company_id", ctx.companyId).eq("kind", "income").neq("status", "void")
-    .gte("occurred_on", "2026-01-01")
-    .limit(5000);
-  type CuentaMes = { nombre: string; currency: string; ksCustody: boolean; meses: Map<string, number>; total: number };
+  // ---- Ingresos por cuenta, mes a mes (vista agregada en la base)
+  type CuentaMes = { nombre: string; currency: string; ksCustody: boolean; accountId: string; meses: Map<string, number>; total: number };
   const porCuenta = new Map<string, CuentaMes>();
-  {
-    const info = new Map((await supabase
-      .from("accounts").select("id, name, currency, ks_custody, separate_books")
-      .eq("company_id", ctx.companyId)).data?.map((a) => [a.id, a]) ?? []);
-    for (const [id, a] of info) nombreCuenta.set(id, a.name);
-    for (const m of ingresosRaw ?? []) {
-      const acc = info.get(m.account_id);
-      if (!acc || acc.separate_books) continue;          // Coni tiene su propio cuadro
-      const k = m.account_id + "|" + m.currency;
-      const c = porCuenta.get(k) ?? {
-        nombre: acc.name, currency: m.currency, ksCustody: Boolean(acc.ks_custody),
-        meses: new Map<string, number>(), total: 0,
-      };
-      const mes = m.occurred_on.slice(0, 7);
-      c.meses.set(mes, (c.meses.get(mes) ?? 0) + Number(m.amount));
-      c.total += Number(m.amount);
-      porCuenta.set(k, c);
-    }
+  const nombreCuenta = new Map<string, string>();
+  for (const a of cuentasInfo ?? []) nombreCuenta.set(a.id, a.name);
+  for (const r of mensualCuenta ?? []) {
+    if (r.separate_books) continue;              // Coni tiene su propio cuadro
+    const k = r.account_id + "|" + r.currency;
+    const c = porCuenta.get(k) ?? {
+      nombre: r.account_name, currency: r.currency, ksCustody: Boolean(r.ks_custody),
+      accountId: r.account_id, meses: new Map<string, number>(), total: 0,
+    };
+    const mes = String(r.month).slice(0, 7);
+    c.meses.set(mes, (c.meses.get(mes) ?? 0) + Number(r.income));
+    c.total += Number(r.income);
+    porCuenta.set(k, c);
   }
   const cuadros = [...porCuenta.values()].sort((a, b) => b.total - a.total);
   const mesesDelAnio = ["2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09","2026-10","2026-11","2026-12"]
@@ -447,14 +439,20 @@ export default async function HoyPage({
                       const v = c.meses.get(m) ?? 0;
                       const nombreMesCorto = new Intl.DateTimeFormat(locale, { timeZone: "UTC", month: "short" })
                         .format(new Date(`${m}-15T12:00:00Z`));
+                      const fin = new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0)).getUTCDate();
                       return (
-                        <div key={m} className="flex items-center gap-2 text-[11px]">
+                        <Link
+                          key={m}
+                          href={`/${empresa}/movimientos?f=ingresos&cuenta=${c.accountId}&desde=${m}-01&hasta=${m}-${String(fin).padStart(2, "0")}`}
+                          className="flex items-center gap-2 rounded-sm text-[11px] transition-colors hover:bg-accent"
+                          title={`Ver los ingresos de ${c.nombre} en ${nombreMesCorto}`}
+                        >
                           <span className="w-8 shrink-0 text-muted-foreground">{nombreMesCorto}</span>
                           <div className="h-3 flex-1 overflow-hidden rounded-sm bg-secondary/60">
                             <div className="h-full rounded-sm bg-emerald-500/80" style={{ width: `${Math.round((v / max) * 100)}%` }} />
                           </div>
                           <span className="fig w-24 shrink-0 text-right">{v ? formatMoney(v, c.currency, locale) : "—"}</span>
-                        </div>
+                        </Link>
                       );
                     })}
                   </div>

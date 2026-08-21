@@ -32,6 +32,26 @@ export default async function CasosPage({
   const { locale } = ctx.config;
   const f = sp.f ?? "saldo";
 
+  // pagos reales por caso: external_key adminmx:{fila}:{slot}
+  const { data: pagosRaw } = await supabase
+    .from("movements")
+    .select("occurred_on, amount, external_key, meta")
+    .eq("company_id", ctx.companyId).eq("kind", "income")
+    .like("external_key", "adminmx:%").neq("status", "void")
+    .limit(3000);
+  const pagosPorFila = new Map<number, { fecha: string; monto: number; metodo: string | null }[]>();
+  for (const pg of pagosRaw ?? []) {
+    const fila = Number(pg.external_key?.match(/^adminmx:(\d+):/)?.[1]);
+    if (!fila) continue;
+    const arr = pagosPorFila.get(fila) ?? [];
+    arr.push({
+      fecha: pg.occurred_on, monto: Number(pg.amount),
+      metodo: (pg.meta as { method_raw?: string } | null)?.method_raw ?? null,
+    });
+    pagosPorFila.set(fila, arr);
+  }
+  for (const arr of pagosPorFila.values()) arr.sort((a, b) => a.fecha.localeCompare(b.fecha));
+
   const { data, error } = await supabase
     .from("treatment_plans")
     .select("id, total_amount, started_on, notes, ks_price_key, doctor:counterparties!treatment_plans_patient_id_company_id_fkey(display_name)")
@@ -41,7 +61,7 @@ export default async function CasosPage({
   if (error) throw new Error(`Error consultando casos: ${error.message}`);
 
   type Caso = {
-    id: string; doctor: string; caso: string; paciente: string; etapa: string;
+    id: string; fila: number | null; doctor: string; caso: string; paciente: string; etapa: string;
     fecha: string | null; valor: number; pagado: number; saldo: number;
   };
   let casos: Caso[] = ((data ?? []) as unknown as Plan[]).map((p) => {
@@ -50,6 +70,7 @@ export default async function CasosPage({
     const pagado = Number(k.pagado ?? 0);
     return {
       id: p.id,
+      fila: k.fila ?? null,
       doctor: p.doctor?.display_name ?? "(sin doctor)",
       caso: k.case ?? "—",
       paciente: k.paciente ?? "—",
@@ -137,9 +158,10 @@ export default async function CasosPage({
             </div>
             <table className="w-full text-[13px]">
               <tbody>
-                {d.casos.map((c) => {
+                {d.casos.flatMap((c) => {
                   const pct = c.valor > 0 ? Math.min(100, Math.round((c.pagado / c.valor) * 100)) : 0;
-                  return (
+                  const pagosCaso = c.fila ? (pagosPorFila.get(c.fila) ?? []) : [];
+                  return [
                     <tr key={c.id} className="border-b last:border-0">
                       <td className="fig w-20 px-4 py-2 font-medium">{c.caso}</td>
                       <td className="max-w-[200px] truncate px-2 py-2">{c.paciente}</td>
@@ -168,8 +190,33 @@ export default async function CasosPage({
                           <span className="text-muted-foreground"> / {formatMoney(c.valor, "MXN", locale)}</span>
                         </span>
                       </td>
-                    </tr>
-                  );
+                    </tr>,
+                    pagosCaso.length ? (
+                      <tr key={`${c.id}-pagos`} className="border-b last:border-0">
+                        <td colSpan={6} className="bg-muted/20 px-4 py-0">
+                          <details className="group py-1.5">
+                            <summary className="cursor-pointer select-none text-[11px] font-medium text-muted-foreground hover:text-foreground">
+                              Ver los {pagosCaso.length} pago{pagosCaso.length === 1 ? "" : "s"} de {c.paciente.split(" ")[0]}
+                              <span className="ml-1 inline-block transition-transform group-open:rotate-90">›</span>
+                            </summary>
+                            <div className="mt-1 space-y-0.5 pb-1">
+                              {pagosCaso.map((pg, i) => (
+                                <div key={i} className="flex items-center gap-3 text-[11px]">
+                                  <span className="fig w-16 text-muted-foreground">
+                                    {pg.fecha.slice(8, 10)}/{pg.fecha.slice(5, 7)}/{pg.fecha.slice(2, 4)}
+                                  </span>
+                                  <span className="fig w-28 text-right text-emerald-700 dark:text-emerald-400">
+                                    +{formatMoney(pg.monto, "MXN", locale)}
+                                  </span>
+                                  <span className="text-muted-foreground">{pg.metodo ?? ""}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        </td>
+                      </tr>
+                    ) : null,
+                  ];
                 })}
               </tbody>
             </table>
