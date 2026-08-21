@@ -41,6 +41,17 @@ npx tsx scripts/sugerir-matches.ts --empresa mx --yes --apply >> "$LOG" 2>&1
 npx tsx scripts/sugerir-matches.ts --empresa ar --yes --apply >> "$LOG" 2>&1
 echo "-- matcher: listo" >> "$LOG"
 
+# caja del consultorio AR via Apps Script (si no esta instalado: exit 2, se saltea)
+npx tsx scripts/sync-caja-ar.ts --apply >> "$LOG" 2>&1
+CAJA_RC=$?
+echo "-- caja AR: exit $CAJA_RC" >> "$LOG"
+if [ $CAJA_RC -eq 0 ]; then
+  npx tsx scripts/import-movimientos-ar.ts --apply --yes >> "$LOG" 2>&1
+  echo "-- caja AR import: exit $?" >> "$LOG"
+  npx tsx scripts/control-solicitud.ts --yes >> "$LOG" 2>&1
+  echo "-- control solicitud: exit $?" >> "$LOG"
+fi
+
 # comprobantes AR del Drive -> pagos (con el inventario que haya; el refresco
 # del inventario lo hace la tarea programada via MCP)
 npx tsx scripts/vincular-comprobantes.ts --yes --apply >> "$LOG" 2>&1
