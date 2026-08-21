@@ -16,6 +16,8 @@ const PAGE_SIZE = 50;
 const SORTS: Record<string, { col: string; label: string }> = {
   fecha: { col: "occurred_on", label: "Fecha" },
   monto: { col: "amount", label: "Monto" },
+  concepto: { col: "description", label: "Concepto" },
+  estado: { col: "status", label: "Estado" },
 };
 
 const FILTROS: Array<{ key: string; label: string }> = [
@@ -39,7 +41,7 @@ export default async function MovimientosPage({
   params, searchParams,
 }: {
   params: Promise<{ empresa: string }>;
-  searchParams: Promise<{ q?: string; f?: string; cuenta?: string; cp?: string; p?: string; sort?: string; dir?: string; desde?: string; hasta?: string }>;
+  searchParams: Promise<{ q?: string; f?: string; cuenta?: string; cp?: string; cat?: string; estado?: string; p?: string; sort?: string; dir?: string; desde?: string; hasta?: string }>;
 }) {
   const { empresa } = await params;
   const sp = await searchParams;
@@ -56,17 +58,21 @@ export default async function MovimientosPage({
   const hasta = esFecha(sp.hasta);
 
   // contabilidades separadas (caja Coni): fuera del listado salvo su propia pestaña
-  const { data: cuentasSep } = await supabase
-    .from("accounts").select("id, name")
-    .eq("company_id", ctx.companyId).eq("separate_books", true);
-  const idsSep = (cuentasSep ?? []).map((a) => a.id);
+  const { data: cuentasTodas } = await supabase
+    .from("accounts").select("id, name, separate_books, ks_custody")
+    .eq("company_id", ctx.companyId).order("name");
+  const idsSep = (cuentasTodas ?? []).filter((a) => a.separate_books).map((a) => a.id);
+  const custodiaKs = new Set((cuentasTodas ?? []).filter((a) => a.ks_custody).map((a) => a.id));
+  const { data: categorias } = await supabase
+    .from("categories").select("id, name")
+    .eq("company_id", ctx.companyId).eq("is_active", true).order("name");
 
   let query = supabase
     .from("movements")
     .select(
       // movements tiene DOS FKs hacia accounts: sin el hint del constraint el
       // embed es ambiguo (PGRST201) y PostgREST devuelve data=null en silencio
-      "id, occurred_on, kind, status, amount, currency, description, source, transfer_group_id, counterparty:counterparties(display_name), category:categories(name), account:accounts!movements_account_company_fk(name)",
+      "id, occurred_on, kind, status, amount, currency, description, source, transfer_group_id, account_id, counterparty:counterparties(display_name), category:categories(name), account:accounts!movements_account_company_fk(name)",
       { count: "exact" }
     )
     .eq("company_id", ctx.companyId);
@@ -85,6 +91,8 @@ export default async function MovimientosPage({
   }
   if (sp.cuenta) query = query.eq("account_id", sp.cuenta);
   if (sp.cp) query = query.eq("counterparty_id", sp.cp);
+  if (sp.cat) query = query.eq("category_id", sp.cat);
+  if (sp.estado && ["confirmed", "pending", "void"].includes(sp.estado)) query = query.eq("status", sp.estado);
   if (sp.q) query = query.ilike("description", `%${sp.q}%`);
   if (desde) query = query.gte("occurred_on", desde);
   if (hasta) query = query.lte("occurred_on", hasta);
@@ -104,7 +112,7 @@ export default async function MovimientosPage({
 
   const urlCon = (cambios: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
-    const estado = { q: sp.q, f: sp.f, cuenta: sp.cuenta, cp: sp.cp, sort: sp.sort, dir: sp.dir, desde: sp.desde, hasta: sp.hasta, ...cambios };
+    const estado = { q: sp.q, f: sp.f, cuenta: sp.cuenta, cp: sp.cp, cat: sp.cat, estado: sp.estado, sort: sp.sort, dir: sp.dir, desde: sp.desde, hasta: sp.hasta, ...cambios };
     for (const [k, v] of Object.entries(estado)) if (v) p.set(k, v);
     const qs = p.toString();
     return `/${empresa}/movimientos${qs ? `?${qs}` : ""}`;
@@ -204,16 +212,32 @@ export default async function MovimientosPage({
             );
           });
         })()}
-        <form action={`/${empresa}/movimientos`} className="flex items-center gap-1.5">
+        <form action={`/${empresa}/movimientos`} className="flex flex-wrap items-center gap-1.5">
           {sp.f ? <input type="hidden" name="f" value={sp.f} /> : null}
           {sp.q ? <input type="hidden" name="q" value={sp.q} /> : null}
+          <select name="cat" defaultValue={sp.cat ?? ""} className="h-7 max-w-[170px] rounded-md border bg-card px-1.5 text-xs" aria-label="Categoría">
+            <option value="">Categoría: todas</option>
+            {(categorias ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <select name="cuenta" defaultValue={sp.cuenta ?? ""} className="h-7 max-w-[170px] rounded-md border bg-card px-1.5 text-xs" aria-label="Cuenta">
+            <option value="">Cuenta: todas</option>
+            {(cuentasTodas ?? []).filter((a) => !a.separate_books).map((a) => (
+              <option key={a.id} value={a.id}>{a.name}{a.ks_custody ? " (KS)" : ""}</option>
+            ))}
+          </select>
+          <select name="estado" defaultValue={sp.estado ?? ""} className="h-7 rounded-md border bg-card px-1.5 text-xs" aria-label="Estado">
+            <option value="">Estado: todos</option>
+            <option value="confirmed">Confirmado</option>
+            <option value="pending">Pendiente</option>
+            <option value="void">Anulado</option>
+          </select>
           <input type="date" name="desde" defaultValue={desde ?? ""} className="h-7 rounded-md border bg-card px-2 text-xs" aria-label="Desde" />
           <span className="text-xs text-muted-foreground">→</span>
           <input type="date" name="hasta" defaultValue={hasta ?? ""} className="h-7 rounded-md border bg-card px-2 text-xs" aria-label="Hasta" />
           <button type="submit" className="h-7 rounded-md border px-2 text-xs font-medium hover:bg-accent">Filtrar</button>
-          {desde || hasta ? (
-            <Link href={urlCon({ desde: undefined, hasta: undefined, p: undefined })} className="text-xs text-muted-foreground hover:text-foreground">
-              ✕ fechas
+          {desde || hasta || sp.cat || sp.estado || sp.cuenta ? (
+            <Link href={urlCon({ desde: undefined, hasta: undefined, cat: undefined, estado: undefined, cuenta: undefined, p: undefined })} className="text-xs text-muted-foreground hover:text-foreground">
+              ✕ limpiar
             </Link>
           ) : null}
         </form>
@@ -228,11 +252,19 @@ export default async function MovimientosPage({
                   Fecha {sortKey === "fecha" ? (dir === "desc" ? "↓" : "↑") : ""}
                 </Link>
               </TableHead>
-              <TableHead>Concepto</TableHead>
+              <TableHead>
+                <Link href={urlCon({ sort: "concepto", dir: sortKey === "concepto" && dir === "asc" ? "desc" : "asc" })} className="hover:text-foreground">
+                  Concepto {sortKey === "concepto" ? (dir === "desc" ? "↓" : "↑") : ""}
+                </Link>
+              </TableHead>
               <TableHead className="hidden md:table-cell">Contraparte</TableHead>
               <TableHead className="hidden lg:table-cell">Categoría</TableHead>
               <TableHead className="hidden lg:table-cell">Cuenta</TableHead>
-              <TableHead className="hidden sm:table-cell">Estado</TableHead>
+              <TableHead className="hidden sm:table-cell">
+                <Link href={urlCon({ sort: "estado", dir: sortKey === "estado" && dir === "asc" ? "desc" : "asc" })} className="hover:text-foreground">
+                  Estado {sortKey === "estado" ? (dir === "desc" ? "↓" : "↑") : ""}
+                </Link>
+              </TableHead>
               <TableHead className="text-right">
                 <Link href={urlCon({ sort: "monto", dir: sortKey === "monto" && dir === "desc" ? "asc" : "desc" })} className="hover:text-foreground">
                   Monto {sortKey === "monto" ? (dir === "desc" ? "↓" : "↑") : ""}
@@ -280,7 +312,17 @@ export default async function MovimientosPage({
                         "—"
                       )}
                     </TableCell>
-                    <TableCell className="hidden text-muted-foreground lg:table-cell">{acc ?? "—"}</TableCell>
+                    <TableCell className="hidden text-muted-foreground lg:table-cell">
+                      {acc ?? "—"}
+                      {custodiaKs.has(mv.account_id) ? (
+                        <span
+                          title="Cuenta de KeepSmiling: esta plata hay que pedirla"
+                          className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                        >
+                          en KS
+                        </span>
+                      ) : null}
+                    </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", ESTADO_CHIP[mv.status])}>
                         {ESTADO_LABEL[mv.status]}
