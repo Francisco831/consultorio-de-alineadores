@@ -11,7 +11,7 @@
 // humano con su sesión.
 
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createAiReadClient } from "@/lib/ai/read-client";
 import { toStrictJsonSchema } from "@/lib/ai/schemas";
 import { todayMX } from "@/lib/dates";
 import { daysSince } from "@/lib/format";
@@ -80,7 +80,7 @@ export const getViabilityStatus = defineTool({
   schema: z.strictObject({ doctor_id: doctorIdArg }),
   handler: async ({ doctor_id }) => {
     if (!UUID_RE.test(doctor_id)) bail("doctor_id inválido: se espera un uuid");
-    const supabase = await createClient();
+    const supabase = await createAiReadClient();
     const today = todayMX();
 
     const [{ data: oppsRaw, error }, { data: profilesRaw }] = await Promise.all([
@@ -188,7 +188,7 @@ export const requestViabilityDraft = defineTool({
     if (opportunity_id != null && !UUID_RE.test(opportunity_id))
       bail("opportunity_id inválido: se espera un uuid");
 
-    const supabase = await createClient();
+    const supabase = await createAiReadClient();
     const { data: doctorRaw, error } = await supabase
       .from("doctors")
       .select("id, nombre, clinical_owner_id")

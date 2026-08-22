@@ -11,7 +11,7 @@
 // resolverse. Mientras siga vacía, la respuesta correcta es "no hay oferta".
 
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createAiReadClient } from "@/lib/ai/read-client";
 import { toStrictJsonSchema } from "@/lib/ai/schemas";
 import { todayMX } from "@/lib/dates";
 import type { AiToolDef, AiToolResult } from "@/lib/ai/types";
@@ -81,7 +81,7 @@ export const getActiveCommercialOffers = defineTool({
       ),
   }),
   handler: async ({ market, lifecycle_stage }) => {
-    const supabase = await createClient();
+    const supabase = await createAiReadClient();
     const today = todayMX();
     const mercado = (market ?? "MX").trim().toUpperCase() || "MX";
     const etapa = lifecycle_stage?.trim().toLowerCase() || null;

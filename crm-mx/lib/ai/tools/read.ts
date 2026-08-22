@@ -17,7 +17,7 @@
 // Los nombres de las tools NO cambian: el runner y los prompts dependen de ellos.
 
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createAiReadClient } from "@/lib/ai/read-client";
 import { toStrictJsonSchema } from "@/lib/ai/schemas";
 import { buildDoctorContext, contextToPromptBlock } from "@/lib/ai/context";
 import { refOportunidad } from "@/lib/ai/pii";
@@ -56,7 +56,7 @@ const ACQ_STAGES = [
 // helpers
 // ---------------------------------------------------------------------------
 
-type SB = Awaited<ReturnType<typeof createClient>>;
+type SB = Awaited<ReturnType<typeof createAiReadClient>>;
 
 function defineTool<S extends z.ZodType>(def: {
   name: string;
@@ -104,7 +104,7 @@ async function aggregateResult(
   args: Record<string, unknown>,
   extraLimitations: string[] = []
 ): Promise<AiToolResult> {
-  const supabase = await createClient();
+  const supabase = await createAiReadClient();
   const raw = await callAggregate(supabase, fn, args);
   const { data, meta } = fromRpc(raw, `Postgres ${fn}()`, extraLimitations);
   return { data: withMeta(data, meta), rows: meta.rows_considered };
@@ -179,7 +179,7 @@ const getGoals = defineTool({
       .describe("mes a consultar en formato YYYY-MM o YYYY-MM-01 (default: mes actual)"),
   }),
   handler: async ({ period }) => {
-    const supabase = await createClient();
+    const supabase = await createAiReadClient();
     let periodISO = period ?? monthStartMX();
     if (/^\d{4}-\d{2}$/.test(periodISO)) periodISO = `${periodISO}-01`;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(periodISO))
@@ -352,7 +352,7 @@ const getDoctor360 = defineTool({
     META_NOTE,
   schema: z.strictObject({ doctor_id: doctorIdArg }),
   handler: async ({ doctor_id }) => {
-    const supabase = await createClient();
+    const supabase = await createAiReadClient();
     const [ctx, { count: actCount }, { count: unknownCases }] = await Promise.all([
       buildDoctorContext(doctor_id),
       supabase
@@ -407,7 +407,7 @@ const getDoctorTimeline = defineTool({
     META_NOTE,
   schema: z.strictObject({ doctor_id: doctorIdArg, limit: limitArg }),
   handler: async ({ doctor_id, limit }) => {
-    const supabase = await createClient();
+    const supabase = await createAiReadClient();
     const n = clampLimit(limit);
     const [
       { data: actsRaw, error: e1, count: actsTotal },
@@ -525,7 +525,7 @@ const getDoctorCases = defineTool({
     META_NOTE,
   schema: z.strictObject({ doctor_id: doctorIdArg, limit: limitArg }),
   handler: async ({ doctor_id, limit }) => {
-    const supabase = await createClient();
+    const supabase = await createAiReadClient();
     const n = clampLimit(limit);
     const { data, error, count } = await supabase
       .from("cases")
@@ -602,7 +602,7 @@ const getDoctorOpportunities = defineTool({
     incluir_cerradas: z.boolean().nullish().describe("incluir ganadas/perdidas (default false)"),
   }),
   handler: async ({ doctor_id, incluir_cerradas }) => {
-    const supabase = await createClient();
+    const supabase = await createAiReadClient();
     let q = supabase
       .from("opportunities")
       .select(
@@ -675,7 +675,7 @@ const getDoctorTasks = defineTool({
       .describe("incluir tareas generadas por automations (default false)"),
   }),
   handler: async ({ doctor_id, incluir_automaticas }) => {
-    const supabase = await createClient();
+    const supabase = await createAiReadClient();
     let q = supabase
       .from("tasks")
       .select("id, title, type, due_date, assigned_to, automation_rule_id, created_at", {
@@ -749,7 +749,7 @@ const getAccreditationHistory = defineTool({
     META_NOTE,
   schema: z.strictObject({ doctor_id: doctorIdArg }),
   handler: async ({ doctor_id }) => {
-    const supabase = await createClient();
+    const supabase = await createAiReadClient();
     const [{ data: docRaw, error }, { data: auditRaw, count }] = await Promise.all([
       supabase
         .from("doctors")
@@ -843,7 +843,7 @@ const getTrainingHistory = defineTool({
     META_NOTE,
   schema: z.strictObject({ doctor_id: doctorIdArg }),
   handler: async ({ doctor_id }) => {
-    const supabase = await createClient();
+    const supabase = await createAiReadClient();
     const { data, error, count } = await supabase
       .from("activities")
       .select("type, occurred_at, summary, outcome, engagement_quality, main_topic, next_action", {
@@ -897,7 +897,7 @@ const getClinicalInteractions = defineTool({
     META_NOTE,
   schema: z.strictObject({ doctor_id: doctorIdArg }),
   handler: async ({ doctor_id }) => {
-    const supabase = await createClient();
+    const supabase = await createAiReadClient();
     const { data, error, count } = await supabase
       .from("activities")
       .select("occurred_at, summary, outcome, engagement_quality, main_topic, next_action", {
@@ -951,7 +951,7 @@ const searchDoctors = defineTool({
     query: z.string().describe("nombre (o parte del nombre) del doctor"),
   }),
   handler: async ({ query }) => {
-    const supabase = await createClient();
+    const supabase = await createAiReadClient();
     const sanitized = query.replace(/[%_,()]/g, " ").trim();
     if (!sanitized) bail("query vacía");
     const { data, error, count } = await supabase

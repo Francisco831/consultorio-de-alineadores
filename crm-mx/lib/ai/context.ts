@@ -4,7 +4,7 @@
 // contextToPromptBlock renderiza un resumen compacto; el detalle se pide por tools.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
+import { createAiReadClient } from "@/lib/ai/read-client";
 import { todayMX } from "@/lib/dates";
 import { daysSince } from "@/lib/format";
 import { refOportunidad } from "@/lib/ai/pii";
@@ -454,7 +454,7 @@ export async function buildDoctorContext(
   doctorId: string,
   client?: SupabaseClient
 ): Promise<DoctorContext> {
-  const supabase = client ?? (await createClient());
+  const supabase = client ?? (await createAiReadClient());
 
   const [
     { data: doctorRaw, error: doctorError },
