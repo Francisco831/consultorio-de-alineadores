@@ -54,5 +54,45 @@
       "83808f0c-564c-4bb2-b83a-0ca45c3f4f71"
     ],
     "nota": "la pagadora real es María Fernanda Cugat; título del archivo mal puesto"
+  },
+  {
+    "fileId": "1Dsj32lO2jKerqUH4dRKAtPpI4NlQNEAP",
+    "movementIds": [
+      "d487a2ef-a14b-486b-a180-a4a8ae342b64"
+    ],
+    "nota": "Gallo Dolores 19/5 — cargado directo del extracto (consolidado 21/8)"
+  },
+  {
+    "fileId": "19B2tCUtvHNhDA8L1RfXPJxQzI30DV8yc",
+    "movementIds": [
+      "6de8aa15-6da2-4499-97f0-f18fa78e5707"
+    ],
+    "nota": "Zaietz Luna 10/6 — cargado directo del extracto (consolidado 21/8)"
+  },
+  {
+    "fileId": "1M_cVK3h-KzsiV727wmH33MULGIkcPgZl",
+    "movementIds": [
+      "f4c71735-2787-4a81-b13e-cafd4ff982f9"
+    ],
+    "nota": "Lambruschini 10/6 — cargado directo del extracto (consolidado 21/8)"
+  },
+  {
+    "fileId": "1QrIvHqxcNXD4fOrqQTgSujXU38R5uCH-",
+    "movementIds": [
+      "c332e8df-1f5e-45e7-8c25-aad42152a2eb"
+    ],
+    "nota": "De Sousa Marcelo 10/6 — cargado directo del extracto (consolidado 21/8)"
+  },
+  {
+    "fileId": "1ocLzM_-o1sNB4UrWZi5-yLFYTNofwhTG",
+    "movementIds": [
+      "e9d16eaf-0f72-4a54-a4c3-79b9f48b84c9"
+    ],
+    "nota": "Navar Sofia 31/7 — cargado directo del extracto (consolidado 21/8)"
+  },
+  {
+    "fileId": "14rlbhtqpwtMHePL-nykBdtDYqCEwdPSV",
+    "movementIds": [],
+    "nota": "Factura aire acondicionado: emitida a KEEPSMILING S.A., no al consultorio — silenciada"
   }
 ]

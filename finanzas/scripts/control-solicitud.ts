@@ -7,7 +7,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { serviceClient, fetchAllRows, argFlags } from "./lib/service-client";
-import { extraerFilasSolicitud, faltantesSolicitud } from "../lib/import/solicitud";
+import { extraerFilasSolicitud, faltantesSolicitud, type Conocida } from "../lib/import/solicitud";
 
 const TAB = "SOLICITUD FACTURAS Y CONSULTAS ";
 
@@ -25,15 +25,19 @@ async function main() {
   }>(db, "movements", "occurred_on, description, counterparty:counterparties(display_name)",
     (q) => q.eq("company_id", cia!.id).eq("kind", "income").neq("status", "void"));
 
+  let conocidas: Conocida[] = [];
+  try { conocidas = JSON.parse(readFileSync(resolve(__dirname, "../seed-data/solicitud_ignorar.json"), "utf8")); } catch { /* sin lista */ }
+
   const r = faltantesSolicitud(
     extraerFilasSolicitud(rows),
     movs.map((m) => ({
       occurred_on: m.occurred_on,
       nombre: (Array.isArray(m.counterparty) ? m.counterparty[0]?.display_name : m.counterparty?.display_name)
         || m.description || "",
-    }))
+    })),
+    conocidas
   );
-  console.log(`SOLICITUD vs caja: ${r.cruzadas} filas cruzadas, ${r.faltan.length} SIN rastro en caja`);
+  console.log(`SOLICITUD vs caja: ${r.cruzadas} filas cruzadas, ${r.faltan.length} SIN rastro en caja${r.salteadas ? ` (${r.salteadas} conocidas salteadas)` : ""}`);
   for (const f of r.faltan) {
     console.log(`  ✗ ${f.fecha} $${f.monto.toLocaleString("es-AR")} — ${f.nombres.join(" | ")}`);
   }

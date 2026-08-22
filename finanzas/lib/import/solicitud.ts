@@ -45,17 +45,24 @@ function dias(a: string, b: string): number {
   return Math.abs((+new Date(a) - +new Date(b)) / 86400000);
 }
 
-/** Filas de SOLICITUD sin rastro en la caja (ningún nombre matchea ese día ±5). */
-export function faltantesSolicitud(filas: FilaSolicitud[], movs: MovNombre[]) {
+export type Conocida = { fecha: string; monto: number; nombre: string; motivo: string };
+
+/** Filas de SOLICITUD sin rastro en la caja (ningún nombre matchea ese día ±5).
+ *  `conocidas`: hallazgos ya decididos con Pancho que no se vuelven a reportar. */
+export function faltantesSolicitud(filas: FilaSolicitud[], movs: MovNombre[], conocidas: Conocida[] = []) {
   const faltan: (FilaSolicitud & { nombres: string[] })[] = [];
-  let cruzadas = 0;
+  let cruzadas = 0, salteadas = 0;
   for (const f of filas) {
     const nombres = candidatos(f);
     if (!nombres.length) continue;
     cruzadas++;
     const cerca = movs.filter((m) => dias(m.occurred_on, f.fecha) <= 5);
     const hay = nombres.some((n) => cerca.some((m) => parecido(n, m.nombre) >= 0.6));
-    if (!hay) faltan.push({ ...f, nombres });
+    if (hay) continue;
+    const conocida = conocidas.some((c) =>
+      c.fecha === f.fecha && c.monto === f.monto && nombres.some((n) => parecido(n, c.nombre) >= 0.6));
+    if (conocida) { salteadas++; continue; }
+    faltan.push({ ...f, nombres });
   }
-  return { cruzadas, faltan };
+  return { cruzadas, faltan, salteadas };
 }

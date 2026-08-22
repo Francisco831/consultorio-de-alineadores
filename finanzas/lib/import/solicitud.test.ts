@@ -37,3 +37,10 @@ test("los rótulos (bancos, billeteras) no cuentan como paciente", () => {
   assert.equal(r.cruzadas, 0);
   assert.equal(r.faltan.length, 0);
 });
+
+test("las conocidas (decididas con Pancho) se saltean y se cuentan", () => {
+  const filas = extraerFilasSolicitud([["2026-06-10", "Monica Gonzalez", "Ricci Francisco", 35000]]);
+  const r = faltantesSolicitud(filas, [], [{ fecha: "2026-06-10", monto: 35000, nombre: "Ricci Francisco", motivo: "efectivo consolidado" }]);
+  assert.equal(r.faltan.length, 0);
+  assert.equal(r.salteadas, 1);
+});
