@@ -32,5 +32,7 @@ export async function logActivity(formData: FormData) {
     .eq("id", doctorId);
 
   revalidatePath(`/doctores/${doctorId}`);
+  // la carga rápida del panel personal también refresca sus tiles y listas
+  revalidatePath("/panel");
   return { ok: true };
 }

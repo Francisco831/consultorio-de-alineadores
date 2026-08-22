@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Sun,
+  CircleUserRound,
   LayoutDashboard,
   Stethoscope,
   UserPlus,
@@ -69,8 +70,19 @@ const NAV: { href: string; label: string; icon: typeof Sun; grupo?: string }[] =
     { href: "/ajustes", label: "Ajustes", icon: Settings },
   ];
 
-export function AppSidebar() {
+export function AppSidebar({ panelLabel }: { panelLabel?: string }) {
   const pathname = usePathname();
+  // la pestaña del panel personal lleva el nombre de quien está logueado
+  // ("Rocío", "Juan"…): es SU panel, y así lo pidió Rocío (22/8)
+  const nav = [
+    NAV[0],
+    {
+      href: "/panel",
+      label: panelLabel || "Mi panel",
+      icon: CircleUserRound,
+    },
+    ...NAV.slice(1),
+  ];
   return (
     <aside className="flex h-screen w-52 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
       <div className="flex h-14 flex-col justify-center gap-1 border-b border-sidebar-border px-4">
@@ -85,12 +97,12 @@ export function AppSidebar() {
         </div>
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
-        {NAV.map(({ href, label, icon: Icon, grupo }, i) => {
+        {nav.map(({ href, label, icon: Icon, grupo }, i) => {
           // Comparación EXACTA, no startsWith: con las rutas anidadas de las dos
           // áreas ("/prospeccion" y "/prospeccion/lista"), startsWith prendía los
           // dos items a la vez.
           const active = pathname === href;
-          const abreGrupo = grupo && grupo !== NAV[i - 1]?.grupo;
+          const abreGrupo = grupo && grupo !== nav[i - 1]?.grupo;
           return (
             <div key={href}>
               {abreGrupo ? (

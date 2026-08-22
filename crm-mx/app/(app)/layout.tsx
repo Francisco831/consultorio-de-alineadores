@@ -24,7 +24,7 @@ export default async function AppLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <AppSidebar />
+      <AppSidebar panelLabel={profile?.nombre?.split(" ")[0]} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center justify-between border-b px-4">
           <SearchButton />
