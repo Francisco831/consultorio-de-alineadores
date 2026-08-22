@@ -295,11 +295,11 @@ export default async function PanelPage({
       {/* ---------- números del mes ---------- */}
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-3 xl:grid-cols-6">
         {tiles.map((m) => (
-          <div key={m.label} className="bg-background p-4">
-            <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          <div key={m.label} className="bg-background p-3">
+            <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
               {m.label}
             </div>
-            <div className="mt-0.5 text-2xl font-semibold tabular-nums">
+            <div className="mt-0.5 text-xl font-semibold tabular-nums">
               {m.value}
             </div>
           </div>
@@ -326,9 +326,11 @@ export default async function PanelPage({
                 ficha de un doctor.
               </p>
             ) : (
+              // filas compactas (doctor arriba, tarea y mini-ficha truncadas
+              // abajo): con las cards grandes el panel era una pared (22/8)
               FRANJAS.map(({ titulo, items, alerta }) =>
                 items.length === 0 ? null : (
-                  <div key={titulo} className="space-y-2">
+                  <div key={titulo} className="space-y-1.5">
                     <h3
                       className={cn(
                         "text-[13px] font-semibold uppercase tracking-wide",
@@ -337,148 +339,141 @@ export default async function PanelPage({
                     >
                       {titulo} · {items.length}
                     </h3>
-                    <div className="space-y-2">
-                      {items.slice(0, 10).map((t) => {
+                    <div className="divide-y rounded-lg border bg-card">
+                      {items.slice(0, 6).map((t) => {
                         const d = t.doctor;
                         const wa = d ? waLink(d.whatsapp ?? d.phone) : null;
                         const tel = d ? telLink(d.phone ?? d.whatsapp) : null;
-                        const eventos = d ? eventosDe.get(d.id) ?? [] : [];
+                        const eventos = d ? (eventosDe.get(d.id) ?? []) : [];
+                        const ficha = d
+                          ? [
+                              CATEGORIA_LABELS[d.categoria as DoctorCategoria],
+                              [d.city, d.state ?? d.zona]
+                                .filter(Boolean)
+                                .join(", "),
+                              `${d.case_count} casos (${d.new_case_count} nuevos)`,
+                              tiposDe.get(d.id),
+                              d.last_contact_at
+                                ? `últ. contacto ${fmtDia(d.last_contact_at.slice(0, 10))}`
+                                : null,
+                              eventos.length
+                                ? `Asistió: ${eventos
+                                    .slice(0, 2)
+                                    .map((e) => e.titulo)
+                                    .join(", ")}${eventos.length > 2 ? ` +${eventos.length - 2}` : ""}`
+                                : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")
+                          : null;
                         return (
                           <div
                             key={t.id}
-                            className="rounded-lg border p-3.5 transition-colors hover:bg-muted/40"
+                            className="flex items-start justify-between gap-3 px-3.5 py-2.5"
                           >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <Badge
-                                    variant="outline"
-                                    className="h-4.5 px-1.5 text-[10px] font-normal"
-                                  >
-                                    {TASK_TYPE_LABELS[t.type]}
-                                  </Badge>
-                                  <span className="font-medium">{t.title}</span>
-                                  {t.due_date ? (
-                                    <span
-                                      className={cn(
-                                        "text-xs tabular-nums text-muted-foreground",
-                                        alerta &&
-                                          "font-medium text-red-600 dark:text-red-400"
-                                      )}
-                                    >
-                                      {fmtDia(t.due_date)}
-                                    </span>
-                                  ) : (
-                                    <span className="text-xs text-muted-foreground">
-                                      sin fecha
-                                    </span>
-                                  )}
-                                </div>
+                            <div className="min-w-0 flex-1 text-sm">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                                 {d ? (
-                                  <>
-                                    <p className="mt-1 text-sm">
-                                      <Link
-                                        href={`/doctores/${d.id}`}
-                                        className="font-medium underline-offset-2 hover:underline"
-                                      >
-                                        {d.nombre}
-                                      </Link>{" "}
-                                      <span className="text-muted-foreground">
-                                        ·{" "}
-                                        {
-                                          CATEGORIA_LABELS[
-                                            d.categoria as DoctorCategoria
-                                          ]
-                                        }
-                                        {d.city || d.state || d.zona
-                                          ? ` · ${[d.city, d.state ?? d.zona].filter(Boolean).join(", ")}`
-                                          : ""}{" "}
-                                        · {d.case_count} casos (
-                                        {d.new_case_count} nuevos)
-                                        {tiposDe.get(d.id)
-                                          ? ` · ${tiposDe.get(d.id)}`
-                                          : ""}
-                                        {d.last_contact_at
-                                          ? ` · últ. contacto ${fmtDia(d.last_contact_at.slice(0, 10))}`
-                                          : ""}
-                                      </span>
-                                    </p>
-                                    {eventos.length > 0 ? (
-                                      <p className="mt-0.5 text-xs text-muted-foreground">
-                                        Asistió:{" "}
-                                        {eventos
-                                          .slice(0, 2)
-                                          .map((e) => e.titulo)
-                                          .join(", ")}
-                                        {eventos.length > 2
-                                          ? ` +${eventos.length - 2}`
-                                          : ""}
-                                      </p>
-                                    ) : null}
-                                  </>
-                                ) : (
-                                  <p className="mt-1 text-sm text-muted-foreground">
-                                    Sin doctor asociado
-                                  </p>
-                                )}
-                              </div>
-                              {d ? (
-                                <div className="flex shrink-0 gap-1">
-                                  {wa ? (
-                                    <a
-                                      href={wa}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className={buttonVariants({
-                                        variant: "outline",
-                                        size: "icon-sm",
-                                      })}
-                                      title="WhatsApp"
-                                    >
-                                      <MessageCircle />
-                                    </a>
-                                  ) : null}
-                                  {tel ? (
-                                    <a
-                                      href={tel}
-                                      className={buttonVariants({
-                                        variant: "outline",
-                                        size: "icon-sm",
-                                      })}
-                                      title="Llamar"
-                                    >
-                                      <Phone />
-                                    </a>
-                                  ) : null}
                                   <Link
                                     href={`/doctores/${d.id}`}
+                                    className="font-medium underline-offset-2 hover:underline"
+                                  >
+                                    {d.nombre}
+                                  </Link>
+                                ) : (
+                                  <span className="line-clamp-1 font-medium">
+                                    {t.title}
+                                  </span>
+                                )}
+                                <Badge
+                                  variant="outline"
+                                  className="h-4.5 px-1.5 text-[10px] font-normal"
+                                >
+                                  {TASK_TYPE_LABELS[t.type]}
+                                </Badge>
+                                <span
+                                  className={cn(
+                                    "text-xs tabular-nums text-muted-foreground",
+                                    alerta &&
+                                      "font-medium text-red-600 dark:text-red-400"
+                                  )}
+                                >
+                                  {t.due_date ? fmtDia(t.due_date) : "sin fecha"}
+                                </span>
+                              </div>
+                              {d ? (
+                                <p
+                                  className="mt-0.5 line-clamp-1 text-muted-foreground"
+                                  title={t.title}
+                                >
+                                  {t.title}
+                                </p>
+                              ) : null}
+                              {ficha ? (
+                                <p
+                                  className="mt-0.5 line-clamp-1 text-xs text-muted-foreground/80"
+                                  title={ficha}
+                                >
+                                  {ficha}
+                                </p>
+                              ) : null}
+                            </div>
+                            {d ? (
+                              <div className="flex shrink-0 gap-1">
+                                {wa ? (
+                                  <a
+                                    href={wa}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     className={buttonVariants({
                                       variant: "outline",
                                       size: "icon-sm",
                                     })}
-                                    title="Abrir ficha"
+                                    title="WhatsApp"
                                   >
-                                    <ArrowRight />
-                                  </Link>
-                                </div>
-                              ) : null}
-                            </div>
+                                    <MessageCircle />
+                                  </a>
+                                ) : null}
+                                {tel ? (
+                                  <a
+                                    href={tel}
+                                    className={buttonVariants({
+                                      variant: "outline",
+                                      size: "icon-sm",
+                                    })}
+                                    title="Llamar"
+                                  >
+                                    <Phone />
+                                  </a>
+                                ) : null}
+                                <Link
+                                  href={`/doctores/${d.id}`}
+                                  className={buttonVariants({
+                                    variant: "outline",
+                                    size: "icon-sm",
+                                  })}
+                                  title="Abrir ficha"
+                                >
+                                  <ArrowRight />
+                                </Link>
+                              </div>
+                            ) : null}
                           </div>
                         );
                       })}
-                      {items.length > 10 ? (
-                        <p className="text-xs text-muted-foreground">
-                          {items.length - 10} más en{" "}
-                          <Link
-                            href="/tareas"
-                            className="underline underline-offset-2"
-                          >
-                            Tareas
-                          </Link>
-                          .
-                        </p>
-                      ) : null}
                     </div>
+                    {items.length > 6 ? (
+                      <p className="text-xs text-muted-foreground">
+                        {items.length - 6} más en{" "}
+                        <Link
+                          href="/tareas"
+                          className="underline underline-offset-2"
+                        >
+                          Tareas
+                        </Link>
+                        .
+                      </p>
+                    ) : null}
                   </div>
                 )
               )
