@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { guardarMetasComercial } from "@/lib/actions/team";
 import { Button } from "@/components/ui/button";
@@ -158,11 +159,19 @@ export default async function EquipoPage() {
 
   return (
     <div className="space-y-4 p-6">
-      <div>
-        <h1 className="text-lg font-semibold tracking-tight">Equipo</h1>
-        <p className="text-sm text-muted-foreground">
-          Mes en curso · actividades de los últimos 30 días
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Equipo</h1>
+          <p className="text-sm text-muted-foreground">
+            Mes en curso · actividades de los últimos 30 días
+          </p>
+        </div>
+        <Link
+          href="/equipo/actividad"
+          className="text-sm font-medium underline underline-offset-2"
+        >
+          Actividad por día →
+        </Link>
       </div>
       <div className="overflow-x-auto rounded-lg border">
         <Table>

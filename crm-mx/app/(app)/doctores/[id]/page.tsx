@@ -338,7 +338,7 @@ export default async function DoctorPage({
           </div>
           {(waChatsRaw ?? []).length === 0 ? (
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Sin chat identificado en las 4 líneas MX (análisis 7/8).{" "}
+              Sin chat identificado en las líneas MX (análisis 7/8).{" "}
               {doctor.whatsapp || doctor.phone
                 ? "Se puede escribir igual con el botón WhatsApp de arriba."
                 : "Tampoco hay teléfono cargado — conseguirlo vale oro."}
