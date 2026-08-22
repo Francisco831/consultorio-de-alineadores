@@ -8,5 +8,49 @@
     "cuenta": "Mercado Pago",
     "moneda": "ARS",
     "nota": "Botto Agustina 28/4: el extracto MP tiene $1.000 ARS el 27/4 — ídem; el 'USD Transferencia' de la caja parece error"
+  },
+  "caja:6c247faeb6e96725": {
+    "cuenta": "Cuenta KS",
+    "nota": "Sande 10/3 cuota 3 de 4: la cuota 4 (14/4) figura en caja como Tr Ks — mismo canal; no está en extracto MP"
+  },
+  "caja:94f35e0ac40c0442": {
+    "cuenta": "Mercado Pago",
+    "nota": "Colimodio 5/5: es la transferencia del 29/4 al MP (extracto, 'COLOMIDIO' con typo); cuotas 4-5-6 fueron todas a MP"
+  },
+  "caja:047369f9094f7739": {
+    "cuenta": "Cuenta KS",
+    "nota": "Hogner 19/6 $592.000 (USD 400 t/c 1480): no está en el extracto MP de ningún mes; ella transfiere siempre — Cuenta KS"
+  },
+  "caja:0a9f2b1496985f7b": {
+    "cuenta": "Coni – cuenta propia",
+    "nota": "Linares Felipe: paciente de la pestaña de Coni — su contabilidad"
+  },
+  "caja:fc1f1b1141b428ca": {
+    "cuenta": "Efectivo USD",
+    "nota": "Etchegoyen cuota USD 27/3: las cuotas en dólares de la pareja son billetes (sus transferencias en pesos van a MP con comprobante; para los USD nunca hay)"
+  },
+  "caja:66b55a06e0fc901e": {
+    "cuenta": "Efectivo USD",
+    "nota": "Etchegoyen USD 300 6/5 — billetes (ver 27/3)"
+  },
+  "caja:ca6053731b6cf60c": {
+    "cuenta": "Efectivo USD",
+    "nota": "Grillo USD 400 6/5 — billetes"
+  },
+  "caja:2a750a661cdd6062": {
+    "cuenta": "Efectivo USD",
+    "nota": "Etchegoyen USD 400 17/6 — billetes"
+  },
+  "caja:7cfedb65a8cdd5ec": {
+    "cuenta": "Efectivo USD",
+    "nota": "Grillo USD 400 17/6 — billetes"
+  },
+  "caja:d9021eaa9d5749e1": {
+    "cuenta": "Efectivo USD",
+    "nota": "Grillo USD 500 21/8 (tc 1550) — billetes"
+  },
+  "caja:00ee924359b36bd6": {
+    "cuenta": "Efectivo USD",
+    "nota": "Etchegoyen USD 500 21/8 (tc 1550) — billetes"
   }
 }
