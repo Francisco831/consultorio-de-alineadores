@@ -3,9 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { QuickLog } from "@/components/panel/quick-log";
-import { waLink, telLink } from "@/lib/phone";
+import { waLink, telLink, periskopeLink } from "@/lib/phone";
 import { todayMX, monthStartMX } from "@/lib/dates";
 import { MX_TZ, CONTACTO_TYPES } from "@/lib/actividad-equipo";
+import { resumenPorPais, PAIS_LABEL } from "@/lib/noloco-pais";
 import {
   ACTIVITY_TYPE_LABELS,
   TASK_TYPE_LABELS,
@@ -131,7 +132,8 @@ export default async function PanelPage({
       .eq("status", "pendiente")
       .eq("is_demo", false)
       .order("due_date", { ascending: true, nullsFirst: false })
-      .limit(30),
+      // TODOS sus pendientes: el panel es su única pantalla (Pancho 22/8)
+      .limit(200),
     supabase
       .from("tasks")
       .select("id", { count: "exact", head: true })
@@ -181,24 +183,69 @@ export default async function PanelPage({
   // ---- mini-ficha de los doctores de la agenda: tipos de caso + eventos ----
   const docIds = [
     ...new Set(agenda.map((t) => t.doctor?.id).filter(Boolean)),
-  ].slice(0, 20) as string[];
-  const [{ data: tiposRaw }, { data: asistenciasRaw }] = await Promise.all([
-    docIds.length
-      ? supabase
-          .from("cases")
-          .select("doctor_id, tipo_tratamiento")
-          .in("doctor_id", docIds)
-          .eq("is_demo", false)
-          .not("tipo_tratamiento", "is", null)
-          .limit(2000)
-      : Promise.resolve({ data: [] }),
-    docIds.length
-      ? supabase
-          .from("event_attendees")
-          .select("doctor_id, events(titulo, fecha)")
-          .in("doctor_id", docIds)
-      : Promise.resolve({ data: [] }),
-  ]);
+  ].slice(0, 60) as string[];
+  const [{ data: tiposRaw }, { data: asistenciasRaw }, { data: chatsAgendaRaw }, waEsp, paises] =
+    await Promise.all([
+      docIds.length
+        ? supabase
+            .from("cases")
+            .select("doctor_id, tipo_tratamiento")
+            .in("doctor_id", docIds)
+            .eq("is_demo", false)
+            .not("tipo_tratamiento", "is", null)
+            .limit(2000)
+        : Promise.resolve({ data: [] }),
+      docIds.length
+        ? supabase
+            .from("event_attendees")
+            .select("doctor_id, events(titulo, fecha)")
+            .in("doctor_id", docIds)
+        : Promise.resolve({ data: [] }),
+      // chat conocido de cada doctor de la agenda: el click de WhatsApp abre
+      // Periskope (donde responde el equipo), no un wa.me pelado
+      docIds.length
+        ? supabase
+            .from("wa_conversations")
+            .select("doctor_id, periskope_chat_id")
+            .in("doctor_id", docIds)
+            .not("periskope_chat_id", "is", null)
+        : Promise.resolve({ data: [] }),
+      // chats de SUS doctores donde el doctor habló último
+      supabase
+        .from("wa_conversations")
+        .select(
+          "id, periskope_chat_id, phone, activity_bucket, doctor:doctors!inner(id, nombre, owner_id, whatsapp)",
+          { count: "exact" }
+        )
+        .eq("unanswered", true)
+        .eq("doctor.owner_id", u)
+        .limit(30),
+      resumenPorPais(),
+    ]);
+
+  const chatDe = new Map<string, string>();
+  for (const c of (chatsAgendaRaw ?? []) as {
+    doctor_id: string | null;
+    periskope_chat_id: string;
+  }[])
+    if (c.doctor_id && !chatDe.has(c.doctor_id))
+      chatDe.set(c.doctor_id, c.periskope_chat_id);
+
+  type WaEspRow = {
+    id: string;
+    periskope_chat_id: string | null;
+    phone: string | null;
+    activity_bucket: string | null;
+    doctor: { id: string; nombre: string; whatsapp: string | null };
+  };
+  const waEsperando = ((waEsp.data ?? []) as unknown as WaEspRow[])
+    .sort(
+      (a, b) =>
+        (a.activity_bucket === "7d" ? 0 : 1) -
+        (b.activity_bucket === "7d" ? 0 : 1)
+    )
+    .slice(0, 8);
+  const waTotal = waEsp.count ?? waEsperando.length;
 
   const tiposDe = new Map<string, string>();
   {
@@ -261,6 +308,121 @@ export default async function PanelPage({
       { titulo: "Vencidas", items: vencidas, alerta: true },
       { titulo: "Próximas", items: proximas },
     ];
+
+  const filaTarea = (t: TareaAgenda, alerta?: boolean) => {
+    const d = t.doctor;
+    // preferir el chat de Periskope (ahí responde el equipo); wa.me de fallback
+    const wa = d
+      ? (periskopeLink(chatDe.get(d.id) ?? null) ??
+        waLink(d.whatsapp ?? d.phone))
+      : null;
+    const tel = d ? telLink(d.phone ?? d.whatsapp) : null;
+    const eventos = d ? (eventosDe.get(d.id) ?? []) : [];
+    const ficha = d
+      ? [
+          CATEGORIA_LABELS[d.categoria as DoctorCategoria],
+          [d.city, d.state ?? d.zona].filter(Boolean).join(", "),
+          `${d.case_count} casos (${d.new_case_count} nuevos)`,
+          tiposDe.get(d.id),
+          d.last_contact_at
+            ? `últ. contacto ${fmtDia(d.last_contact_at.slice(0, 10))}`
+            : null,
+          eventos.length
+            ? `Asistió: ${eventos
+                .slice(0, 2)
+                .map((e) => e.titulo)
+                .join(", ")}${eventos.length > 2 ? ` +${eventos.length - 2}` : ""}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : null;
+    return (
+      <div
+        key={t.id}
+        className="flex items-start justify-between gap-3 px-3.5 py-2.5"
+      >
+        <div className="min-w-0 flex-1 text-sm">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            {d ? (
+              <Link
+                href={`/doctores/${d.id}`}
+                className="font-medium underline-offset-2 hover:underline"
+              >
+                {d.nombre}
+              </Link>
+            ) : (
+              <span className="line-clamp-1 font-medium">{t.title}</span>
+            )}
+            <Badge
+              variant="outline"
+              className="h-4.5 px-1.5 text-[10px] font-normal"
+            >
+              {TASK_TYPE_LABELS[t.type]}
+            </Badge>
+            <span
+              className={cn(
+                "text-xs tabular-nums text-muted-foreground",
+                alerta && "font-medium text-red-600 dark:text-red-400"
+              )}
+            >
+              {t.due_date ? fmtDia(t.due_date) : "sin fecha"}
+            </span>
+          </div>
+          {d ? (
+            <p
+              className="mt-0.5 line-clamp-1 text-muted-foreground"
+              title={t.title}
+            >
+              {t.title}
+            </p>
+          ) : null}
+          {ficha ? (
+            <p
+              className="mt-0.5 line-clamp-1 text-xs text-muted-foreground/80"
+              title={ficha}
+            >
+              {ficha}
+            </p>
+          ) : null}
+        </div>
+        {d ? (
+          <div className="flex shrink-0 gap-1">
+            {wa ? (
+              <a
+                href={wa}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonVariants({
+                  variant: "outline",
+                  size: "icon-sm",
+                })}
+                title="WhatsApp"
+              >
+                <MessageCircle />
+              </a>
+            ) : null}
+            {tel ? (
+              <a
+                href={tel}
+                className={buttonVariants({ variant: "outline", size: "icon-sm" })}
+                title="Llamar"
+              >
+                <Phone />
+              </a>
+            ) : null}
+            <Link
+              href={`/doctores/${d.id}`}
+              className={buttonVariants({ variant: "outline", size: "icon-sm" })}
+              title="Abrir ficha"
+            >
+              <ArrowRight />
+            </Link>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4 p-6">
@@ -340,140 +502,18 @@ export default async function PanelPage({
                       {titulo} · {items.length}
                     </h3>
                     <div className="divide-y rounded-lg border bg-card">
-                      {items.slice(0, 6).map((t) => {
-                        const d = t.doctor;
-                        const wa = d ? waLink(d.whatsapp ?? d.phone) : null;
-                        const tel = d ? telLink(d.phone ?? d.whatsapp) : null;
-                        const eventos = d ? (eventosDe.get(d.id) ?? []) : [];
-                        const ficha = d
-                          ? [
-                              CATEGORIA_LABELS[d.categoria as DoctorCategoria],
-                              [d.city, d.state ?? d.zona]
-                                .filter(Boolean)
-                                .join(", "),
-                              `${d.case_count} casos (${d.new_case_count} nuevos)`,
-                              tiposDe.get(d.id),
-                              d.last_contact_at
-                                ? `últ. contacto ${fmtDia(d.last_contact_at.slice(0, 10))}`
-                                : null,
-                              eventos.length
-                                ? `Asistió: ${eventos
-                                    .slice(0, 2)
-                                    .map((e) => e.titulo)
-                                    .join(", ")}${eventos.length > 2 ? ` +${eventos.length - 2}` : ""}`
-                                : null,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ")
-                          : null;
-                        return (
-                          <div
-                            key={t.id}
-                            className="flex items-start justify-between gap-3 px-3.5 py-2.5"
-                          >
-                            <div className="min-w-0 flex-1 text-sm">
-                              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                                {d ? (
-                                  <Link
-                                    href={`/doctores/${d.id}`}
-                                    className="font-medium underline-offset-2 hover:underline"
-                                  >
-                                    {d.nombre}
-                                  </Link>
-                                ) : (
-                                  <span className="line-clamp-1 font-medium">
-                                    {t.title}
-                                  </span>
-                                )}
-                                <Badge
-                                  variant="outline"
-                                  className="h-4.5 px-1.5 text-[10px] font-normal"
-                                >
-                                  {TASK_TYPE_LABELS[t.type]}
-                                </Badge>
-                                <span
-                                  className={cn(
-                                    "text-xs tabular-nums text-muted-foreground",
-                                    alerta &&
-                                      "font-medium text-red-600 dark:text-red-400"
-                                  )}
-                                >
-                                  {t.due_date ? fmtDia(t.due_date) : "sin fecha"}
-                                </span>
-                              </div>
-                              {d ? (
-                                <p
-                                  className="mt-0.5 line-clamp-1 text-muted-foreground"
-                                  title={t.title}
-                                >
-                                  {t.title}
-                                </p>
-                              ) : null}
-                              {ficha ? (
-                                <p
-                                  className="mt-0.5 line-clamp-1 text-xs text-muted-foreground/80"
-                                  title={ficha}
-                                >
-                                  {ficha}
-                                </p>
-                              ) : null}
-                            </div>
-                            {d ? (
-                              <div className="flex shrink-0 gap-1">
-                                {wa ? (
-                                  <a
-                                    href={wa}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={buttonVariants({
-                                      variant: "outline",
-                                      size: "icon-sm",
-                                    })}
-                                    title="WhatsApp"
-                                  >
-                                    <MessageCircle />
-                                  </a>
-                                ) : null}
-                                {tel ? (
-                                  <a
-                                    href={tel}
-                                    className={buttonVariants({
-                                      variant: "outline",
-                                      size: "icon-sm",
-                                    })}
-                                    title="Llamar"
-                                  >
-                                    <Phone />
-                                  </a>
-                                ) : null}
-                                <Link
-                                  href={`/doctores/${d.id}`}
-                                  className={buttonVariants({
-                                    variant: "outline",
-                                    size: "icon-sm",
-                                  })}
-                                  title="Abrir ficha"
-                                >
-                                  <ArrowRight />
-                                </Link>
-                              </div>
-                            ) : null}
+                      {items.slice(0, 6).map((t) => filaTarea(t, alerta))}
+                      {items.length > 6 ? (
+                        <details>
+                          <summary className="cursor-pointer select-none px-3.5 py-2 text-xs font-medium text-muted-foreground hover:text-foreground">
+                            Ver las {items.length - 6} restantes
+                          </summary>
+                          <div className="divide-y border-t">
+                            {items.slice(6).map((t) => filaTarea(t, alerta))}
                           </div>
-                        );
-                      })}
+                        </details>
+                      ) : null}
                     </div>
-                    {items.length > 6 ? (
-                      <p className="text-xs text-muted-foreground">
-                        {items.length - 6} más en{" "}
-                        <Link
-                          href="/tareas"
-                          className="underline underline-offset-2"
-                        >
-                          Tareas
-                        </Link>
-                        .
-                      </p>
-                    ) : null}
                   </div>
                 )
               )
@@ -546,6 +586,70 @@ export default async function PanelPage({
             </div>
           </div>
 
+          {waEsperando.length > 0 ? (
+            <div className="space-y-2">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  WhatsApp esperando respuesta
+                  {waTotal > waEsperando.length ? (
+                    <span className="ml-1.5 font-normal normal-case tracking-normal">
+                      · {waEsperando.length} de {waTotal}
+                    </span>
+                  ) : null}
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Chats de {esPropio ? "tus" : "sus"} doctores donde el doctor
+                  habló último. El botón abre Periskope.
+                </p>
+              </div>
+              <ul className="divide-y rounded-lg border bg-card">
+                {waEsperando.map((w) => {
+                  const link =
+                    periskopeLink(w.periskope_chat_id) ??
+                    waLink(w.phone ?? w.doctor.whatsapp);
+                  return (
+                    <li
+                      key={w.id}
+                      className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <Link
+                          href={`/doctores/${w.doctor.id}`}
+                          className="block truncate font-medium hover:underline"
+                        >
+                          {w.doctor.nombre}
+                        </Link>
+                        <span className="text-xs text-muted-foreground">
+                          {w.activity_bucket === "7d" ? (
+                            <span className="font-medium text-orange-600 dark:text-orange-400">
+                              activo esta semana
+                            </span>
+                          ) : w.activity_bucket === "30d" ? (
+                            "últimos 30 días"
+                          ) : (
+                            "hace más de 30 días"
+                          )}
+                        </span>
+                      </div>
+                      {link ? (
+                        <a
+                          href={link}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={cn(
+                            buttonVariants({ variant: "outline", size: "sm" })
+                          )}
+                        >
+                          Responder
+                        </a>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+
           <div className="space-y-2">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Tu mes por tipo
@@ -576,6 +680,56 @@ export default async function PanelPage({
               </Link>
             </p>
           </div>
+
+          {paises && paises.filas.length > 0 ? (
+            <div className="space-y-2">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Noloco por país — este mes
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Casos con movimientos, pedidos de modificación y
+                  comunicaciones. Directo de Noloco, se refresca ~cada hora.
+                </p>
+              </div>
+              <div className="overflow-x-auto rounded-lg border bg-card">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-muted-foreground">
+                      <th className="px-3 py-2 font-medium">País</th>
+                      <th className="px-3 py-2 text-right font-medium">
+                        Movidos
+                      </th>
+                      <th className="px-3 py-2 text-right font-medium">
+                        Modif.
+                      </th>
+                      <th className="px-3 py-2 text-right font-medium">
+                        Comunic.
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {paises.filas.map((f) => (
+                      <tr key={f.pais}>
+                        <td className="px-3 py-1.5 font-medium">
+                          {PAIS_LABEL[f.pais] ?? f.pais}
+                        </td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">
+                          {f.movidos}
+                        </td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">
+                          {f.modificaciones}
+                        </td>
+                        <td className="px-3 py-1.5 text-right tabular-nums">
+                          {f.comunicaciones}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
