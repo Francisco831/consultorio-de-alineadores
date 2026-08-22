@@ -68,11 +68,37 @@ async function main() {
   // Una fila puede traer ARS y USD A LA VEZ (caso real: retiro 29/4 con
   // ars=-50000 y usd=66965). Cada moneda es una pata independiente del ledger:
   // partirla acá evita perder plata en silencio.
-  type Pata = MovAR & { currency: "ARS" | "USD"; amount: number };
+  type Pata = MovAR & { currency: "ARS" | "USD"; amount: number; key: string; cuentaOverride?: string };
   const movs: Pata[] = [];
-  for (const m of filas) {
-    if ((m.ars ?? 0) !== 0) movs.push({ ...m, currency: "ARS", amount: Math.abs(m.ars) });
-    if ((m.usd ?? 0) !== 0) movs.push({ ...m, currency: "USD", amount: Math.abs(m.usd) });
+  {
+    // La clave se computa ACÁ (mismo orden de recorrido = mismos ordinales) y
+    // se congela ANTES de aplicar overrides: la identidad es el contenido de
+    // la caja, la corrección es solo interpretación (moneda/cuenta).
+    const keys = new KeyBuilder();
+    // correcciones por fila verificadas contra el extracto (pesos en la
+    // columna de dólares, medios confirmados a mano): seed-data/medios_overrides.json
+    let overrides: Record<string, { cuenta?: string; moneda?: "ARS" | "USD"; nota?: string }> = {};
+    try {
+      overrides = JSON.parse(readFileSync(resolve(__dirname, "../seed-data/medios_overrides.json"), "utf8"));
+    } catch { /* sin overrides */ }
+    let aplicados = 0;
+    for (const m of filas) {
+      for (const currency of ["ARS", "USD"] as const) {
+        const monto = currency === "ARS" ? m.ars : m.usd;
+        if ((monto ?? 0) === 0) continue;
+        const key = keys.build("caja", m.tab, m.fecha, m.paciente, m.ars, m.usd, m.motivo, currency);
+        const o = overrides[key];
+        if (o) aplicados++;
+        movs.push({
+          ...m,
+          currency: o?.moneda ?? currency,
+          amount: Math.abs(monto),
+          key,
+          cuentaOverride: o?.cuenta,
+        });
+      }
+    }
+    if (aplicados) console.log(`✓ ${aplicados} overrides de medio/moneda aplicados`);
   }
 
   // Totales esperados desde la FUENTE (el gate compara contra esto).
@@ -135,11 +161,10 @@ async function main() {
     console.log(`✓ ${pacientesNuevos.size} pacientes creados`);
   }
 
-  const keys = new KeyBuilder();
   const rows = movs.map((m) => {
     const { currency, amount } = m;
     const kind = m.tipo === "cobro" ? "income" : "expense";
-    const cuenta = cuentaPara(m);
+    const cuenta = m.cuentaOverride ? { name: m.cuentaOverride, pendiente: false } : cuentaPara(m);
     const account = accByName[cuenta.name];
     if (!account) throw new Error(`cuenta inexistente: ${cuenta.name}`);
     if (account.currency !== currency) throw new Error(`moneda incoherente ${cuenta.name} ${currency}`);
@@ -172,7 +197,7 @@ async function main() {
         ? `Retiro liquidación ${m.doctora ?? ""}`.trim()
         : m.tipo.replace("_", " ")),
       source: "seed",
-      external_key: keys.build("caja", m.tab, m.fecha, m.paciente, m.ars, m.usd, m.motivo, currency),
+      external_key: m.key,
       meta: {
         tab: m.tab, doctora: m.doctora, atribucion_clara: m.atribucion_clara,
         medio_raw: m.medio, motivo: m.motivo, obs: m.obs, tipo_origen: m.tipo,

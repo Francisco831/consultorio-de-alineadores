@@ -1,0 +1,12 @@
+{
+  "caja:5a4c41916471eaee": {
+    "cuenta": "Mercado Pago",
+    "moneda": "ARS",
+    "nota": "Perez Viviana 22/4: el extracto MP tiene $400 ARS ese día — pesos en la columna USD de la caja (cuota 6 de 6 simbólica)"
+  },
+  "caja:59a258537ef6414d": {
+    "cuenta": "Mercado Pago",
+    "moneda": "ARS",
+    "nota": "Botto Agustina 28/4: el extracto MP tiene $1.000 ARS el 27/4 — ídem; el 'USD Transferencia' de la caja parece error"
+  }
+}
