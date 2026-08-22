@@ -31,7 +31,7 @@ const CATEGORIA_INGRESO: Record<string, string> = {
 };
 
 // La pata ya es mono-moneda: la cuenta se decide por medio canónico + moneda.
-function cuentaPara(m: MovAR & { currency: "ARS" | "USD" }): { name: string; pendiente: boolean } {
+function cuentaPara(m: MovAR & { currency: "ARS" | "USD"; amount: number }): { name: string; pendiente: boolean } {
   const usd = m.currency === "USD";
   const canon = medioCanonico(m.medio);
   if (canon === "ks") return { name: usd ? "Cuenta KS USD" : "Cuenta KS", pendiente: false };
@@ -42,6 +42,20 @@ function cuentaPara(m: MovAR & { currency: "ARS" | "USD" }): { name: string; pen
     ? { name: "Sin medio USD (a revisar)", pendiente: true }
     : { name: "Mercado Pago", pendiente: false };
   if (canon === "efectivo") return { name: usd ? "Efectivo USD" : "Efectivo", pendiente: false };
+  // Sin medio: si es GASTO o RETIRO, sale de la caja física — es efectivo
+  // (decisión Pancho 21/8, "bloque 1"). Dos excepciones: lo de la pestaña de
+  // Coni va a su cuenta propia (contabilidad separada; su pata USD no existe),
+  // y un gasto USD grande sin medio huele a monto en pesos en la columna de
+  // dólares (casos reales 21/4 y 29/4) — queda en revisión, no se inventa.
+  if (m.tipo !== "cobro") {
+    if (m.tab === "CONI 2020") {
+      return usd
+        ? { name: "Sin medio USD (a revisar)", pendiente: true }
+        : { name: "Coni – cuenta propia", pendiente: false };
+    }
+    if (usd && m.amount >= 5000) return { name: "Sin medio USD (a revisar)", pendiente: true };
+    return { name: usd ? "Efectivo USD" : "Efectivo", pendiente: false };
+  }
   return { name: usd ? "Sin medio USD (a revisar)" : "Sin medio (a revisar)", pendiente: true };
 }
 
