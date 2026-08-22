@@ -22,14 +22,18 @@ export async function askDirector(
 export async function generateMorningBrief(opts: {
   requestedBy: string | null;
 }): Promise<{ brief: DirectorBrief; runId: string }> {
+  // Formato BREVE a propósito: este brief se lee todas las mañanas desde el
+  // celular en un minuto. El análisis profundo de 15 secciones sigue disponible
+  // vía Ask Your CRM; acá el detalle viaja en findings/recommendations.
   const userMessage = [
     `Hoy es ${todayMX()}. Genera el brief comercial de la mañana para el Country Manager (es-MX).`,
-    "Prioridades de HOY, en este orden:",
-    "1. Doctores en riesgo o con señales de servicio abiertas.",
-    "2. Acreditados sin activar (sin primer caso de paciente pagado).",
-    "3. Casos trabados que están frenando confianza.",
-    "4. Pipeline y casos pagados del mes vs la meta del mes.",
-    "5. Top 3-5 acciones concretas para hoy: qué doctor, qué acción y por qué (con evidencia).",
+    "FORMATO BREVE OBLIGATORIO — ignora las 15 secciones del brief profundo.",
+    "`answer` tiene 150 palabras como máximo, sin títulos en mayúsculas, con esta estructura:",
+    "· Meta del mes en una línea: casos pagados X de Y, acreditaciones X de Y.",
+    "· Qué cambió desde el último brief: 1-2 líneas (si nada cambió, una línea que lo diga).",
+    "· HOY, máximo 3 acciones: doctor → acción → por qué, una línea cada una.",
+    "· Un riesgo o dato faltante, una línea.",
+    "El detalle y la evidencia van en findings y recommendations, nunca en answer.",
     "Usa tus tools para traer los números reales — no cites ningún número que no venga de una tool.",
     "Emite recomendaciones con doctor_id cuando la acción sea sobre un doctor específico.",
   ].join("\n");

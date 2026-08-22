@@ -67,6 +67,7 @@ export const DISMISS_CODES = [
 
 export const TASK_TYPES = [
   "llamada",
+  "videollamada",
   "whatsapp",
   "visita",
   "reunion",
@@ -78,6 +79,7 @@ export const TASK_TYPES = [
 // 'seguimiento'. Un valor fuera de la lista hace fallar el insert al aceptar.
 export const ACTIVITY_TYPES = [
   "llamada",
+  "videollamada",
   "whatsapp",
   "visita",
   "reunion",

@@ -37,10 +37,10 @@ export type OppStage =
 
 export type ForecastCat = "pipeline" | "best_case" | "commit" | "closed" | "omitted";
 export type TaskType =
-  | "llamada" | "whatsapp" | "visita" | "reunion" | "revision_clinica" | "seguimiento";
+  | "llamada" | "videollamada" | "whatsapp" | "visita" | "reunion" | "revision_clinica" | "seguimiento";
 export type TaskStatus = "pendiente" | "completada" | "cancelada";
 export type ActivityType =
-  | "llamada" | "whatsapp" | "visita" | "reunion" | "revision_clinica" | "email" | "nota" | "keepday";
+  | "llamada" | "videollamada" | "whatsapp" | "visita" | "reunion" | "revision_clinica" | "email" | "nota" | "keepday";
 export type AlertStatus = "abierta" | "descartada" | "resuelta";
 export type AlertSeverity = "critica" | "alta" | "media" | "info";
 export type AttributionSource =
@@ -298,6 +298,7 @@ export const OPP_STAGE_LABELS: Record<OppStage, string> = {
 
 export const TASK_TYPE_LABELS: Record<TaskType, string> = {
   llamada: "Llamada",
+  videollamada: "Videollamada",
   whatsapp: "WhatsApp",
   visita: "Visita",
   reunion: "Reunión",
@@ -307,6 +308,7 @@ export const TASK_TYPE_LABELS: Record<TaskType, string> = {
 
 export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
   llamada: "Llamada",
+  videollamada: "Videollamada",
   whatsapp: "WhatsApp",
   visita: "Visita",
   reunion: "Reunión",
