@@ -43,14 +43,23 @@ async function main() {
   });
 
   // overrides confirmados a mano (typos revisados): fileId → movementIds
-  let overrides: { fileId: string; movementIds: string[]; nota?: string }[] = [];
+  // fileId = archivo del Drive; externo = comprobante que llegó por otro canal
+  // (WhatsApp Business, mail): se registra igual para que no figure faltante
+  let overrides: { fileId?: string; externo?: string; titulo?: string; movementIds: string[]; nota?: string }[] = [];
   try {
     overrides = JSON.parse(readFileSync(resolve(__dirname, "../seed-data/comprobantes_overrides.json"), "utf8"));
   } catch { /* sin overrides */ }
-  const idsOverride = new Set(overrides.map((o) => o.fileId));
+  const idsOverride = new Set(overrides.map((o) => o.fileId).filter(Boolean) as string[]);
 
   const r = vincular(raw.files.filter((f) => !idsOverride.has(f.id)), raw.folders, candidatos);
   for (const o of overrides) {
+    if (o.externo) {
+      r.vinculos.push({
+        fileId: o.externo, titulo: o.titulo ?? o.externo, url: o.externo, mime: null,
+        fecha: "", carpeta: "externo", movementIds: o.movementIds, corrimiento: 0, via: "carpeta",
+      });
+      continue;
+    }
     const f = raw.files.find((x) => x.id === o.fileId);
     if (!f) continue;
     r.vinculos.push({

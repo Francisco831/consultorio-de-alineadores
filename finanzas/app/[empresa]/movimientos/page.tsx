@@ -319,6 +319,17 @@ export default async function MovimientosPage({
                         </span>
                       ) : null}
                       {(docsPorMov.get(mv.id) ?? [])
+                        .filter((d) => !d.storage_path.startsWith("http"))
+                        .map((d) => (
+                          <span
+                            key={d.storage_path}
+                            title={`Comprobante: ${d.filename}`}
+                            className="ml-1.5 align-middle opacity-70"
+                          >
+                            📎
+                          </span>
+                        ))}
+                      {(docsPorMov.get(mv.id) ?? [])
                         .filter((d) => d.storage_path.startsWith("http"))
                         .map((d) => (
                           <a
