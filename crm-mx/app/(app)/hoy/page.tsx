@@ -19,9 +19,8 @@ import {
   LIFECYCLE_STYLES,
 } from "@/lib/format";
 import { TaskList } from "@/components/tasks/task-list";
-import { AgentBadge } from "@/components/ai/agent-badge";
 import { MorningBrief } from "@/components/ai/morning-brief";
-import { routeDoctorFromRow } from "@/lib/ai/orchestrator";
+import { CONTACTO_TYPES } from "@/lib/actividad-equipo";
 import { getForecastMes } from "@/lib/forecast";
 import { todayMX, monthStartMX, hourMX } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -99,7 +98,9 @@ export default async function HoyPage({
   // los dos universos, y con 6.208 prospectos scoreados los bloques Activación,
   // Crecimiento y Riesgo quedaban vacíos — el usuario creía que no había nada
   // que hacer con la base acreditada. Cada motor pide (y cuenta) lo suyo.
-  const POR_MOTOR = 8;
+  // 5 por motor: con 8 la pantalla era una pared de ~32 fichas y dejaba de
+  // leerse como "mi plan de hoy" (feedback Rocío/Pancho 22/8)
+  const POR_MOTOR = 5;
   const motorQuery = (buckets: PriorityBucket[], head = false) => {
     let q = supabase
       .from("doctors")
@@ -127,9 +128,10 @@ export default async function HoyPage({
     fc,
     motores,
     { data: alertsRaw, count: alertsTotal },
-    { data: myTasksRaw },
+    { data: myTasksRaw, count: myTasksTotal },
     { data: profilesRaw },
     { data: waWaitingRaw },
+    { count: monthContacts },
   ] = await Promise.all([
     // is_demo=false en todo lo que se cuenta o se pondera: las filas sintéticas del
     // seed cuelgan de doctores REALES y están asignadas a personas reales, así que
@@ -151,6 +153,8 @@ export default async function HoyPage({
     motoresData,
     // el count es exacto aunque la lista venga recortada a 30: el tile de arriba
     // tiene que decir cuántas alertas hay, no cuántas entran en la columna
+    // con cientos de alertas abiertas, listar 30 era una pared: se muestran las
+    // 8 más severas y el total exacto va en el título del bloque
     supabase
       .from("alerts")
       .select("*", { count: "exact" })
@@ -158,16 +162,16 @@ export default async function HoyPage({
       .eq("is_demo", false)
       .order("severity", { ascending: true })
       .order("created_at", { ascending: false })
-      .limit(30),
+      .limit(8),
     supabase
       .from("tasks")
-      .select("*")
+      .select("*", { count: "exact" })
       .eq("assigned_to", user!.id)
       .eq("status", "pendiente")
       .eq("is_demo", false)
       .lte("due_date", todayISO)
       .order("due_date", { ascending: true })
-      .limit(20),
+      .limit(8),
     supabase.from("profiles").select("id, nombre"),
     supabase
       .from("wa_conversations")
@@ -177,6 +181,14 @@ export default async function HoyPage({
       .eq("unanswered", true)
       .in("activity_bucket", ["7d", "30d"])
       .limit(60),
+    // contactos reales del equipo en el mes (llamadas, videollamadas, visitas,
+    // reuniones, WhatsApp, KeepDays) — lo que Rocío pide "que contabilice"
+    supabase
+      .from("activities")
+      .select("id", { count: "exact", head: true })
+      .eq("is_demo", false)
+      .in("type", [...CONTACTO_TYPES])
+      .gte("occurred_at", `${monthStartISO}T00:00:00-06:00`),
   ]);
 
   const doctors = motores.flatMap((m) => m.doctors);
@@ -188,25 +200,6 @@ export default async function HoyPage({
   const pagados = fc?.casos_pagados_mes_ledger ?? null;
   const forecast = fc?.forecast_casos_nuevos ?? closed;
   const gap = fc?.gap_vs_objetivo ?? null;
-
-  // Señales de SERVICIO por doctor para el router determinístico (labels de
-  // agente). Solo las reglas que representan un caso trabado o una entrega
-  // demorada: las de activación/retención ya las cubre el lifecycle, y contarlas
-  // acá pintaría de SERVICIO a doctores que no tienen ningún problema abierto.
-  const SERVICE_RULE_KEYS = new Set([
-    "caso_atrasado",
-    "aprobacion_pendiente",
-    "oportunidad_estancada",
-  ]);
-  const alertCountByDoctor = new Map<string, number>();
-  for (const a of alerts) {
-    if (!a.doctor_id || !SERVICE_RULE_KEYS.has(a.rule_key)) continue;
-    alertCountByDoctor.set(
-      a.doctor_id,
-      (alertCountByDoctor.get(a.doctor_id) ?? 0) + 1
-    );
-  }
-
 
   const profileName = new Map(
     ((profilesRaw ?? []) as { id: string; nombre: string }[]).map((p) => [
@@ -236,7 +229,7 @@ export default async function HoyPage({
         (a.activity_bucket === "7d" ? 0 : 1) - (b.activity_bucket === "7d" ? 0 : 1) ||
         b.doctor.new_case_count - a.doctor.new_case_count
     )
-    .slice(0, 12);
+    .slice(0, 8);
 
   const hour = hourMX();
   const saludo = hour < 12 ? "Buen día" : hour < 19 ? "Buenas tardes" : "Buenas noches";
@@ -249,7 +242,10 @@ export default async function HoyPage({
           <h1 className="text-xl font-semibold tracking-tight">
             {saludo}, {profile?.nombre?.split(" ")[0]}
           </h1>
-          <p className="text-sm capitalize text-muted-foreground">{monthLabel}</p>
+          <p className="text-sm text-muted-foreground">
+            <span className="capitalize">{monthLabel}</span> — tu plan del día:
+            a quién contactar, tus tareas y los avisos del sistema
+          </p>
         </div>
         <div className="flex gap-1">
           {[
@@ -296,7 +292,9 @@ export default async function HoyPage({
                   ? "text-orange-600 dark:text-orange-400"
                   : "text-emerald-600 dark:text-emerald-400",
           },
-          { label: "Alertas abiertas", value: alertsTotal ?? alerts.length },
+          // reemplaza al tile "Alertas abiertas": un stock de cientos no dice
+          // nada del día; los contactos del mes sí miden el trabajo del equipo
+          { label: "Contactos del mes", value: String(monthContacts ?? 0) },
         ].map((m) => (
           <div key={m.label} className="bg-background p-4">
             <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -312,9 +310,15 @@ export default async function HoyPage({
       <div className="grid gap-6 lg:grid-cols-3">
         {/* ---------- prioridades ---------- */}
         <div className="space-y-5 lg:col-span-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Tus prioridades
-          </h2>
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              ¿A quién contacto hoy?
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              El CRM elige los doctores que más mueven la aguja y te dice por
+              qué. Arrancá por acá, de arriba hacia abajo.
+            </p>
+          </div>
           {doctors.length === 0 ? (
             <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
               Sin prioridades pendientes. O está todo al día, o todavía no se
@@ -340,10 +344,6 @@ export default async function HoyPage({
                       const wa = waLink(d.whatsapp ?? d.phone);
                       const tel = telLink(d.phone ?? d.whatsapp);
                       const reasons = (d.priority_reasons ?? []) as PriorityReason[];
-                      // router determinístico (gratis, sin LLM): qué agente atiende a este doctor
-                      const routing = routeDoctorFromRow(d, {
-                        serviceSignals: alertCountByDoctor.get(d.id) ?? 0,
-                      });
                       return (
                         <div
                           key={d.id}
@@ -358,9 +358,6 @@ export default async function HoyPage({
                                 >
                                   {d.nombre}
                                 </Link>
-                                <span className="text-sm tabular-nums text-muted-foreground">
-                                  {d.priority_score}
-                                </span>
                                 <Badge
                                   variant="outline"
                                   className={cn(
@@ -374,12 +371,6 @@ export default async function HoyPage({
                                     ? LIFECYCLE_LABELS[d.lifecycle_stage]
                                     : "No acreditado"}
                                 </Badge>
-                                {routing.primary ? (
-                                  <AgentBadge
-                                    agent={routing.primary.agent}
-                                    title={routing.primary.reason}
-                                  />
-                                ) : null}
                                 {d.is_demo ? (
                                   <Badge variant="outline" className="h-4 px-1 text-[10px] font-normal">
                                     demo
@@ -387,7 +378,7 @@ export default async function HoyPage({
                                 ) : null}
                               </div>
                               <ul className="mt-1 space-y-0.5 text-sm text-muted-foreground">
-                                {reasons.slice(0, 3).map((r) => (
+                                {reasons.slice(0, 2).map((r) => (
                                   <li key={r.code}>• {r.text}</li>
                                 ))}
                               </ul>
@@ -440,9 +431,19 @@ export default async function HoyPage({
         {/* ---------- columna derecha: tareas de hoy + alertas ---------- */}
         <div className="space-y-6">
           <div className="space-y-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Tus tareas de hoy
-            </h2>
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Tus tareas de hoy
+              </h2>
+              {(myTasksTotal ?? 0) > myTasks.length ? (
+                <Link
+                  href="/tareas"
+                  className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                >
+                  ver las {myTasksTotal} en Tareas
+                </Link>
+              ) : null}
+            </div>
             <TaskList
               tasks={myTasks}
               profileName={Object.fromEntries(profileName)}
@@ -502,15 +503,26 @@ export default async function HoyPage({
                 })}
               </ul>
               <p className="text-xs text-muted-foreground">
-                El doctor habló último y nadie respondió (export Periskope 7/8).
+                El doctor habló último y nadie le respondió — se actualiza solo con cada mensaje que entra por Periskope.
               </p>
             </div>
           ) : null}
 
           <div className="space-y-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Alertas
-            </h2>
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Alertas
+                {(alertsTotal ?? 0) > alerts.length ? (
+                  <span className="ml-1.5 font-normal normal-case tracking-normal">
+                    · {alerts.length} de {alertsTotal}
+                  </span>
+                ) : null}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Avisos automáticos (rechazos, casos trabados, doctores
+                frenados), de más a menos grave. ✓ resuelta · ✕ no aplica.
+              </p>
+            </div>
             {alerts.length === 0 ? (
               <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
                 Sin alertas abiertas.

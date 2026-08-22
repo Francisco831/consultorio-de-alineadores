@@ -11,7 +11,7 @@ export async function signIn(formData: FormData) {
   if (error) {
     redirect(`/login?error=${encodeURIComponent("Email o contraseña incorrectos")}`);
   }
-  redirect("/doctores");
+  redirect("/hoy");
 }
 
 export async function signOut() {
