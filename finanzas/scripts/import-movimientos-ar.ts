@@ -167,8 +167,38 @@ async function main() {
     };
   });
 
+  // Filas que YA NO están en la caja: Claudia editó el monto/el texto (la clave
+  // es de contenido: editar = clave nueva) o borró la fila. Sin esto la vieja
+  // queda viva y el conteo del gate falla todos los días. Se anulan, no se
+  // borran (regla del ledger: status='void' + audit).
+  const clavesEntrantes = new Set(rows.map((r) => r.external_key));
+  const enBaseAntes = await fetchAllRows<{ id: string; external_key: string | null; occurred_on: string; amount: string; currency: string; description: string | null }>(
+    db, "movements", "id, external_key, occurred_on, amount, currency, description",
+    (q) => q.eq("company_id", companyId).eq("source", "seed").neq("status", "void")
+  );
+  const desaparecidos = enBaseAntes.filter((m) => m.external_key && !clavesEntrantes.has(m.external_key));
+  const LIMITE_DESAPARECIDOS = 15;
+  if (desaparecidos.length) {
+    console.log(`\nFilas que ya no están en la caja (editadas o borradas): ${desaparecidos.length}`);
+    for (const m of desaparecidos.slice(0, 20)) {
+      console.log(`  · ${m.occurred_on} ${m.currency} ${Number(m.amount).toLocaleString("es-AR")} — ${m.description ?? "—"}`);
+    }
+    if (desaparecidos.length > LIMITE_DESAPARECIDOS) {
+      console.error(`\n✗ GATE: desaparecieron ${desaparecidos.length} filas (límite ${LIMITE_DESAPARECIDOS}).`);
+      console.error("  Eso no parece una edición puntual sino un problema de la fuente: NO se escribe nada.");
+      process.exit(1);
+    }
+  }
+
   const written = await upsertBatched(db, "movements", rows, "company_id,external_key");
   console.log(`✓ ${written} movimientos upserteados`);
+
+  if (desaparecidos.length) {
+    const { error } = await db.from("movements").update({ status: "void" })
+      .in("id", desaparecidos.map((m) => m.id));
+    if (error) throw new Error(`anular desaparecidos: ${error.message}`);
+    console.log(`✓ ${desaparecidos.length} anuladas (status void)`);
+  }
 
   // ---------- GATE ----------
   const enBase = await fetchAllRows<{ occurred_on: string; currency: string; kind: string; amount: string }>(

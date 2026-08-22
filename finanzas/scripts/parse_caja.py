@@ -113,15 +113,24 @@ def parse_tab(rows, tab, dra, year=2026):
         })
     return movs
 
+def celda(c):
+    """Normaliza una celda del JSON a lo que devolvería openpyxl.
+
+    Dos diferencias del GAS: las fechas llegan como "yyyy-MM-dd", y los enteros
+    como int (openpyxl da float). El int importa: `motivo` se vuelca a texto y
+    entra en la external_key — "1" y "1.0" serían dos claves para la MISMA fila.
+    """
+    if isinstance(c, str) and RE_FECHA.match(c):
+        return datetime.strptime(c, '%Y-%m-%d')
+    # openpyxl devuelve int o float según cómo esté guardada la celda ("86500"
+    # → int, "1.0" → float) y el JSON del GAS pierde esa distinción. Forma
+    # canónica única: los enteros van como int en AMBOS caminos.
+    if isinstance(c, float) and c.is_integer():
+        return int(c)
+    return c
+
 def materializar(rows):
-    """celdas "yyyy-MM-dd" (del GAS) → datetime, como las ve openpyxl."""
-    out = []
-    for r in rows:
-        out.append([
-            datetime.strptime(c, '%Y-%m-%d') if isinstance(c, str) and RE_FECHA.match(c) else c
-            for c in r
-        ])
-    return out
+    return [[celda(c) for c in r] for r in rows]
 
 def xlsx_a_raw(path_xlsx, path_out):
     from openpyxl import load_workbook
@@ -137,7 +146,7 @@ def xlsx_a_raw(path_xlsx, path_out):
             filas.append([
                 c.strftime('%Y-%m-%d') if isinstance(c, datetime) else (None if c == '' else c)
                 for c in r
-            ])
+            ])  # celda() normaliza al parsear: el raw guarda el crudo
         tabs[tab] = filas
     wb.close()
     json.dump({'tabs': tabs}, open(path_out, 'w'), ensure_ascii=False)
