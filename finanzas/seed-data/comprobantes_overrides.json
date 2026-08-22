@@ -94,5 +94,12 @@
     "fileId": "14rlbhtqpwtMHePL-nykBdtDYqCEwdPSV",
     "movementIds": [],
     "nota": "Factura aire acondicionado: emitida a KEEPSMILING S.A., no al consultorio — silenciada"
+  },
+  {
+    "fileId": "1c5M0JAxhvIgJHsgYP901imCCnN4-AYRI",
+    "movementIds": [
+      "97748f31-2e8f-477c-919c-346f3bc30587"
+    ],
+    "nota": "Comprobante 'Venini Agustina' 19/8 = la 1ra consulta de Tamara Cejas (pagó a nombre de otro)"
   }
 ]
