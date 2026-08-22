@@ -52,5 +52,31 @@
   "caja:00ee924359b36bd6": {
     "cuenta": "Efectivo USD",
     "nota": "Etchegoyen USD 500 21/8 (tc 1550) — billetes"
+  },
+  "caja:78f94fadec453045": {
+    "cuenta": "Efectivo",
+    "moneda": "ARS",
+    "nota": "21/4: -60.000 en la columna USD de una fila vacía — Pancho: es en PESOS (gasto/retiro), imposible USD 60.000"
+  },
+  "caja:09bc97377d884167": {
+    "cuenta": "Efectivo",
+    "moneda": "ARS",
+    "nota": "29/4: 66.965 en la columna USD de la fila del retiro de Matelli — Pancho: es en PESOS; el retiro fue -50.000 y -66.965"
+  },
+  "caja:dc15cc851ef3c231": {
+    "cuenta": "Sin medio (a revisar)",
+    "nota": "Capria 27/1: irrastreable (pre-extracto, MP no era canal) — decisión Pancho 21/8, queda como ingreso de medio desconocido"
+  },
+  "caja:5618c11efea35927": {
+    "cuenta": "Sin medio (a revisar)",
+    "nota": "Doherty 27/1: ídem irrastreable"
+  },
+  "caja:91c3f39c820ae513": {
+    "cuenta": "Sin medio (a revisar)",
+    "nota": "Florio 27/1: ídem irrastreable"
+  },
+  "caja:b58001da9c5d93ab": {
+    "cuenta": "Sin medio USD (a revisar)",
+    "nota": "USD 100 retira Maru, caja de Coni — Pancho: no interesa"
   }
 }

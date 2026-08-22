@@ -77,7 +77,7 @@ async function main() {
     const keys = new KeyBuilder();
     // correcciones por fila verificadas contra el extracto (pesos en la
     // columna de dólares, medios confirmados a mano): seed-data/medios_overrides.json
-    let overrides: Record<string, { cuenta?: string; moneda?: "ARS" | "USD"; nota?: string }> = {};
+    let overrides: Record<string, { cuenta?: string; moneda?: "ARS" | "USD"; ignorar?: boolean; nota?: string }> = {};
     try {
       overrides = JSON.parse(readFileSync(resolve(__dirname, "../seed-data/medios_overrides.json"), "utf8"));
     } catch { /* sin overrides */ }
@@ -89,6 +89,9 @@ async function main() {
         const key = keys.build("caja", m.tab, m.fecha, m.paciente, m.ars, m.usd, m.motivo, currency);
         const o = overrides[key];
         if (o) aplicados++;
+        // pata espuria (monto fantasma en la columna equivocada de la caja):
+        // no entra a la fuente → el paso de "desaparecidos" la anula en la base
+        if (o?.ignorar) continue;
         movs.push({
           ...m,
           currency: o?.moneda ?? currency,
