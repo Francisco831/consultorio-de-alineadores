@@ -143,7 +143,13 @@ export default async function EquipoPage() {
   );
 
   // reales del MES calendario para el panel de metas (la tabla de arriba usa 30d)
-  const CONTACTO_TYPES = new Set(["llamada", "whatsapp", "visita", "reunion"]);
+  const CONTACTO_TYPES = new Set([
+    "llamada",
+    "videollamada",
+    "whatsapp",
+    "visita",
+    "reunion",
+  ]);
   const mes = new Map<string, { contactos: number; videollamadas: number; keepdays: number }>();
   for (const a of actsMes ?? []) {
     if (!a.created_by) continue;
@@ -151,7 +157,9 @@ export default async function EquipoPage() {
       mes.set(a.created_by, { contactos: 0, videollamadas: 0, keepdays: 0 });
     const m = mes.get(a.created_by)!;
     if (CONTACTO_TYPES.has(a.type)) m.contactos++;
-    if (a.type === "reunion") m.videollamadas++;
+    // "reunion" sigue contando: era el tipo con el que se registraban las
+    // videollamadas hasta que existió el tipo propio (0038)
+    if (a.type === "videollamada" || a.type === "reunion") m.videollamadas++;
     if (a.type === "keepday") m.keepdays++;
   }
 
