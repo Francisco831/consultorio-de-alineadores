@@ -6,6 +6,7 @@ import { formatDateShort } from "@/lib/dates";
 import { currentPeriodIn } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { calcularAlertas } from "@/lib/alertas";
+import { comisionClaudiaPorMes } from "@/lib/liquidaciones/comision-claudia-query";
 
 type Balance = {
   account_id: string; name: string; type: string; currency: string;
@@ -42,6 +43,7 @@ export default async function HoyPage({
     { data: recientesRaw },
     { data: mensualCuenta },
     { data: consultasRaw },
+    tratamientosPorMes,
   ] = await Promise.all([
     calcularAlertas(supabase, { companyId: ctx.companyId, config: ctx.config }),
     supabase.from("accounts").select("id, name, currency, ks_custody, separate_books")
@@ -70,6 +72,9 @@ export default async function HoyPage({
       .select("occurred_on, counterparty_id, category_id, description, category:categories!inner(name)")
       .eq("company_id", ctx.companyId).eq("kind", "income").neq("status", "void")
       .eq("categories.name", "Consulta").gte("occurred_on", "2026-01-01"),
+    // tratamientos nuevos = PRIMERA seña/cuota de Alineadores de cada paciente
+    // (misma cuenta que dispara la comisión de Claudia: un solo criterio)
+    comisionClaudiaPorMes(supabase, ctx.companyId),
   ]);
   const idsSep = (cuentasInfo ?? []).filter((a) => a.separate_books).map((a) => a.id);
   const ultimos = (ultimosRaw ?? []).filter((m) => !idsSep.includes(m.account_id)).slice(0, 10);
@@ -136,6 +141,14 @@ export default async function HoyPage({
   const consultasPrev = idxActual > 0 ? serieConsultas[idxActual - 1].n : null;
   const maxConsultas = Math.max(1, ...serieConsultas.map((s) => s.n));
 
+  // ---- Tratamientos nuevos (primer pago): misma serie de meses que arriba
+  const mesesUnion = [...new Set([...mesesConsulta, ...tratamientosPorMes.keys()])].sort();
+  const serieTrat = mesesUnion.map((m) => ({ mes: m, n: tratamientosPorMes.get(m)?.cantidad ?? 0 }));
+  const tratMes = tratamientosPorMes.get(periodo)?.cantidad ?? 0;
+  const idxTrat = serieTrat.findIndex((s) => s.mes === periodo);
+  const tratPrev = idxTrat > 0 ? serieTrat[idxTrat - 1].n : null;
+  const maxTrat = Math.max(1, ...serieTrat.map((s) => s.n));
+
   // ---- Disponibilidad: un bucket por moneda, JAMÁS sumados entre sí
   const porMoneda = new Map<string, Balance[]>();
   const sepBalances = ((balances ?? []) as Balance[]).filter((b) => idsSep.includes(b.account_id));
@@ -196,6 +209,7 @@ export default async function HoyPage({
     return `${p}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, "0")}`;
   };
   const deltaConsultas = consultasPrev === null ? null : consultasMes - consultasPrev;
+  const deltaTrat = tratPrev === null ? null : tratMes - tratPrev;
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">
@@ -207,55 +221,34 @@ export default async function HoyPage({
             <p className="text-sm capitalize text-muted-foreground">{nombreMes}</p>
           </div>
 
-          <Link
-            href={`/${empresa}/movimientos?f=ingresos&cat=${catConsultaId ?? ""}&desde=${periodo}-01&hasta=${finDeMes(periodo)}`}
-            className="group flex items-stretch gap-4 rounded-xl border bg-card px-4 py-3 transition-colors hover:bg-accent/40"
-            title="Ver los cobros de primera consulta de este mes"
-          >
-            <div className="flex flex-col justify-center">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Pacientes nuevos
-              </span>
-              <div className="flex items-baseline gap-2">
-                <span className="fig text-3xl font-semibold leading-none text-emerald-600 dark:text-emerald-400">
-                  {consultasMes}
-                </span>
-                {deltaConsultas !== null ? (
-                  <span className={cn("text-xs font-medium",
-                    deltaConsultas > 0 ? "text-emerald-600 dark:text-emerald-400"
-                      : deltaConsultas < 0 ? "text-red-600 dark:text-red-400"
-                      : "text-muted-foreground")}>
-                    {deltaConsultas > 0 ? "↑" : deltaConsultas < 0 ? "↓" : "="}
-                    {deltaConsultas !== 0 ? Math.abs(deltaConsultas) : ""}
-                  </span>
-                ) : null}
-              </div>
-              <span className="text-[11px] text-muted-foreground">
-                primeras consultas {consultasPrev !== null ? `· ${consultasPrev} el mes pasado` : ""}
-              </span>
-            </div>
-
-            {/* mini gráfico: un barrita por mes, la del mes en curso encendida */}
-            <div className="flex items-end gap-1 border-l pl-4" aria-hidden>
-              {serieConsultas.slice(-8).map((s) => {
-                const alto = Math.max(4, Math.round((s.n / maxConsultas) * 40));
-                const esActual = s.mes === periodo;
-                return (
-                  <span key={s.mes} className="flex flex-col items-center gap-1" title={`${s.mes}: ${s.n}`}>
-                    <span
-                      style={{ height: `${alto}px` }}
-                      className={cn("w-3 rounded-sm transition-colors",
-                        esActual ? "bg-emerald-500" : "bg-emerald-500/25 group-hover:bg-emerald-500/40")}
-                    />
-                    <span className={cn("text-[9px] tabular-nums",
-                      esActual ? "font-semibold text-foreground" : "text-muted-foreground")}>
-                      {s.mes.slice(5, 7)}
-                    </span>
-                  </span>
-                );
-              })}
-            </div>
-          </Link>
+          <div className="flex flex-wrap items-stretch gap-3">
+            <PulsoCard
+              titulo="Pacientes nuevos"
+              pie="primeras consultas"
+              n={consultasMes}
+              delta={deltaConsultas}
+              prev={consultasPrev}
+              serie={serieConsultas}
+              max={maxConsultas}
+              periodo={periodo}
+              tono="emerald"
+              href={`/${empresa}/movimientos?f=ingresos&cat=${catConsultaId ?? ""}&desde=${periodo}-01&hasta=${finDeMes(periodo)}`}
+              titleAttr="Ver los cobros de primera consulta de este mes"
+            />
+            <PulsoCard
+              titulo="Tratamientos nuevos"
+              pie={consultasMes > 0 ? `arrancaron · ${Math.round((tratMes / consultasMes) * 100)}% de las consultas` : "arrancaron tratamiento"}
+              n={tratMes}
+              delta={deltaTrat}
+              prev={tratPrev}
+              serie={serieTrat}
+              max={maxTrat}
+              periodo={periodo}
+              tono="sky"
+              href={`/${empresa}/liquidaciones`}
+              titleAttr="Primera seña o cuota de tratamiento — el mismo criterio que la comisión de Claudia"
+            />
+          </div>
         </header>
       ) : null}
 
@@ -709,5 +702,70 @@ function Kpi({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** Tarjeta de pulso: un número grande, su variación y las barras del año. */
+function PulsoCard({
+  titulo, pie, n, delta, prev, serie, max, periodo, tono, href, titleAttr,
+}: {
+  titulo: string;
+  pie: string;
+  n: number;
+  delta: number | null;
+  prev: number | null;
+  serie: { mes: string; n: number }[];
+  max: number;
+  periodo: string;
+  tono: "emerald" | "sky";
+  href: string;
+  titleAttr: string;
+}) {
+  const color = tono === "emerald"
+    ? { texto: "text-emerald-600 dark:text-emerald-400", barra: "bg-emerald-500", barraOff: "bg-emerald-500/25 group-hover:bg-emerald-500/40" }
+    : { texto: "text-sky-600 dark:text-sky-400", barra: "bg-sky-500", barraOff: "bg-sky-500/25 group-hover:bg-sky-500/40" };
+  return (
+    <Link
+      href={href}
+      title={titleAttr}
+      className="group flex items-stretch gap-4 rounded-xl border bg-card px-4 py-3 transition-colors hover:bg-accent/40"
+    >
+      <div className="flex flex-col justify-center">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {titulo}
+        </span>
+        <div className="flex items-baseline gap-2">
+          <span className={cn("fig text-3xl font-semibold leading-none", color.texto)}>{n}</span>
+          {delta !== null ? (
+            <span className={cn("text-xs font-medium",
+              delta > 0 ? "text-emerald-600 dark:text-emerald-400"
+                : delta < 0 ? "text-red-600 dark:text-red-400"
+                : "text-muted-foreground")}>
+              {delta > 0 ? "↑" : delta < 0 ? "↓" : "="}{delta !== 0 ? Math.abs(delta) : ""}
+            </span>
+          ) : null}
+        </div>
+        <span className="text-[11px] text-muted-foreground">
+          {pie}{prev !== null ? ` · ${prev} el mes pasado` : ""}
+        </span>
+      </div>
+      <div className="flex items-end gap-1 border-l pl-4" aria-hidden>
+        {serie.slice(-8).map((s) => {
+          const alto = Math.max(4, Math.round((s.n / max) * 40));
+          const esActual = s.mes === periodo;
+          return (
+            <span key={s.mes} className="flex flex-col items-center gap-1" title={`${s.mes}: ${s.n}`}>
+              <span
+                style={{ height: `${alto}px` }}
+                className={cn("w-3 rounded-sm transition-colors", esActual ? color.barra : color.barraOff)}
+              />
+              <span className={cn("text-[9px] tabular-nums", esActual ? "font-semibold text-foreground" : "text-muted-foreground")}>
+                {s.mes.slice(5, 7)}
+              </span>
+            </span>
+          );
+        })}
+      </div>
+    </Link>
   );
 }
