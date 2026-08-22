@@ -41,6 +41,7 @@ export default async function HoyPage({
     { data: porCobrar },
     { data: recientesRaw },
     { data: mensualCuenta },
+    { data: consultasRaw },
   ] = await Promise.all([
     calcularAlertas(supabase, { companyId: ctx.companyId, config: ctx.config }),
     supabase.from("accounts").select("id, name, currency, ks_custody, separate_books")
@@ -63,6 +64,12 @@ export default async function HoyPage({
       .order("occurred_on", { ascending: false }).order("created_at", { ascending: false }).limit(600),
     supabase.from("v_monthly_income_by_account").select("account_id, account_name, ks_custody, separate_books, month, currency, income")
       .eq("company_id", ctx.companyId).gte("month", "2026-01-01"),
+    // primeras consultas: el cobro de categoría "Consulta" es la puerta de
+    // entrada de cada paciente nuevo
+    supabase.from("movements")
+      .select("occurred_on, counterparty_id, category_id, description, category:categories!inner(name)")
+      .eq("company_id", ctx.companyId).eq("kind", "income").neq("status", "void")
+      .eq("categories.name", "Consulta").gte("occurred_on", "2026-01-01"),
   ]);
   const idsSep = (cuentasInfo ?? []).filter((a) => a.separate_books).map((a) => a.id);
   const ultimos = (ultimosRaw ?? []).filter((m) => !idsSep.includes(m.account_id)).slice(0, 10);
@@ -109,6 +116,25 @@ export default async function HoyPage({
   const cuadros = [...porCuenta.values()].sort((a, b) => b.total - a.total);
   const mesesDelAnio = ["2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09","2026-10","2026-11","2026-12"]
     .filter((m) => m <= periodo || cuadros.some((c) => c.meses.has(m)));
+
+  // ---- Primeras consultas: PACIENTES únicos por mes (uno puede pagar la
+  // consulta en dos partes el mismo día — eso es un paciente, no dos)
+  const consultasPorMes = new Map<string, Set<string>>();
+  let catConsultaId: string | null = null;
+  for (const c of consultasRaw ?? []) {
+    catConsultaId ??= c.category_id ?? null;
+    const mes = c.occurred_on.slice(0, 7);
+    const quien = c.counterparty_id ?? (c.description ?? "").toLowerCase().trim();
+    if (!quien) continue;
+    if (!consultasPorMes.has(mes)) consultasPorMes.set(mes, new Set());
+    consultasPorMes.get(mes)!.add(quien);
+  }
+  const mesesConsulta = [...consultasPorMes.keys()].sort();
+  const serieConsultas = mesesConsulta.map((m) => ({ mes: m, n: consultasPorMes.get(m)!.size }));
+  const consultasMes = consultasPorMes.get(periodo)?.size ?? 0;
+  const idxActual = serieConsultas.findIndex((s) => s.mes === periodo);
+  const consultasPrev = idxActual > 0 ? serieConsultas[idxActual - 1].n : null;
+  const maxConsultas = Math.max(1, ...serieConsultas.map((s) => s.n));
 
   // ---- Disponibilidad: un bucket por moneda, JAMÁS sumados entre sí
   const porMoneda = new Map<string, Balance[]>();
@@ -165,8 +191,74 @@ export default async function HoyPage({
     };
   }
 
+  const finDeMes = (p: string) => {
+    const [y, m] = p.split("-").map(Number);
+    return `${p}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, "0")}`;
+  };
+  const deltaConsultas = consultasPrev === null ? null : consultasMes - consultasPrev;
+
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">
+      {/* ---- encabezado: el mes + el pulso de pacientes nuevos ---- */}
+      {serieConsultas.length > 0 ? (
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">{ctx.config.nombre}</h1>
+            <p className="text-sm capitalize text-muted-foreground">{nombreMes}</p>
+          </div>
+
+          <Link
+            href={`/${empresa}/movimientos?f=ingresos&cat=${catConsultaId ?? ""}&desde=${periodo}-01&hasta=${finDeMes(periodo)}`}
+            className="group flex items-stretch gap-4 rounded-xl border bg-card px-4 py-3 transition-colors hover:bg-accent/40"
+            title="Ver los cobros de primera consulta de este mes"
+          >
+            <div className="flex flex-col justify-center">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Pacientes nuevos
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="fig text-3xl font-semibold leading-none text-emerald-600 dark:text-emerald-400">
+                  {consultasMes}
+                </span>
+                {deltaConsultas !== null ? (
+                  <span className={cn("text-xs font-medium",
+                    deltaConsultas > 0 ? "text-emerald-600 dark:text-emerald-400"
+                      : deltaConsultas < 0 ? "text-red-600 dark:text-red-400"
+                      : "text-muted-foreground")}>
+                    {deltaConsultas > 0 ? "↑" : deltaConsultas < 0 ? "↓" : "="}
+                    {deltaConsultas !== 0 ? Math.abs(deltaConsultas) : ""}
+                  </span>
+                ) : null}
+              </div>
+              <span className="text-[11px] text-muted-foreground">
+                primeras consultas {consultasPrev !== null ? `· ${consultasPrev} el mes pasado` : ""}
+              </span>
+            </div>
+
+            {/* mini gráfico: un barrita por mes, la del mes en curso encendida */}
+            <div className="flex items-end gap-1 border-l pl-4" aria-hidden>
+              {serieConsultas.slice(-8).map((s) => {
+                const alto = Math.max(4, Math.round((s.n / maxConsultas) * 40));
+                const esActual = s.mes === periodo;
+                return (
+                  <span key={s.mes} className="flex flex-col items-center gap-1" title={`${s.mes}: ${s.n}`}>
+                    <span
+                      style={{ height: `${alto}px` }}
+                      className={cn("w-3 rounded-sm transition-colors",
+                        esActual ? "bg-emerald-500" : "bg-emerald-500/25 group-hover:bg-emerald-500/40")}
+                    />
+                    <span className={cn("text-[9px] tabular-nums",
+                      esActual ? "font-semibold text-foreground" : "text-muted-foreground")}>
+                      {s.mes.slice(5, 7)}
+                    </span>
+                  </span>
+                );
+              })}
+            </div>
+          </Link>
+        </header>
+      ) : null}
+
       {/* ---- alertas: lo que el sistema encontró solo ---- */}
       {alertas.length > 0 ? (
         <section className="space-y-1.5">

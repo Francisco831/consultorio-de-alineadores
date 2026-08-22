@@ -82,5 +82,9 @@
   "caja:18bfe6de3ab99886": {
     "cuenta": "Mercado Pago",
     "nota": "Tamara Cejas 19/8 (1ra consulta): la pagó MARIA AGUSTINA VENINI — transferencia Galicia $35.000 19/8 14:11, op 42686292686. Venini NO es paciente (cero filas en la caja 2026) y su línea era la única suelta del MP ese día."
+  },
+  "caja:be407cf8e2478458": {
+    "cuenta": "Cuenta KS",
+    "nota": "Cordoni Laura $1.000 18/3: irrastreable (el extracto MP de marzo solo cubre 25, 27 y 31). Decisión Pancho 21/8: a Cuenta KS, como el resto de las filas de Matelli de ese día."
   }
 }
