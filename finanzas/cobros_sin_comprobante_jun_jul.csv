@@ -1,0 +1,59 @@
+fecha,moneda,monto,paciente,cuenta,concepto,deberia_tener_comprobante
+2026-06-02,ARS,55000,Zoff Ivana,Mercado Pago,16-17,SI
+2026-06-05,ARS,105000,Pistone Paula,Mercado Pago,junio-julio y agosto,SI
+2026-06-05,ARS,35000,Garcia Soledad,Mercado Pago,junio,SI
+2026-06-08,ARS,150000,Acri Fiorella,Mercado Pago,contenciones,SI
+2026-06-17,ARS,35000,Etchegoyen Ignacio,Mercado Pago,junio,SI
+2026-06-19,ARS,592000,Agustina Hogner,Cuenta KS,t/c $1480 dolares 400,SI
+2026-06-24,ARS,35000,Fernandez Lindsell,Mercado Pago,junio,SI
+2026-06-24,ARS,70000,Longinova Maria,Mercado Pago,junio y julio,SI
+2026-06-26,ARS,5000,Sanchez Michelle,Mercado Pago,junio,SI
+2026-06-29,ARS,634000,Badiola Ramiro,Cuenta KS,Abona cuota,SI
+2026-06-29,ARS,37500,Sofia Russo,Mercado Pago,placa Maru/Coni,SI
+2026-06-29,ARS,950000,Sofia Russo,Mercado Pago,Abona cuota 1 Maru/Coni,SI
+2026-07-04,ARS,1200000,Evelin Herrera,Cuenta KS,pago cuota mayo Dra Franco,SI
+2026-07-04,ARS,1200000,Evelin Herrera,Cuenta KS,pago cuota junio Dra Franco,SI
+2026-07-06,ARS,200000,De Sousa Valentina,Mercado Pago,contenciones,SI
+2026-07-13,ARS,400000,Daira Castellón,Mercado Pago,cuota 1 de 3 etapa adicional,SI
+2026-07-15,ARS,35000,Poccard Manuel,Mercado Pago,julio,SI
+2026-07-17,ARS,35000,Vilella Agustina,Mercado Pago,Julio,SI
+2026-07-20,ARS,200000,Granoni Mariana,Mercado Pago,Contenciones,SI
+2026-07-22,ARS,35000,Vicky Albarracin,Mercado Pago,julio,SI
+2026-06-05,ARS,70000,Demasi Melanie,Efectivo,junio-julio,no (efectivo)
+2026-06-09,ARS,60000,Rossi Ileana,Efectivo,1-2 y 3,no (efectivo)
+2026-06-10,ARS,40000,Maria José Colimodio,Efectivo,Junio,no (efectivo)
+2026-06-10,ARS,35000,Gastón Gallo,Efectivo,Junio,no (efectivo)
+2026-06-10,ARS,35000,Badiola Ramiro,Efectivo,Junio,no (efectivo)
+2026-06-10,ARS,35000,Lazáro Magdalena,Efectivo,Junio,no (efectivo)
+2026-06-10,ARS,40000,Pratolongo Jano,Efectivo,Junio,no (efectivo)
+2026-06-16,ARS,200000,Tonello Fiorella,Efectivo,Abona a cuenta de cuota 3 de 4,no (efectivo)
+2026-06-17,ARS,40000,Quiroga Macarena,Efectivo,junio,no (efectivo)
+2026-06-17,USD,400,Etchegoyen Ignacio,Efectivo USD,Abona cuota,no (efectivo)
+2026-06-17,ARS,100000,Rhina Olivares,Efectivo,contenciones,no (efectivo)
+2026-06-19,ARS,35000,Mariano Reyes,Efectivo,1era consulta,no (efectivo)
+2026-06-19,ARS,30000,Masut Gabriela,Efectivo,junio,no (efectivo)
+2026-06-19,ARS,35000,Agustina Hogner,Efectivo,junio,no (efectivo)
+2026-06-23,ARS,60000,Peña Rocio,Efectivo,junio y julio,no (efectivo)
+2026-06-23,ARS,30000,Dursi Candela,Efectivo,junio,no (efectivo)
+2026-06-23,ARS,30000,Rozenbaum Lia,Efectivo,junio,no (efectivo)
+2026-06-24,ARS,35000,Natalia Szalontai,Efectivo,1ra consulta,no (efectivo)
+2026-06-26,ARS,30000,Sanchez Michelle,Efectivo,junio,no (efectivo)
+2026-06-26,ARS,35000,Suzel Dalvia,Efectivo,junio,no (efectivo)
+2026-07-01,ARS,40000,Alcoba Lopez Ricardo,Efectivo,mayo y junio,no (efectivo)
+2026-07-01,ARS,35000,Lazaro Magdalena,Efectivo,julio,no (efectivo)
+2026-07-03,ARS,70000,Nisenbaum Martín,Efectivo,julio agosto,no (efectivo)
+2026-07-07,ARS,150000,Longobardi Vanesa,Efectivo,Conteciones prueba en consultorio,no (efectivo)
+2026-07-08,ARS,30000,Lombar Julieta,Efectivo,cobro,no (efectivo)
+2026-07-14,ARS,60000,Rossi Ileana,Efectivo,4-5-y 6,no (efectivo)
+2026-07-14,ARS,300000,Luckow Janet,Efectivo,contenciones,no (efectivo)
+2026-07-14,ARS,60000,Seoane Laura,Efectivo,3 y 4,no (efectivo)
+2026-07-14,ARS,60000,Doto Lautaro,Efectivo,cobro,no (efectivo)
+2026-07-15,ARS,35000,Macarena Quiroga,Efectivo,Julio,no (efectivo)
+2026-07-15,ARS,330000,ingreso de Dra Matelli,Efectivo,Paciente Bianc hi Ana,no (efectivo)
+2026-07-15,ARS,30000,Badiola Ramiro,Efectivo,julio,no (efectivo)
+2026-07-17,ARS,35000,Hogner Agustina,Efectivo,Julio,no (efectivo)
+2026-07-22,ARS,35000,Dalvia Suzel,Efectivo,julio,no (efectivo)
+2026-07-22,ARS,35000,Marcelo Tiseyra,Efectivo,1era consulta,no (efectivo)
+2026-07-22,ARS,35000,Gutierrez Juana,Efectivo,julio,no (efectivo)
+2026-07-28,ARS,200000,Zollino Daniela,Efectivo,contenciones,no (efectivo)
+2026-07-28,ARS,386000,Russo Sofia,Efectivo,a cta de cuota 2 de 4,no (efectivo)
