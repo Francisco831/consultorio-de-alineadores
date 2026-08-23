@@ -14,6 +14,12 @@ const claveConApodos = (nombre: string) =>
 // "cuota 3" a secas (sin "de Y"): cuenta como cuota numerada del plan ya conocido
 const RE_CUOTA_SUELTA = /c(?:uo)?ta\s*\.?\s*(\d+)\b(?!\s*de)/i;
 
+// "parte de cuota 3", "a cta de cuota 2", "resto/saldo de cuota": el monto NO
+// es una cuota entera — no puede pisar la última cuota conocida (bug real:
+// la fila de USD 300 de Etchegoyen "cuota 2 + a cta de cuota 3" desinflaba
+// el pendiente). Como mucho la sube, si es lo único que hay.
+const RE_PARCIAL = /\bparte\b|\bresto\b|\bsaldo\b|\bse\u00f1a\b|\ba\s*c(?:uo|uen)?ta\.?\s*de\b/i;
+
 // "tc 1550" / "t/c $1.550": cuota en dólares con el tipo de cambio anotado
 const RE_TC = /\bt\/?c\s*\$?\s*[\d.,]+/i;
 
@@ -82,24 +88,38 @@ export function planesPacientes(pagos: PagoPlan[], hoy?: string): PlanPaciente[]
     a.pagadoArs += p.ars; a.pagadoUsd += p.usd;
     if (p.fecha > a.ultimoPago) a.ultimoPago = p.fecha;
     if (p.doctora) a.doctora = p.doctora;
+    // Una fila entera pisa la última cuota (y fija la moneda del plan); una
+    // PARCIAL solo puede subirla en la moneda ya vigente — nunca desinflar el
+    // pendiente ni cambiar el plan de moneda por una seña chica.
+    const parcial = RE_PARCIAL.test(p.motivo);
+    const anotaCuota = (divisor: number) => {
+      if (p.fecha < a.ultimaCuotaFecha) return;
+      if (parcial) {
+        if (p.ars > 0 && p.ars > a.ultimaCuotaArs && a.ultimaCuotaUsd === 0) a.ultimaCuotaArs = p.ars;
+        else if (p.usd > 0 && p.usd > a.ultimaCuotaUsd && a.ultimaCuotaArs === 0) a.ultimaCuotaUsd = p.usd;
+        return;
+      }
+      if (p.ars > 0) { a.ultimaCuotaArs = p.ars / divisor; a.ultimaCuotaUsd = 0; a.ultimaCuotaFecha = p.fecha; }
+      else if (p.usd > 0) { a.ultimaCuotaUsd = p.usd / divisor; a.ultimaCuotaArs = 0; a.ultimaCuotaFecha = p.fecha; }
+    };
+    // Tope sanitario: un typo tipo "cuota 3 de 600.000" no es un plan de 600
+    // cuotas (inflaría el pendiente en cientos de millones).
+    const planValido = (y: number) => y >= 1 && y <= 36;
     const doble = RE_CUOTA_DOBLE.exec(p.motivo);
     const simple = RE_CUOTA.exec(p.motivo);
     if (doble) {
-      a.plan = Math.max(a.plan, Number(doble[3]));
+      if (planValido(Number(doble[3]))) a.plan = Math.max(a.plan, Number(doble[3]));
       a.cuotas.add(Number(doble[1])); a.cuotas.add(Number(doble[2]));
-      if (p.ars > 0 && p.fecha >= a.ultimaCuotaFecha) { a.ultimaCuotaArs = p.ars / 2; a.ultimaCuotaUsd = 0; a.ultimaCuotaFecha = p.fecha; }
-      else if (p.usd > 0 && p.fecha >= a.ultimaCuotaFecha) { a.ultimaCuotaUsd = p.usd / 2; a.ultimaCuotaArs = 0; a.ultimaCuotaFecha = p.fecha; }
+      anotaCuota(2);
     } else if (simple) {
-      a.plan = Math.max(a.plan, Number(simple[2]));
+      if (planValido(Number(simple[2]))) a.plan = Math.max(a.plan, Number(simple[2]));
       a.cuotas.add(Number(simple[1]));
-      if (p.ars > 0 && p.fecha >= a.ultimaCuotaFecha) { a.ultimaCuotaArs = p.ars; a.ultimaCuotaUsd = 0; a.ultimaCuotaFecha = p.fecha; }
-      else if (p.usd > 0 && p.fecha >= a.ultimaCuotaFecha) { a.ultimaCuotaUsd = p.usd; a.ultimaCuotaArs = 0; a.ultimaCuotaFecha = p.fecha; }
+      anotaCuota(1);
     } else {
       const suelta = RE_CUOTA_SUELTA.exec(p.motivo);
       if (suelta) {
         a.cuotas.add(Number(suelta[1]));
-        if (p.ars > 0 && p.fecha >= a.ultimaCuotaFecha) { a.ultimaCuotaArs = p.ars; a.ultimaCuotaUsd = 0; a.ultimaCuotaFecha = p.fecha; }
-        else if (p.usd > 0 && p.fecha >= a.ultimaCuotaFecha) { a.ultimaCuotaUsd = p.usd; a.ultimaCuotaArs = 0; a.ultimaCuotaFecha = p.fecha; }
+        anotaCuota(1);
       }
     }
     por.set(k, a);
@@ -128,10 +148,10 @@ export function planesPacientes(pagos: PagoPlan[], hoy?: string): PlanPaciente[]
   return [...por.values()]
     .filter((a) => a.plan > 0)
     .map((a) => {
-      const pendienteCuotas = Math.max(0, a.plan - a.cuotas.size);
       // pagó la ÚLTIMA cuota del plan → terminado, aunque las primeras sean
-      // anteriores al histórico (la caja arranca en ene/2026)
+      // anteriores al histórico (la caja arranca en ene/2026): no debe nada
       const terminado = a.cuotas.has(a.plan);
+      const pendienteCuotas = terminado ? 0 : Math.max(0, a.plan - a.cuotas.size);
       const pendienteEstimadoArs = Math.round(pendienteCuotas * a.ultimaCuotaArs);
       const pendienteEstimadoUsd = Math.round(pendienteCuotas * a.ultimaCuotaUsd);
       // El progreso mide PLATA: una cuota inicial grande avanza la barra aunque
@@ -140,9 +160,9 @@ export function planesPacientes(pagos: PagoPlan[], hoy?: string): PlanPaciente[]
       // estimado posible, cae a la proporción de cuotas.
       const pagRef = pendienteEstimadoUsd > 0 ? a.pagadoUsd : a.pagadoArs;
       const pendRef = pendienteEstimadoUsd > 0 ? pendienteEstimadoUsd : pendienteEstimadoArs;
-      const progresoPct = pagRef + pendRef > 0
+      const progresoPct = Math.max(0, pagRef + pendRef > 0
         ? Math.min(100, Math.round((pagRef / (pagRef + pendRef)) * 100))
-        : Math.min(100, Math.round((a.cuotas.size / a.plan) * 100));
+        : Math.min(100, Math.round((a.cuotas.size / a.plan) * 100)));
       const ref = hoy ?? [...pagos].reduce((m, p) => (p.fecha > m ? p.fecha : m), "");
       const diasSinPagar = Math.max(0, Math.round((+new Date(ref) - +new Date(a.ultimoPago)) / 86400000));
       return {

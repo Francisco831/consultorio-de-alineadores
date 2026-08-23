@@ -108,3 +108,58 @@ test("motivoCompleto junta motivo, obs y medio — la única forma válida de ar
   );
   assert.ok(pareceCuota(motivoCompleto(null, { medio_raw: "tc 1550" })));
 });
+
+test("una parte de cuota chica NO pisa la última cuota conocida", () => {
+  const r = planesPacientes([
+    { paciente: "Lucia P", fecha: "2026-04-01", ars: 600000, usd: 0, motivo: "cuota 1 de 6", doctora: null },
+    { paciente: "Lucia P", fecha: "2026-05-01", ars: 600000, usd: 0, motivo: "cuota 2 de 6", doctora: null },
+    { paciente: "Lucia P", fecha: "2026-06-01", ars: 100000, usd: 0, motivo: "abona parte de cuota 3 de 6", doctora: null },
+  ], "2026-06-10");
+  // la cuota sigue siendo 600k: faltan 3 × 600k, no 3 × 100k
+  assert.equal(r[0].pendienteEstimadoArs, 1800000);
+  assert.equal(r[0].progresoPct, 42);  // 1,3M / 3,1M — no 81%
+});
+
+test("si SOLO hay filas parciales, el monto sirve de piso de cuota (Etchegoyen)", () => {
+  const r = planesPacientes([
+    { paciente: "Nacho E", fecha: "2026-03-27", ars: 0, usd: 500, motivo: "Abona cuota1 de 6 y parte de cuota 2 de 6", doctora: null },
+    { paciente: "Nacho E", fecha: "2026-05-06", ars: 0, usd: 300, motivo: "Abona cuota 2 de 6 U$S 250 y a cta de cuota 3 de 6 U$S 50", doctora: null },
+  ], "2026-05-10");
+  // la parcial de 300 no baja la cuota de 500: pendiente 4 × 500
+  assert.equal(r[0].cuotasPagadas, 2);
+  assert.equal(r[0].pendienteEstimadoUsd, 2000);
+});
+
+test("una seña parcial en otra moneda no cambia la moneda del plan", () => {
+  const r = planesPacientes([
+    { paciente: "Mix M", fecha: "2026-04-01", ars: 600000, usd: 0, motivo: "cuota 1 de 4", doctora: null },
+    { paciente: "Mix M", fecha: "2026-05-01", ars: 0, usd: 50, motivo: "parte de cuota 2 de 4", doctora: null },
+  ], "2026-05-10");
+  assert.equal(r[0].pendienteEstimadoUsd, 0);
+  assert.equal(r[0].pendienteEstimadoArs, 1200000);  // 2 × 600k
+});
+
+test("plan terminado: pendiente 0 y barra 100 aunque falten cuotas del histórico", () => {
+  const r = planesPacientes([
+    { paciente: "Vieja V", fecha: "2026-02-01", ars: 583333, usd: 0, motivo: "cuota 6 de 6", doctora: null },
+  ], "2026-08-01");
+  assert.equal(r[0].estado, "completo");
+  assert.equal(r[0].pendienteCuotas, 0);
+  assert.equal(r[0].pendienteEstimadoArs, 0);
+  assert.equal(r[0].progresoPct, 100);
+});
+
+test("un typo tipo 'cuota 3 de 600.000' no fabrica un plan de 600 cuotas", () => {
+  const r = planesPacientes([
+    { paciente: "Typo T", fecha: "2026-04-01", ars: 600000, usd: 0, motivo: "cuota 3 de 600.000", doctora: null },
+  ], "2026-05-01");
+  assert.equal(r.length, 0);  // sin plan válido no entra a la lista
+});
+
+test("el progreso nunca es negativo", () => {
+  const r = planesPacientes([
+    { paciente: "Nota C", fecha: "2026-04-01", ars: 600000, usd: 0, motivo: "cuota 1 de 4", doctora: null },
+    { paciente: "Nota C", fecha: "2026-05-01", ars: -900000, usd: 0, motivo: "ajuste", doctora: null },
+  ], "2026-05-10");
+  assert.equal(r[0].progresoPct, 0);
+});

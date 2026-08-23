@@ -122,11 +122,18 @@ async function main() {
   // moroso (o su plan no avanza). Pasa cuando la caja corre las columnas o
   // classify() no conoce una redacción nueva. No aborta, pero lo canta en
   // cada corrida de la mañana. Se busca en TODAS las columnas de texto.
+  const filaVista = new Set<string>();
   const invisibles = movs.filter((m) =>
     m.tipo === "cobro" &&
     m.categoria !== "Alineadores" && m.categoria !== "Contención" &&
     pareceCuota([m.paciente, m.motivo, m.obs, m.medio].filter(Boolean).join(" "))
-  );
+  ).filter((m) => {
+    // una fila con ARS y USD genera dos patas: avisar una sola vez
+    const k = `${m.tab}|${m.fecha}|${m.paciente}|${m.motivo}|${m.obs}`;
+    if (filaVista.has(k)) return false;
+    filaVista.add(k);
+    return true;
+  });
   if (invisibles.length) {
     console.log(`\n⚠ ${invisibles.length} cobro(s) con texto de cuota FUERA de Alineadores — el plan del paciente no los ve:`);
     for (const m of invisibles) {
