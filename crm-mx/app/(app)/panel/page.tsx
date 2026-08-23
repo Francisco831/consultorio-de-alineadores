@@ -84,12 +84,22 @@ export default async function PanelPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: profilesRaw } = await supabase
-    .from("profiles")
-    .select("id, nombre, rol, activo")
-    .order("nombre");
+  // último ingreso de cada uno (auth.users vía team_signins): el gate de rol
+  // vive en la función — a un rol sin gestión le devuelve error y el bloque
+  // "Ingresos al CRM" directamente no aparece
+  const [{ data: profilesRaw }, { data: signinsRaw }] = await Promise.all([
+    supabase.from("profiles").select("id, nombre, rol, activo").order("nombre"),
+    supabase.rpc("team_signins"),
+  ]);
   const profiles = profilesRaw ?? [];
   const equipo = profiles.filter((p) => p.activo && p.rol !== "VIEWER");
+  const lastSignIn = signinsRaw
+    ? new Map<string, string | null>(
+        (
+          signinsRaw as { user_id: string; last_sign_in_at: string | null }[]
+        ).map((s) => [s.user_id, s.last_sign_in_at])
+      )
+    : null;
 
   // persona del panel: ?u= válido, o quien está logueado
   const u =
@@ -280,6 +290,34 @@ export default async function PanelPage({
   }
   for (const lista of eventosDe.values())
     lista.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+
+  // ---- ingresos al CRM ("lo quiero ver en el panel", Pancho 22/8) ----
+  // OJO: last_sign_in_at es el último LOGIN — si la sesión quedó abierta de
+  // otro día, abrir la app no lo mueve; por eso el rojo solo salta en día
+  // hábil y la alarma de las 17:30 MX (api/sync/asistencia) mira también si
+  // cargaron algo.
+  const esDiaHabil = !["Sat", "Sun"].includes(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: MX_TZ,
+      weekday: "short",
+    }).format(new Date())
+  );
+  const diaMXDe = new Intl.DateTimeFormat("en-CA", { timeZone: MX_TZ });
+  const horaMX = new Intl.DateTimeFormat("es-MX", {
+    timeZone: MX_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const ingresoDe = (iso: string | null | undefined) => {
+    if (!iso) return { label: "nunca entró", hoy: false };
+    const hoy = diaMXDe.format(new Date(iso)) === todayISO;
+    return {
+      label: hoy
+        ? `hoy ${horaMX.format(new Date(iso))}`
+        : fmtTs.format(new Date(iso)),
+      hoy,
+    };
+  };
 
   // ---- agenda en tres franjas ----
   const vencidas = agenda.filter((t) => t.due_date && t.due_date < todayISO);
@@ -576,6 +614,47 @@ export default async function PanelPage({
 
         {/* ---------- columna derecha ---------- */}
         <div className="space-y-6">
+          {lastSignIn ? (
+            <div className="space-y-2">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Ingresos al CRM
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Último login de cada uno. En día hábil, quien no entró
+                  aparece en rojo; a las 17:30 de México sale la alarma por
+                  Slack si alguien no entró ni cargó nada.
+                </p>
+              </div>
+              <ul className="divide-y rounded-lg border bg-card text-sm">
+                {equipo.map((p) => {
+                  const ing = ingresoDe(lastSignIn.get(p.id));
+                  return (
+                    <li
+                      key={p.id}
+                      className="flex items-center justify-between px-4 py-2"
+                    >
+                      <span className="font-medium">
+                        {p.nombre.split(" ")[0]}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-xs tabular-nums",
+                          !ing.hoy && esDiaHabil
+                            ? "font-medium text-red-600 dark:text-red-400"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {ing.label}
+                        {!ing.hoy && esDiaHabil ? " · sin entrar hoy" : ""}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+
           <div className="space-y-2">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
