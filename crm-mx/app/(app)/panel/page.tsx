@@ -6,7 +6,7 @@ import { QuickLog } from "@/components/panel/quick-log";
 import { waLink, telLink, periskopeLink } from "@/lib/phone";
 import { todayMX, monthStartMX } from "@/lib/dates";
 import { MX_TZ, CONTACTO_TYPES } from "@/lib/actividad-equipo";
-import { resumenPorPais, PAIS_LABEL } from "@/lib/noloco-pais";
+import { resumenPorPaisDe, v2UserIdDe, PAIS_LABEL } from "@/lib/noloco-pais";
 import {
   ACTIVITY_TYPE_LABELS,
   TASK_TYPE_LABELS,
@@ -25,9 +25,9 @@ import { MessageCircle, Phone, ArrowRight } from "lucide-react";
 // Lo que pidió Rocío y dónde quedó: llamadas planificadas con resumen del
 // doctor → Agenda (tareas + mini-ficha con casos, tipos y eventos académicos);
 // reuniones realizadas + registrar lo conversado → bloque Reuniones + carga
-// rápida; contabilizar → tiles del mes. Pendientes conocidos: edad del doctor
-// (campo no existe), Google Calendar (sin integración) y "por país" (el CRM
-// espeja solo MEXICO).
+// rápida; contabilizar → tiles del mes; "por país" → tabla de SU mes en Noloco
+// (lib/noloco-pais.ts, por persona). Pendientes conocidos: edad del doctor
+// (campo no existe) y Google Calendar (sin integración).
 
 type DocMini = {
   id: string;
@@ -220,7 +220,12 @@ export default async function PanelPage({
         .eq("unanswered", true)
         .eq("doctor.owner_id", u)
         .limit(30),
-      resumenPorPais(),
+      // por país pero DE LA PERSONA (Pancho 22/8: "los de ella, no los
+      // generales"): sin usuario v2 mapeado el bloque directamente no aparece
+      (() => {
+        const v2id = v2UserIdDe(persona?.nombre ?? "");
+        return v2id != null ? resumenPorPaisDe(v2id) : Promise.resolve(null);
+      })(),
     ]);
 
   const chatDe = new Map<string, string>();
@@ -685,11 +690,13 @@ export default async function PanelPage({
             <div className="space-y-2">
               <div>
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Noloco por país — este mes
+                  {esPropio ? "Tu mes" : `El mes de ${nombre}`} en Noloco, por
+                  país
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  Casos con movimientos, pedidos de modificación y
-                  comunicaciones. Directo de Noloco, se refresca ~cada hora.
+                  Solo lo {esPropio ? "tuyo" : "suyo"}: casos movidos donde
+                  figura como asesor, y modificaciones/comunicaciones que
+                  atendió. Directo de Noloco, se refresca ~cada hora.
                 </p>
               </div>
               <div className="overflow-x-auto rounded-lg border bg-card">

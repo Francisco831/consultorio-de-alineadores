@@ -1,27 +1,41 @@
-// Resumen del mes POR PAÍS desde Noloco keepsmiling-v2, para el panel personal
-// (lo pidió Rocío 22/8: casos movidos / modificaciones / comunicaciones por país).
-// Reusa lo probado en panel-ortodoncistas/fetch_datos.py: totalCount por país para
-// movimientos (sin paginar) + una pasada por keepsmilingComunicacionCollection del
-// mes (≈400 filas) agrupando motivo × país del caso.
+// Resumen del mes POR PAÍS **de una persona** desde Noloco keepsmiling-v2.
+// Pancho (22/8): "tienen que ser los de ella, no los generales" — la tabla del
+// panel muestra lo que ESA persona movió/atendió, no el total de la empresa.
 //
-// El CRM espeja solo MEXICO; esto NO importa nada a la base: es un vistazo de
-// solo lectura con cache en memoria de 1 h (por instancia — en serverless un cold
-// start lo repaga, ~3-5 s, aceptable para un bloque secundario). Sin credenciales
-// o con Noloco caído devuelve null y el panel lo omite.
-
-import { monthStartMX } from "@/lib/dates";
+// Cómo se define "suyo" en el esquema v2 (verificado en vivo 22/8):
+//   · casos movidos  → keepsmilingCasos con fechaMovimientos del mes y la
+//     persona como asesorComercialId o asesorAtencionId (Juan: 29 en agosto)
+//   · comunicaciones → keepsmilingComunicacion del mes con userKsId o
+//     userAtencionId = la persona; traen `pais` directo (Rocío: 32+8 en agosto)
+//   · modificaciones → las mismas comunicaciones con motivo
+//     MODIFICACIONES_DE_VIDEO_YO_RENDERS
+// Los filtros de relación anidados ({is:{...}}) tiran INTERNAL error en este
+// portal; los campos planos `...Id` andan — usar SIEMPRE esos.
+//
+// Volumen por persona/mes ≈ decenas: se traen las filas (1-2 páginas) y se
+// agrupa acá. Cache 1 h por usuario, en memoria de la instancia. Sin
+// credenciales o con Noloco caído → null y el panel omite el bloque.
 
 const API = "https://api.portals.noloco.io/data/keepsmiling-v2";
 
-// países con operación conocida; lo que no matchee suma a "Otros"
-const PAISES = [
-  "ARGENTINA",
-  "MEXICO",
-  "PERU",
-  "CHILE",
-  "URUGUAY",
-  "PARAGUAY",
-] as const;
+// CRM profile (por primer nombre normalizado) → id de keepsmilingUser en v2.
+// El matcheo por nombre no alcanza: hay 3 "Juan" y 2 "Rocio" en la colección.
+// Verificado 22/8: Rocio Puig=121 · Juan Banffi=12 · Francisco Basilico=182.
+const V2_USER_POR_NOMBRE: Record<string, number> = {
+  rocio: 121,
+  juan: 12,
+  pancho: 182,
+};
+
+export function v2UserIdDe(nombrePerfil: string): number | null {
+  const primero = nombrePerfil
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim()
+    .split(/\s+/)[0];
+  return V2_USER_POR_NOMBRE[primero] ?? null;
+}
 
 export const PAIS_LABEL: Record<string, string> = {
   ARGENTINA: "Argentina",
@@ -30,7 +44,7 @@ export const PAIS_LABEL: Record<string, string> = {
   CHILE: "Chile",
   URUGUAY: "Uruguay",
   PARAGUAY: "Paraguay",
-  OTROS: "Otros",
+  SIN_PAIS: "Sin país",
 };
 
 export interface FilaPais {
@@ -76,9 +90,47 @@ async function login(email: string, password: string): Promise<string> {
   return d.login.token;
 }
 
-let memo: { ts: number; data: ResumenPaises } | null = null;
+/** Trae todas las páginas de una colección para un where dado (tope 10 páginas). */
+async function filas(
+  token: string,
+  coleccion: string,
+  where: string,
+  campos: string
+): Promise<Array<Record<string, unknown>>> {
+  const out: Array<Record<string, unknown>> = [];
+  let cursor: string | null = null;
+  for (let page = 0; page < 10; page++) {
+    const after = cursor ? `, after: "${cursor}"` : "";
+    const d = await gql(
+      `{ ${coleccion}(first: 200, where: ${where}${after}) {
+          edges { node { ${campos} } }
+          pageInfo { hasNextPage endCursor }
+        } }`,
+      {},
+      token
+    );
+    const c = d[coleccion];
+    out.push(...c.edges.map((e: { node: Record<string, unknown> }) => e.node));
+    if (!c.pageInfo.hasNextPage) break;
+    cursor = c.pageInfo.endCursor;
+  }
+  return out;
+}
 
-export async function resumenPorPais(): Promise<ResumenPaises | null> {
+/** inicio de mes en México (-06): las fechas de Noloco vienen en UTC */
+function inicioMesUTC(): string {
+  const hoyMX = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Mexico_City",
+  }).format(new Date());
+  return `${hoyMX.slice(0, 7)}-01T06:00:00Z`;
+}
+
+const memos = new Map<number, { ts: number; data: ResumenPaises }>();
+
+export async function resumenPorPaisDe(
+  v2UserId: number
+): Promise<ResumenPaises | null> {
+  const memo = memos.get(v2UserId);
   if (memo && Date.now() - memo.ts < 3_600_000) return memo.data;
 
   const email = process.env.KEEPSMILING_EMAIL;
@@ -87,70 +139,73 @@ export async function resumenPorPais(): Promise<ResumenPaises | null> {
 
   try {
     const token = await login(email, password);
-    // inicio de mes en México (-06): las fechas de Noloco vienen en UTC
-    const desde = `${monthStartMX()}T06:00:00Z`;
+    const desde = inicioMesUTC();
 
-    // movidos: un totalCount por país + el total global para calcular "Otros"
-    const countMovidos = async (pais?: string) => {
-      const wherePais = pais ? `pais: {equals: "${pais}"}, ` : "";
-      const d = await gql(
-        `{ keepsmilingCasosCollection(first: 1, where: {${wherePais}fechaMovimientos: {gte: "${desde}"}}) { totalCount } }`,
-        {},
-        token
-      );
-      return d.keepsmilingCasosCollection.totalCount as number;
-    };
-
-    const [totalMovidos, ...movidosPorPais] = await Promise.all([
-      countMovidos(),
-      ...PAISES.map((p) => countMovidos(p)),
+    // por cada métrica, la persona puede figurar en DOS campos: se piden ambos
+    // y se deduplica por id (si está en los dos roles del mismo registro)
+    const [casosCom, casosAte, comsKs, comsAte] = await Promise.all([
+      filas(
+        token,
+        "keepsmilingCasosCollection",
+        `{asesorComercialId: {equals: ${v2UserId}}, fechaMovimientos: {gte: "${desde}"}}`,
+        "id pais"
+      ),
+      filas(
+        token,
+        "keepsmilingCasosCollection",
+        `{asesorAtencionId: {equals: ${v2UserId}}, fechaMovimientos: {gte: "${desde}"}}`,
+        "id pais"
+      ),
+      filas(
+        token,
+        "keepsmilingComunicacionCollection",
+        `{userKsId: {equals: ${v2UserId}}, createdAt: {gte: "${desde}"}}`,
+        "id motivo pais"
+      ),
+      filas(
+        token,
+        "keepsmilingComunicacionCollection",
+        `{userAtencionId: {equals: ${v2UserId}}, createdAt: {gte: "${desde}"}}`,
+        "id motivo pais"
+      ),
     ]);
 
-    // comunicaciones del mes (paginado; ~2-3 páginas): motivo × país del caso
-    type Com = { motivo: string | null; casos: { pais: string | null } | null };
-    const coms: Com[] = [];
-    let cursor: string | null = null;
-    for (let page = 0; page < 10; page++) {
-      const after = cursor ? `, after: "${cursor}"` : "";
-      const d = await gql(
-        `{ keepsmilingComunicacionCollection(first: 200, where: {createdAt: {gte: "${desde}"}}${after}) {
-            edges { node { motivo casos { pais } } }
-            pageInfo { hasNextPage endCursor }
-          } }`,
-        {},
-        token
-      );
-      const c = d.keepsmilingComunicacionCollection;
-      coms.push(...c.edges.map((e: { node: Com }) => e.node));
-      if (!c.pageInfo.hasNextPage) break;
-      cursor = c.pageInfo.endCursor;
-    }
+    const dedup = (grupos: Array<Array<Record<string, unknown>>>) => {
+      const vistos = new Map<string, Record<string, unknown>>();
+      for (const g of grupos)
+        for (const r of g) vistos.set(String(r.id), r);
+      return [...vistos.values()];
+    };
+    const casos = dedup([casosCom, casosAte]);
+    const coms = dedup([comsKs, comsAte]);
 
     const fila = new Map<string, FilaPais>();
-    const de = (pais: string) => {
+    const de = (paisCrudo: unknown) => {
+      const pais =
+        typeof paisCrudo === "string" && paisCrudo.trim()
+          ? paisCrudo.trim().toUpperCase()
+          : "SIN_PAIS";
       if (!fila.has(pais))
         fila.set(pais, { pais, movidos: 0, modificaciones: 0, comunicaciones: 0 });
       return fila.get(pais)!;
     };
-    PAISES.forEach((p, i) => (de(p).movidos = movidosPorPais[i]));
-    const restoMovidos = totalMovidos - movidosPorPais.reduce((a, b) => a + b, 0);
-    if (restoMovidos > 0) de("OTROS").movidos = restoMovidos;
-
+    for (const c of casos) de(c.pais).movidos++;
     for (const c of coms) {
-      const pais = c.casos?.pais?.toUpperCase() ?? "OTROS";
-      const f = de((PAISES as readonly string[]).includes(pais) ? pais : "OTROS");
+      const f = de(c.pais);
       f.comunicaciones++;
       if (c.motivo === "MODIFICACIONES_DE_VIDEO_YO_RENDERS") f.modificaciones++;
     }
 
-    const filas = [...fila.values()]
-      .filter((f) => f.movidos || f.modificaciones || f.comunicaciones)
-      .sort((a, b) => b.movidos - a.movidos || b.comunicaciones - a.comunicaciones);
+    const listas = [...fila.values()].sort(
+      (a, b) =>
+        b.movidos - a.movidos || b.comunicaciones - a.comunicaciones
+    );
 
-    memo = { ts: Date.now(), data: { filas, generado: new Date().toISOString() } };
-    return memo.data;
+    const data = { filas: listas, generado: new Date().toISOString() };
+    memos.set(v2UserId, { ts: Date.now(), data });
+    return data;
   } catch {
-    // Noloco caído o credenciales mal: se devuelve lo último bueno si existe
+    // Noloco caído: se devuelve lo último bueno si existe
     return memo?.data ?? null;
   }
 }
