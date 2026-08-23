@@ -462,7 +462,7 @@
   "motivo": "Abona tratamiento completo con 10% descuento",
   "obs": "",
   "tipo": "cobro",
-  "categoria": "Otros"
+  "categoria": "Alineadores"
  },
  {
   "fecha": "2026-01-16",
@@ -5427,7 +5427,7 @@
   "motivo": "abona resto del tratamiento",
   "obs": "",
   "tipo": "cobro",
-  "categoria": "Otros"
+  "categoria": "Alineadores"
  },
  {
   "fecha": "2026-08-19",
@@ -5862,7 +5862,7 @@
   "motivo": "Abona  total del tratamiento",
   "obs": "",
   "tipo": "cobro",
-  "categoria": "Otros"
+  "categoria": "Alineadores"
  },
  {
   "fecha": "2026-01-21",
@@ -5877,7 +5877,7 @@
   "motivo": "Abona  total del tratamiento",
   "obs": "",
   "tipo": "cobro",
-  "categoria": "Otros"
+  "categoria": "Alineadores"
  },
  {
   "fecha": "2026-01-21",
@@ -6987,7 +6987,7 @@
   "motivo": "Abona el tratamiento con 10% de descuento",
   "obs": "",
   "tipo": "cobro",
-  "categoria": "Otros"
+  "categoria": "Alineadores"
  },
  {
   "fecha": "2026-04-14",
@@ -9027,7 +9027,7 @@
   "motivo": "contenciones de tratamiento entregadas por Maru",
   "obs": "",
   "tipo": "cobro",
-  "categoria": "Contención"
+  "categoria": "Alineadores"
  },
  {
   "fecha": "2026-01-20",
@@ -12087,7 +12087,7 @@
   "motivo": "Contenciones",
   "obs": "Contención fuera de tratamiento no lo vio Maru",
   "tipo": "cobro",
-  "categoria": "Contención"
+  "categoria": "Alineadores"
  },
  {
   "fecha": "2026-01-07",
@@ -12102,7 +12102,7 @@
   "motivo": "Contenciones",
   "obs": "fc 361 Contención fuera de tratamiento no lo vio Maru",
   "tipo": "cobro",
-  "categoria": "Contención"
+  "categoria": "Alineadores"
  },
  {
   "fecha": "2026-01-09",
@@ -12117,7 +12117,7 @@
   "motivo": "Contenciones",
   "obs": "Contención fuera de tratamiento no lo vio Maru",
   "tipo": "cobro",
-  "categoria": "Contención"
+  "categoria": "Alineadores"
  },
  {
   "fecha": "2026-01-13",
@@ -12177,7 +12177,7 @@
   "motivo": "contenciones de tratamiento la vio Maru",
   "obs": "",
   "tipo": "cobro",
-  "categoria": "Contención"
+  "categoria": "Alineadores"
  },
  {
   "fecha": "2026-01-20",
@@ -12207,7 +12207,7 @@
   "motivo": "placa bis de tratamiento la vio Maru",
   "obs": "",
   "tipo": "cobro",
-  "categoria": "Otros"
+  "categoria": "Alineadores"
  },
  {
   "fecha": "2026-01-20",
@@ -12507,7 +12507,7 @@
   "motivo": "contenciones de tratamiento en consulta",
   "obs": "",
   "tipo": "cobro",
-  "categoria": "Contención"
+  "categoria": "Alineadores"
  },
  {
   "fecha": "2026-02-24",

@@ -57,7 +57,11 @@ export default async function CobrarPage({
       );
     }
   }
-  const planesConDeuda = planes.filter((pl) => pl.pendienteCuotas > 0);
+  const RANGO = { moroso: 0, atrasado: 1, al_dia: 2, completo: 3 } as const;
+  const planesConDeuda = planes
+    .filter((pl) => pl.pendienteCuotas > 0 && pl.estado !== "completo")
+    .sort((a, b) => RANGO[a.estado] - RANGO[b.estado] || b.diasSinPagar - a.diasSinPagar);
+  const morosos = planesConDeuda.filter((p) => p.estado === "moroso");
   const totalPendienteEstimado = planesConDeuda.reduce((a, pl) => a + pl.pendienteEstimadoArs, 0);
 
   const [{ data: filas }, { data: cuentas }] = await Promise.all([
@@ -175,8 +179,15 @@ export default async function CobrarPage({
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Planes de pacientes — pagado y lo que falta
             </h2>
-            <span className="fig text-sm font-semibold text-red-600 dark:text-red-400">
-              faltan ≈ {formatMoney(totalPendienteEstimado, "ARS", locale)}
+            <span className="flex items-center gap-3">
+              {morosos.length ? (
+                <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-950 dark:text-red-300">
+                  {morosos.length} moroso{morosos.length === 1 ? "" : "s"} · {formatMoney(morosos.reduce((a, p) => a + p.pendienteEstimadoArs, 0), "ARS", locale)}
+                </span>
+              ) : null}
+              <span className="fig text-sm font-semibold text-red-600 dark:text-red-400">
+                faltan ≈ {formatMoney(totalPendienteEstimado, "ARS", locale)}
+              </span>
             </span>
           </div>
           <p className="mb-3 text-xs text-muted-foreground">
@@ -189,6 +200,7 @@ export default async function CobrarPage({
                 <tr className="border-b text-left text-xs text-muted-foreground">
                   <th className="px-4 py-2 font-medium">Paciente</th>
                   <th className="hidden px-2 py-2 font-medium md:table-cell">Doctora</th>
+                  <th className="px-2 py-2 font-medium">Estado</th>
                   <th className="px-2 py-2 font-medium">Cuotas</th>
                   <th className="px-2 py-2 text-right font-medium">Pagado</th>
                   <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">Última cuota</th>
@@ -202,6 +214,16 @@ export default async function CobrarPage({
                     <tr key={pl.paciente + pl.ultimoPago} className="border-b last:border-0">
                       <td className="max-w-[220px] truncate px-4 py-2 font-medium">{pl.paciente}</td>
                       <td className="hidden px-2 py-2 text-muted-foreground md:table-cell">{pl.doctora ?? "—"}</td>
+                      <td className="px-2 py-2">
+                        <span className={cn("whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium",
+                          pl.estado === "moroso" ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
+                            : pl.estado === "atrasado" ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300")}>
+                          {pl.estado === "moroso" ? `moroso · ${pl.diasSinPagar}d`
+                            : pl.estado === "atrasado" ? `atrasado · ${pl.diasSinPagar}d`
+                            : "al día"}
+                        </span>
+                      </td>
                       <td className="px-2 py-2">
                         <div className="flex items-center gap-2">
                           <span className="fig whitespace-nowrap text-xs">{pl.cuotasPagadas} de {pl.plan}</span>
@@ -225,7 +247,7 @@ export default async function CobrarPage({
                   );
                 })}
                 {planesConDeuda.length === 0 ? (
-                  <tr><td colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                  <tr><td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
                     Todos los planes conocidos están al día.
                   </td></tr>
                 ) : null}

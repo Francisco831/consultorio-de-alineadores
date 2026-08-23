@@ -50,6 +50,10 @@ def classify(paciente, motivo, obs, monto_ars, monto_usd):
         return 'gasto_consultorio', None
     if RE_CUOTA.search((motivo or '') + ' ' + (obs or '')) or 'cuota' in texto or 'etapa adicional' in texto:
         return 'cobro', 'Alineadores'
+    # "abona (el) tratamiento", "resto del tratamiento": venta de tratamiento
+    # sin la palabra cuota (pago total o saldo final)
+    if 'tratamiento' in texto:
+        return 'cobro', 'Alineadores'
     if 'contenc' in texto:
         return 'cobro', 'Contención'
     if 'consult' in texto or '1era' in texto or '1ra' in texto or 'primera' in texto:
