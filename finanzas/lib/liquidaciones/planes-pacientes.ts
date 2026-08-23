@@ -14,6 +14,24 @@ const claveConApodos = (nombre: string) =>
 // "cuota 3" a secas (sin "de Y"): cuenta como cuota numerada del plan ya conocido
 const RE_CUOTA_SUELTA = /c(?:uo)?ta\s*\.?\s*(\d+)\b(?!\s*de)/i;
 
+// "tc 1550" / "t/c $1.550": cuota en dólares con el tipo de cambio anotado
+const RE_TC = /\bt\/?c\s*\$?\s*[\d.,]+/i;
+
+// La caja corre columnas: el texto de la cuota puede estar en motivo, en obs
+// o hasta en la columna del medio de pago. TODO lo que arme el motivo de un
+// plan (pantalla, script, análisis) debe pasar por acá — nunca concatenar a mano.
+export const motivoCompleto = (
+  description: string | null | undefined,
+  meta: { obs?: string | null; medio_raw?: string | null } | null | undefined,
+) => `${description ?? ""} ${meta?.obs ?? ""} ${meta?.medio_raw ?? ""}`;
+
+// ¿El texto de una fila parece una cuota de plan? Lo usa el control diario del
+// import: una cuota que el clasificador dejó fuera de Alineadores es invisible
+// para "Por cobrar" y fabrica falsos morosos (caso Etchegoyen, ago/26).
+export const pareceCuota = (texto: string) =>
+  RE_CUOTA_DOBLE.test(texto) || RE_CUOTA.test(texto) ||
+  RE_CUOTA_SUELTA.test(texto) || RE_TC.test(texto);
+
 export type PagoPlan = {
   paciente: string; fecha: string; ars: number; usd: number;
   motivo: string; doctora: string | null;
@@ -34,6 +52,7 @@ export type PlanPaciente = {
   pendienteEstimadoUsd: number;
   diasSinPagar: number;
   estado: EstadoPlan;
+  progresoPct: number;          // % del plan por PLATA pagada, no por cuotas
 };
 
 // Las cuotas son mensuales: hasta 45 días desde el último pago es ritmo
@@ -113,6 +132,17 @@ export function planesPacientes(pagos: PagoPlan[], hoy?: string): PlanPaciente[]
       // pagó la ÚLTIMA cuota del plan → terminado, aunque las primeras sean
       // anteriores al histórico (la caja arranca en ene/2026)
       const terminado = a.cuotas.has(a.plan);
+      const pendienteEstimadoArs = Math.round(pendienteCuotas * a.ultimaCuotaArs);
+      const pendienteEstimadoUsd = Math.round(pendienteCuotas * a.ultimaCuotaUsd);
+      // El progreso mide PLATA: una cuota inicial grande avanza la barra aunque
+      // "vaya 1 de 6". Se usa la moneda de la última cuota (la del plan vigente);
+      // lo pagado en la otra moneda no suma — subestima, nunca infla. Sin
+      // estimado posible, cae a la proporción de cuotas.
+      const pagRef = pendienteEstimadoUsd > 0 ? a.pagadoUsd : a.pagadoArs;
+      const pendRef = pendienteEstimadoUsd > 0 ? pendienteEstimadoUsd : pendienteEstimadoArs;
+      const progresoPct = pagRef + pendRef > 0
+        ? Math.min(100, Math.round((pagRef / (pagRef + pendRef)) * 100))
+        : Math.min(100, Math.round((a.cuotas.size / a.plan) * 100));
       const ref = hoy ?? [...pagos].reduce((m, p) => (p.fecha > m ? p.fecha : m), "");
       const diasSinPagar = Math.max(0, Math.round((+new Date(ref) - +new Date(a.ultimoPago)) / 86400000));
       return {
@@ -120,10 +150,11 @@ export function planesPacientes(pagos: PagoPlan[], hoy?: string): PlanPaciente[]
         cuotasPagadas: a.cuotas.size, pagadoArs: a.pagadoArs, pagadoUsd: a.pagadoUsd,
         ultimaCuotaArs: a.ultimaCuotaArs, ultimaCuotaUsd: a.ultimaCuotaUsd, ultimoPago: a.ultimoPago,
         pendienteCuotas,
-        pendienteEstimadoArs: Math.round(pendienteCuotas * a.ultimaCuotaArs),
-        pendienteEstimadoUsd: Math.round(pendienteCuotas * a.ultimaCuotaUsd),
+        pendienteEstimadoArs,
+        pendienteEstimadoUsd,
         diasSinPagar,
         estado: terminado ? "completo" as const : estadoPlan(pendienteCuotas, diasSinPagar),
+        progresoPct,
       };
     })
     .sort((a, b) => b.pendienteEstimadoArs - a.pendienteEstimadoArs || b.ultimoPago.localeCompare(a.ultimoPago));

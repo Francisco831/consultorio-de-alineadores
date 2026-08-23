@@ -4,7 +4,7 @@ import { formatMoney } from "@/lib/money";
 import { formatDateShort, todayIn } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { CobrarBoton, NuevaDeudaClienteDialog } from "@/components/compromisos/cobrar-controles";
-import { planesPacientes } from "@/lib/liquidaciones/planes-pacientes";
+import { planesPacientes, motivoCompleto } from "@/lib/liquidaciones/planes-pacientes";
 
 type Aging = {
   id: string; counterparty_name: string; concept: string; currency: string;
@@ -51,7 +51,7 @@ export default async function CobrarPage({
             fecha: m.occurred_on,
             ars: m.currency === "USD" ? 0 : Number(m.amount),
             usd: m.currency === "USD" ? Number(m.amount) : 0,
-            motivo: `${m.description ?? ""} ${(m.meta as { obs?: string } | null)?.obs ?? ""} ${(m.meta as { medio_raw?: string } | null)?.medio_raw ?? ""}`,
+            motivo: motivoCompleto(m.description, m.meta as { obs?: string; medio_raw?: string } | null),
             doctora: (m.meta as { doctora?: string } | null)?.doctora ?? null,
           }))
       );
@@ -192,7 +192,8 @@ export default async function CobrarPage({
           </div>
           <p className="mb-3 text-xs text-muted-foreground">
             Derivado de la caja (“cuota X de Y”). El pendiente es un estimado con la
-            última cuota conocida — las cuotas se ajustan, así que es piso.
+            última cuota conocida — las cuotas se ajustan, así que es piso. La barra
+            avanza por plata pagada, no por cantidad de cuotas.
           </p>
           <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
             <table className="w-full text-[13px]">
@@ -209,7 +210,6 @@ export default async function CobrarPage({
               </thead>
               <tbody>
                 {planesConDeuda.map((pl) => {
-                  const pct = Math.min(100, Math.round((pl.cuotasPagadas / pl.plan) * 100));
                   return (
                     <tr key={pl.paciente + pl.ultimoPago} className="border-b last:border-0">
                       <td className="max-w-[220px] truncate px-4 py-2 font-medium">{pl.paciente}</td>
@@ -227,8 +227,11 @@ export default async function CobrarPage({
                       <td className="px-2 py-2">
                         <div className="flex items-center gap-2">
                           <span className="fig whitespace-nowrap text-xs">{pl.cuotasPagadas} de {pl.plan}</span>
-                          <div className="h-1.5 w-20 overflow-hidden rounded-full bg-secondary">
-                            <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.max(pct, 4)}%` }} />
+                          <div
+                            className="h-1.5 w-20 overflow-hidden rounded-full bg-secondary"
+                            title={`≈${pl.progresoPct}% del plan por plata pagada`}
+                          >
+                            <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.max(pl.progresoPct, 4)}%` }} />
                           </div>
                         </div>
                       </td>

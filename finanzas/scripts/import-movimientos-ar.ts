@@ -13,6 +13,7 @@ import { resolve } from "node:path";
 import { serviceClient, upsertBatched, fetchAllRows, argFlags } from "./lib/service-client";
 import { medioCanonico } from "../lib/import/medios";
 import { KeyBuilder } from "../lib/import/keys";
+import { pareceCuota } from "../lib/liquidaciones/planes-pacientes";
 
 type MovAR = {
   fecha: string; mes: number; doctora: string | null; atribucion_clara: boolean;
@@ -115,6 +116,24 @@ async function main() {
   }
 
   console.log(`Fuente: ${filas.length} filas → ${movs.length} patas mono-moneda.`);
+
+  // CONTROL ANTI-ETCHEGOYEN: un cobro con texto de cuota que NO quedó en
+  // Alineadores es invisible para "Por cobrar" → el paciente figura falso
+  // moroso (o su plan no avanza). Pasa cuando la caja corre las columnas o
+  // classify() no conoce una redacción nueva. No aborta, pero lo canta en
+  // cada corrida de la mañana. Se busca en TODAS las columnas de texto.
+  const invisibles = movs.filter((m) =>
+    m.tipo === "cobro" &&
+    m.categoria !== "Alineadores" && m.categoria !== "Contención" &&
+    pareceCuota([m.paciente, m.motivo, m.obs, m.medio].filter(Boolean).join(" "))
+  );
+  if (invisibles.length) {
+    console.log(`\n⚠ ${invisibles.length} cobro(s) con texto de cuota FUERA de Alineadores — el plan del paciente no los ve:`);
+    for (const m of invisibles) {
+      console.log(`  · ${m.fecha} ${m.paciente ?? "—"} ${m.currency} ${m.amount.toLocaleString("es-AR")} [${m.categoria ?? "sin categoría"}] — ${[m.motivo, m.obs, m.medio].filter(Boolean).join(" · ")}`);
+    }
+    console.log("  → corregir classify() en scripts/parse_caja.py o la fila en la caja.");
+  }
   if (flags.dryRun) {
     console.log("DRY-RUN (sin --apply no escribe). Totales de la fuente:");
     for (const [k, v] of [...esperado].sort()) console.log(`  ${k}: ${v.toLocaleString("es-AR")}`);

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { planesPacientes } from "./planes-pacientes";
+import { planesPacientes, motivoCompleto, pareceCuota } from "./planes-pacientes";
 
 test("plan en curso: cuotas pagadas, pendiente estimado con la última cuota", () => {
   const r = planesPacientes([
@@ -70,4 +70,41 @@ test("plan en dólares: cadencia y pendiente estimado en USD", () => {
   assert.equal(r[0].estado, "al_dia");        // pagó hoy: al día aunque el plan siga abierto
   assert.ok(r[0].pendienteEstimadoUsd > 0);   // lo que falta se estima en USD
   assert.equal(r[0].pendienteEstimadoArs, 0);
+});
+
+test("la barra mide plata: un pago grande sin número avanza aunque 'vaya 1 de 6'", () => {
+  const r = planesPacientes([
+    { paciente: "Evelin H", fecha: "2026-05-01", ars: 600000, usd: 0, motivo: "cuota 1 de 6", doctora: null },
+    { paciente: "Evelin H", fecha: "2026-06-15", ars: 1800000, usd: 0, motivo: "abona parte del tratamiento", doctora: null },
+  ], "2026-07-01");
+  // por cuotas sería 1/6 = 17%; por plata: 2,4M pagado vs 3M estimado → 44%
+  assert.equal(r[0].cuotasPagadas, 1);
+  assert.equal(r[0].progresoPct, 44);
+});
+
+test("plan en dólares: el progreso usa la plata en USD", () => {
+  const r = planesPacientes([
+    { paciente: "Nacho E", fecha: "2026-06-01", ars: 0, usd: 400, motivo: "cuotas 1 y 2 de 6", doctora: null },
+    { paciente: "Nacho E", fecha: "2026-07-01", ars: 0, usd: 400, motivo: "cuota 3 de 6 tc 1550", doctora: null },
+  ], "2026-07-10");
+  // pagado USD 800, pendiente 3 × 400 = 1.200 → 40%
+  assert.equal(r[0].progresoPct, 40);
+});
+
+test("pareceCuota detecta cuotas aunque el texto esté corrido de columna", () => {
+  assert.ok(pareceCuota("Abona cuota1 de 6 y parte de cuota 2 de 6"));
+  assert.ok(pareceCuota("cta. 3"));
+  assert.ok(pareceCuota("tc 1550"));
+  assert.ok(pareceCuota("t/c $1.550"));
+  assert.ok(!pareceCuota("consulta"));
+  assert.ok(!pareceCuota("mensualidad julio"));
+  assert.ok(!pareceCuota("compró 5 etc 5"));  // "etc" no es tipo de cambio
+});
+
+test("motivoCompleto junta motivo, obs y medio — la única forma válida de armarlo", () => {
+  assert.equal(
+    motivoCompleto("Etchegoyen", { obs: null, medio_raw: "Abona cuota1 de 6" }).trim(),
+    "Etchegoyen  Abona cuota1 de 6".trim()
+  );
+  assert.ok(pareceCuota(motivoCompleto(null, { medio_raw: "tc 1550" })));
 });
