@@ -27,9 +27,11 @@ export type PlanPaciente = {
   cuotasPagadas: number;
   pagadoArs: number; pagadoUsd: number;
   ultimaCuotaArs: number;       // monto de la última cuota numerada
+  ultimaCuotaUsd: number;       // ídem si el plan se paga en dólares
   ultimoPago: string;
   pendienteCuotas: number;
   pendienteEstimadoArs: number;
+  pendienteEstimadoUsd: number;
   diasSinPagar: number;
   estado: EstadoPlan;
 };
@@ -47,7 +49,7 @@ export function planesPacientes(pagos: PagoPlan[], hoy?: string): PlanPaciente[]
   type Acum = {
     paciente: string; doctora: string | null; plan: number;
     cuotas: Set<number>; pagadoArs: number; pagadoUsd: number;
-    ultimaCuotaArs: number; ultimaCuotaFecha: string; ultimoPago: string;
+    ultimaCuotaArs: number; ultimaCuotaUsd: number; ultimaCuotaFecha: string; ultimoPago: string;
   };
   const por = new Map<string, Acum>();
   for (const p of [...pagos].sort((a, b) => a.fecha.localeCompare(b.fecha))) {
@@ -56,7 +58,7 @@ export function planesPacientes(pagos: PagoPlan[], hoy?: string): PlanPaciente[]
     const a = por.get(k) ?? {
       paciente: p.paciente, doctora: p.doctora, plan: 0,
       cuotas: new Set<number>(), pagadoArs: 0, pagadoUsd: 0,
-      ultimaCuotaArs: 0, ultimaCuotaFecha: "", ultimoPago: p.fecha,
+      ultimaCuotaArs: 0, ultimaCuotaUsd: 0, ultimaCuotaFecha: "", ultimoPago: p.fecha,
     };
     a.pagadoArs += p.ars; a.pagadoUsd += p.usd;
     if (p.fecha > a.ultimoPago) a.ultimoPago = p.fecha;
@@ -66,16 +68,19 @@ export function planesPacientes(pagos: PagoPlan[], hoy?: string): PlanPaciente[]
     if (doble) {
       a.plan = Math.max(a.plan, Number(doble[3]));
       a.cuotas.add(Number(doble[1])); a.cuotas.add(Number(doble[2]));
-      if (p.ars > 0 && p.fecha >= a.ultimaCuotaFecha) { a.ultimaCuotaArs = p.ars / 2; a.ultimaCuotaFecha = p.fecha; }
+      if (p.ars > 0 && p.fecha >= a.ultimaCuotaFecha) { a.ultimaCuotaArs = p.ars / 2; a.ultimaCuotaUsd = 0; a.ultimaCuotaFecha = p.fecha; }
+      else if (p.usd > 0 && p.fecha >= a.ultimaCuotaFecha) { a.ultimaCuotaUsd = p.usd / 2; a.ultimaCuotaArs = 0; a.ultimaCuotaFecha = p.fecha; }
     } else if (simple) {
       a.plan = Math.max(a.plan, Number(simple[2]));
       a.cuotas.add(Number(simple[1]));
-      if (p.ars > 0 && p.fecha >= a.ultimaCuotaFecha) { a.ultimaCuotaArs = p.ars; a.ultimaCuotaFecha = p.fecha; }
+      if (p.ars > 0 && p.fecha >= a.ultimaCuotaFecha) { a.ultimaCuotaArs = p.ars; a.ultimaCuotaUsd = 0; a.ultimaCuotaFecha = p.fecha; }
+      else if (p.usd > 0 && p.fecha >= a.ultimaCuotaFecha) { a.ultimaCuotaUsd = p.usd; a.ultimaCuotaArs = 0; a.ultimaCuotaFecha = p.fecha; }
     } else {
       const suelta = RE_CUOTA_SUELTA.exec(p.motivo);
       if (suelta) {
         a.cuotas.add(Number(suelta[1]));
-        if (p.ars > 0 && p.fecha >= a.ultimaCuotaFecha) { a.ultimaCuotaArs = p.ars; a.ultimaCuotaFecha = p.fecha; }
+        if (p.ars > 0 && p.fecha >= a.ultimaCuotaFecha) { a.ultimaCuotaArs = p.ars; a.ultimaCuotaUsd = 0; a.ultimaCuotaFecha = p.fecha; }
+        else if (p.usd > 0 && p.fecha >= a.ultimaCuotaFecha) { a.ultimaCuotaUsd = p.usd; a.ultimaCuotaArs = 0; a.ultimaCuotaFecha = p.fecha; }
       }
     }
     por.set(k, a);
@@ -97,7 +102,7 @@ export function planesPacientes(pagos: PagoPlan[], hoy?: string): PlanPaciente[]
     b.pagadoArs += a.pagadoArs; b.pagadoUsd += a.pagadoUsd;
     if (a.ultimoPago > b.ultimoPago) b.ultimoPago = a.ultimoPago;
     if (a.ultimaCuotaFecha > b.ultimaCuotaFecha) {
-      b.ultimaCuotaArs = a.ultimaCuotaArs; b.ultimaCuotaFecha = a.ultimaCuotaFecha;
+      b.ultimaCuotaArs = a.ultimaCuotaArs; b.ultimaCuotaUsd = a.ultimaCuotaUsd; b.ultimaCuotaFecha = a.ultimaCuotaFecha;
     }
     por.delete(k);
   }
@@ -113,9 +118,10 @@ export function planesPacientes(pagos: PagoPlan[], hoy?: string): PlanPaciente[]
       return {
         paciente: a.paciente, doctora: a.doctora, plan: a.plan,
         cuotasPagadas: a.cuotas.size, pagadoArs: a.pagadoArs, pagadoUsd: a.pagadoUsd,
-        ultimaCuotaArs: a.ultimaCuotaArs, ultimoPago: a.ultimoPago,
+        ultimaCuotaArs: a.ultimaCuotaArs, ultimaCuotaUsd: a.ultimaCuotaUsd, ultimoPago: a.ultimoPago,
         pendienteCuotas,
         pendienteEstimadoArs: Math.round(pendienteCuotas * a.ultimaCuotaArs),
+        pendienteEstimadoUsd: Math.round(pendienteCuotas * a.ultimaCuotaUsd),
         diasSinPagar,
         estado: terminado ? "completo" as const : estadoPlan(pendienteCuotas, diasSinPagar),
       };

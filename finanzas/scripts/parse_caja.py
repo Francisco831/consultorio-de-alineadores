@@ -38,9 +38,13 @@ MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
 RE_CUOTA = re.compile(r'c(?:uo)?ta\s*\.?\s*(\d+)\s*de\s*(\d+)', re.I)
 RE_FECHA = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 
-def classify(paciente, motivo, obs, monto_ars, monto_usd):
+RE_TC = re.compile(r't/?c\s*\$?\s*[\d.,]+', re.I)
+
+def classify(paciente, motivo, obs, monto_ars, monto_usd, medio=''):
+    # el medio entra al texto: la caja a veces corre las columnas y el
+    # "Abona cuota X de Y" cae ahí; y "tc 1550" = cuota pagada en dólares
     p, m, o = norm(paciente or ''), norm(motivo or ''), norm(obs or '')
-    texto = ' '.join([p, m, o])
+    texto = ' '.join([p, m, o, norm(medio or '')])
     neg = (monto_ars is not None and monto_ars < 0) or (monto_usd is not None and monto_usd < 0)
     if neg:
         if 'liquidacion' in texto or 'retiro' in texto or 'rendicion' in texto:
@@ -53,6 +57,8 @@ def classify(paciente, motivo, obs, monto_ars, monto_usd):
     # "abona (el) tratamiento", "resto del tratamiento": venta de tratamiento
     # sin la palabra cuota (pago total o saldo final)
     if 'tratamiento' in texto:
+        return 'cobro', 'Alineadores'
+    if RE_TC.search(texto):
         return 'cobro', 'Alineadores'
     if 'contenc' in texto:
         return 'cobro', 'Contención'
@@ -102,7 +108,7 @@ def parse_tab(rows, tab, dra, year=2026):
             continue
         if ars == 0 and (usd is None or usd == 0):
             continue
-        tipo, cat = classify(str(paciente or ''), str(motivo or ''), str(obs or ''), ars, usd)
+        tipo, cat = classify(str(paciente or ''), str(motivo or ''), str(obs or ''), ars, usd, str(medio or ''))
         dra_attr, attr_clara = dra, True
         if tipo == 'retiro_liquidacion':
             dra_attr, attr_clara = atribuir_retiro(

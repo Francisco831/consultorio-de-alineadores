@@ -51,7 +51,7 @@ export default async function CobrarPage({
             fecha: m.occurred_on,
             ars: m.currency === "USD" ? 0 : Number(m.amount),
             usd: m.currency === "USD" ? Number(m.amount) : 0,
-            motivo: `${m.description ?? ""} ${(m.meta as { obs?: string } | null)?.obs ?? ""}`,
+            motivo: `${m.description ?? ""} ${(m.meta as { obs?: string } | null)?.obs ?? ""} ${(m.meta as { medio_raw?: string } | null)?.medio_raw ?? ""}`,
             doctora: (m.meta as { doctora?: string } | null)?.doctora ?? null,
           }))
       );
@@ -237,10 +237,13 @@ export default async function CobrarPage({
                         {pl.pagadoUsd ? <div className="text-[11px] text-muted-foreground">+ {formatMoney(pl.pagadoUsd, "USD", locale)}</div> : null}
                       </td>
                       <td className="fig hidden px-2 py-2 text-right text-muted-foreground sm:table-cell">
-                        {pl.ultimaCuotaArs ? formatMoney(pl.ultimaCuotaArs, "ARS", locale) : "—"}
+                        {pl.ultimaCuotaArs ? formatMoney(pl.ultimaCuotaArs, "ARS", locale)
+                          : pl.ultimaCuotaUsd ? formatMoney(pl.ultimaCuotaUsd, "USD", locale) : "—"}
                       </td>
                       <td className="fig px-4 py-2 text-right font-semibold text-red-600 dark:text-red-400">
-                        {formatMoney(pl.pendienteEstimadoArs, "ARS", locale)}
+                        {pl.pendienteEstimadoUsd > 0
+                          ? formatMoney(pl.pendienteEstimadoUsd, "USD", locale)
+                          : formatMoney(pl.pendienteEstimadoArs, "ARS", locale)}
                         <span className="ml-1 text-[11px] font-normal text-muted-foreground">({pl.pendienteCuotas} cuota{pl.pendienteCuotas === 1 ? "" : "s"})</span>
                       </td>
                     </tr>

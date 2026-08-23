@@ -59,3 +59,15 @@ test("typos y apodos no parten el plan (Romino=Romina, Magui=Magdalena)", () => 
   assert.equal(r.length, 2);
   assert.ok(r.every((p) => p.estado === "completo"));
 });
+
+test("plan en dólares: cadencia y pendiente estimado en USD", () => {
+  const pagos = [
+    { paciente: "Etchegoyen Ignacio", fecha: "2026-03-27", ars: 0, usd: 500, motivo: "Abona cuota1 de 6 y parte de cuota 2 de 6", doctora: "M" },
+    { paciente: "Etchegoyen Ignacio", fecha: "2026-08-21", ars: 0, usd: 500, motivo: "tc 1550", doctora: "M" },
+  ];
+  const r = planesPacientes(pagos, "2026-08-21");
+  assert.equal(r.length, 1);
+  assert.equal(r[0].estado, "al_dia");        // pagó hoy: al día aunque el plan siga abierto
+  assert.ok(r[0].pendienteEstimadoUsd > 0);   // lo que falta se estima en USD
+  assert.equal(r[0].pendienteEstimadoArs, 0);
+});
