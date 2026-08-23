@@ -54,14 +54,30 @@ export async function GET(req: Request) {
 
   // cada fuente falla por separado: que el intranet esté caído no debe
   // frenar las comunicaciones de Noloco, ni al revés
-  const intranetEmail = process.env.INTRANET_EMAIL;
-  const intranetPass = process.env.INTRANET_PASSWORD;
-  if (intranetEmail && intranetPass) {
-    try {
-      resumen.contactPoints = await sincronizarContactPoints(db, intranetEmail, intranetPass, log);
-    } catch (e) {
-      errores.push(`contact points: ${e instanceof Error ? e.message : String(e)}`);
+  //
+  // SYNC POR USUARIO (22/8): el intranet delimita por cuenta — cada login ve
+  // solo SUS eventos, y la atribución sale de la identidad que devuelve el
+  // login. Un par de envs por persona: INTRANET_EMAIL/INTRANET_PASSWORD (Juan),
+  // INTRANET_EMAIL_2/INTRANET_PASSWORD_2 (Rocío), _3, _4… Agregar el par en
+  // Vercel es TODO lo que hace falta para sumar a alguien.
+  const cuentas: { email: string; password: string }[] = [];
+  for (const suf of ["", "_2", "_3", "_4"]) {
+    const e = process.env[`INTRANET_EMAIL${suf}`];
+    const p = process.env[`INTRANET_PASSWORD${suf}`];
+    if (e && p) cuentas.push({ email: e, password: p });
+  }
+  if (cuentas.length > 0) {
+    const reportes = [];
+    for (const c of cuentas) {
+      try {
+        reportes.push(await sincronizarContactPoints(db, c.email, c.password, log));
+      } catch (e) {
+        errores.push(
+          `contact points (${c.email}): ${e instanceof Error ? e.message : String(e)}`
+        );
+      }
     }
+    if (reportes.length > 0) resumen.contactPoints = reportes;
   } else {
     log("INTRANET_EMAIL/INTRANET_PASSWORD sin configurar: contact points salteados");
   }

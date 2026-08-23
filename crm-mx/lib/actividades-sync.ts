@@ -1,7 +1,8 @@
 // Sync de actividad comercial MX → tabla activities. Dos fuentes automatizables:
 //
 //   · contact points del intranet (api-colombia getContactPoint, eventos 1-a-1
-//     de los asesores) — credenciales INTRANET_EMAIL/INTRANET_PASSWORD
+//     de los asesores) — POR USUARIO: cada cuenta ve solo sus eventos y se
+//     atribuye a quien se loguea (INTRANET_EMAIL/_PASSWORD, y _2, _3… en la ruta)
 //   · pedidos de modificación de casos MX (Noloco keepsmiling-v2,
 //     keepsmilingComunicacion) — credenciales KEEPSMILING_EMAIL/PASSWORD
 //
@@ -77,11 +78,13 @@ export async function cargarDoctores(db: SupabaseClient): Promise<Doc[]> {
 }
 
 export async function perfilPorPista(db: SupabaseClient, pista: string): Promise<string | null> {
-  const { data } = await db.from("profiles").select("id, full_name, email");
-  const p = (data ?? []).find(
-    (x) =>
-      norm(x.full_name ?? "").includes(pista) || norm(x.email ?? "").includes(pista)
-  );
+  // OJO: profiles NO tiene full_name ni email — la versión anterior los pedía,
+  // el select fallaba en silencio y esta función devolvió null SIEMPRE (por eso
+  // ninguna actividad del sync tuvo autor hasta el 22/8). La columna real es
+  // `nombre`; si esto vuelve a fallar, que reviente en vez de atribuir a nadie.
+  const { data, error } = await db.from("profiles").select("id, nombre");
+  if (error) throw new Error(`perfilPorPista: ${error.message}`);
+  const p = (data ?? []).find((x) => norm(x.nombre ?? "").includes(pista));
   return p?.id ?? null;
 }
 
@@ -111,12 +114,21 @@ export interface ReporteFuente {
   duplicadas: number;
   sinMatch: string[];
   ambiguos: string[];
+  /** contact points: con qué usuario del intranet se leyó y a qué perfil se atribuyó */
+  usuario?: string;
+  atribuidoA?: string | null;
 }
 
 // ---------- fuente: contact points (intranet api-colombia) ----------
 const INTRANET = "https://api-colombia.keepsmiling.click/";
 
-async function intranetLogin(email: string, password: string): Promise<string> {
+interface SesionIntranet {
+  token: string;
+  fullName: string | null;
+  email: string | null;
+}
+
+async function intranetLogin(email: string, password: string): Promise<SesionIntranet> {
   const res = await fetch(INTRANET + "api/login", {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -125,7 +137,12 @@ async function intranetLogin(email: string, password: string): Promise<string> {
   const data = await res.json();
   const token = data?.data?.token;
   if (!token) throw new Error(`Login intranet falló (${res.status}): ${JSON.stringify(data).slice(0, 200)}`);
-  return token;
+  // el login devuelve el usuario completo: de acá sale la atribución
+  return {
+    token,
+    fullName: data?.data?.full_name ?? null,
+    email: data?.data?.email ?? null,
+  };
 }
 
 async function intranetGet(path: string, token: string): Promise<any> {
@@ -142,7 +159,8 @@ export async function sincronizarContactPoints(
   password: string,
   log: (s: string) => void = () => {}
 ): Promise<ReporteFuente> {
-  const token = await intranetLogin(email, password);
+  const sesion = await intranetLogin(email, password);
+  const token = sesion.token;
 
   type Evento = {
     dentista: string;
@@ -180,9 +198,27 @@ export async function sincronizarContactPoints(
   log(`Contact points leídos del intranet: ${eventos.length}`);
 
   const doctors = await cargarDoctores(db);
-  const juan = await perfilPorPista(db, "juan");
+  // Atribución por IDENTIDAD del login: cada cuenta del intranet ve SOLO sus
+  // propios eventos (verificado 22/8: con la sesión de Juan, los 460 eventos de
+  // la ventana son suyos). Quien se loguea es quien hizo el contacto — así el
+  // sync por usuario no necesita más config que el par de credenciales.
+  const pista =
+    norm(sesion.fullName ?? "").split(" ")[0] ||
+    (sesion.email ?? "").split("@")[0].toLowerCase();
+  const autor = pista ? await perfilPorPista(db, pista) : null;
   const existentes = await actividadesExistentes(db);
-  const rep: ReporteFuente = { insertadas: 0, duplicadas: 0, sinMatch: [], ambiguos: [] };
+  const rep: ReporteFuente = {
+    insertadas: 0,
+    duplicadas: 0,
+    sinMatch: [],
+    ambiguos: [],
+    usuario: sesion.fullName ?? sesion.email ?? email,
+    atribuidoA: autor,
+  };
+  log(
+    `Intranet: sesión de ${rep.usuario} → ` +
+      (autor ? "atribuido a su perfil del CRM" : "SIN perfil que matchee (created_by null)")
+  );
 
   const filas: any[] = [];
   for (const e of eventos) {
@@ -200,7 +236,7 @@ export async function sincronizarContactPoints(
       : /whatsapp/i.test(e.details ?? "") ? "whatsapp"
       : e.modality === "Presencial" ? "visita"
       : "reunion";
-    filas.push({ doctor_id: doctorId, type, occurred_at: occurred, summary, outcome: e.reason, created_by: juan });
+    filas.push({ doctor_id: doctorId, type, occurred_at: occurred, summary, outcome: e.reason, created_by: autor });
   }
   for (let i = 0; i < filas.length; i += 200) {
     const { error } = await db.from("activities").insert(filas.slice(i, i + 200));
