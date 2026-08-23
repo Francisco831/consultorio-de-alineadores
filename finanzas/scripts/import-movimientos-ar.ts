@@ -77,7 +77,7 @@ async function main() {
     const keys = new KeyBuilder();
     // correcciones por fila verificadas contra el extracto (pesos en la
     // columna de dólares, medios confirmados a mano): seed-data/medios_overrides.json
-    let overrides: Record<string, { cuenta?: string; moneda?: "ARS" | "USD"; ignorar?: boolean; nota?: string }> = {};
+    let overrides: Record<string, { cuenta?: string; moneda?: "ARS" | "USD"; monto?: number; ignorar?: boolean; nota?: string }> = {};
     try {
       overrides = JSON.parse(readFileSync(resolve(__dirname, "../seed-data/medios_overrides.json"), "utf8"));
     } catch { /* sin overrides */ }
@@ -95,7 +95,9 @@ async function main() {
         movs.push({
           ...m,
           currency: o?.moneda ?? currency,
-          amount: Math.abs(monto),
+          // el monto corregido entra TAMBIÉN en el total esperado del gate: el
+          // override es verdad declarada, no un parche sobre la base
+          amount: o?.monto ?? Math.abs(monto),
           key,
           cuentaOverride: o?.cuenta,
         });

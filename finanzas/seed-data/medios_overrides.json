@@ -86,5 +86,19 @@
   "caja:be407cf8e2478458": {
     "cuenta": "Cuenta KS",
     "nota": "Cordoni Laura $1.000 18/3: irrastreable (el extracto MP de marzo solo cubre 25, 27 y 31). Decisión Pancho 21/8: a Cuenta KS, como el resto de las filas de Matelli de ese día."
+  },
+  "caja:79771578c4e8eced": {
+    "cuenta": "Coni – cuenta propia",
+    "moneda": "ARS",
+    "monto": 454500,
+    "nota": "Macarena Tapia es paciente de CONI: el ingreso NO es ganancia de Pancho (dixit 21/8), aunque el efectivo lo tenga él. Va a la caja de Coni; la liquidación a Matelli se mantiene (Pancho la abona en efectivo de esa misma plata). Pendiente de hablar con Coni. Cuota 1 de 6: la caja anota USD 300 pero la obs dice 'en pesos $454.500 al tc $1515' — cobró PESOS."
+  },
+  "caja:694332ef15139eff": {
+    "cuenta": "Coni – cuenta propia",
+    "nota": "Macarena Tapia es paciente de CONI: el ingreso NO es ganancia de Pancho (dixit 21/8), aunque el efectivo lo tenga él. Va a la caja de Coni; la liquidación a Matelli se mantiene (Pancho la abona en efectivo de esa misma plata). Pendiente de hablar con Coni. 1ra consulta 24/6 (parte que entró por MP)."
+  },
+  "caja:f289fdc85d99bbeb": {
+    "cuenta": "Coni – cuenta propia",
+    "nota": "Macarena Tapia es paciente de CONI: el ingreso NO es ganancia de Pancho (dixit 21/8), aunque el efectivo lo tenga él. Va a la caja de Coni; la liquidación a Matelli se mantiene (Pancho la abona en efectivo de esa misma plata). Pendiente de hablar con Coni. 1ra consulta 24/6 (parte en efectivo)."
   }
 }

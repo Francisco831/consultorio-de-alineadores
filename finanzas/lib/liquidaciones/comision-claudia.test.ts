@@ -68,3 +68,13 @@ describe("comisionPorMes", () => {
     assert.deepEqual(m.get("2026-03")!.pacientes.sort(), ["Ana", "Beto"]);
   });
 });
+
+it("los pacientes de Coni no cuentan como tratamiento nuevo aunque la plata sea de Pancho", () => {
+  const pagos = [
+    { occurred_on: "2026-08-19", counterparty_id: "t", paciente: "TApia Macarena", separada: false, descripcion: "cuota 1 de 6" },
+    { occurred_on: "2026-08-20", counterparty_id: "b", paciente: "Lucio Bustos", separada: false, descripcion: "cuota 1 de 6" },
+  ];
+  const r = tratamientosNuevos(pagos, ["Macarena Tapia"]);
+  assert.equal(r.length, 1);
+  assert.equal(r[0].paciente, "Lucio Bustos");
+});

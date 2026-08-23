@@ -4,6 +4,8 @@
 // etapa o las cuotas siguientes del mismo paciente no vuelven a contar.
 // Los pacientes de la caja Coni quedan afuera (contabilidad separada).
 
+import { PACIENTES_DE_CONI } from "./pacientes-coni";
+
 export const COMISION_POR_TRATAMIENTO = 100_000;
 
 export type PagoAlineadores = {
@@ -30,8 +32,13 @@ const empiezaAMitad = (desc: string | null | undefined) =>
 
 export type TratamientoNuevo = { mes: string; fecha: string; paciente: string };
 
-export function tratamientosNuevos(pagos: PagoAlineadores[]): TratamientoNuevo[] {
-  const propios = pagos.filter((p) => !p.separada);
+export function tratamientosNuevos(
+  pagos: PagoAlineadores[], ajenos: string[] = PACIENTES_DE_CONI
+): TratamientoNuevo[] {
+  const deOtro = new Set(ajenos.map(claveNombre));
+  const propios = pagos.filter(
+    (p) => !p.separada && !deOtro.has(claveNombre(p.paciente ?? ""))
+  );
   // primera aparición por paciente (nombre normalizado; sin nombre, el id)
   const primeros = new Map<string, PagoAlineadores>();
   for (const p of [...propios].sort((a, b) => a.occurred_on.localeCompare(b.occurred_on))) {
