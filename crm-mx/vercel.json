@@ -15,6 +15,10 @@
     {
       "path": "/api/ai/brief/cron",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/sync/asistencia",
+      "schedule": "30 23 * * 1-5"
     }
   ]
 }
