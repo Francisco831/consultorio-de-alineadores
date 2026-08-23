@@ -202,10 +202,21 @@ export async function sincronizarContactPoints(
   // propios eventos (verificado 22/8: con la sesión de Juan, los 460 eventos de
   // la ventana son suyos). Quien se loguea es quien hizo el contacto — así el
   // sync por usuario no necesita más config que el par de credenciales.
-  const pista =
-    norm(sesion.fullName ?? "").split(" ")[0] ||
-    (sesion.email ?? "").split("@")[0].toLowerCase();
-  const autor = pista ? await perfilPorPista(db, pista) : null;
+  //
+  // Matcheo por TOKENS, no por primera palabra: el intranet devuelve
+  // "Banffi, Juan" (apellido primero) y la primera palabra no matchea nada.
+  const tokensLogin = new Set(
+    norm(sesion.fullName ?? "").split(" ").filter(Boolean)
+  );
+  const { data: perfiles, error: errPerfiles } = await db
+    .from("profiles")
+    .select("id, nombre");
+  if (errPerfiles) throw new Error(`perfiles: ${errPerfiles.message}`);
+  const autor =
+    (perfiles ?? []).find((p) => {
+      const primer = norm(p.nombre ?? "").split(" ")[0];
+      return primer.length > 1 && tokensLogin.has(primer);
+    })?.id ?? null;
   const existentes = await actividadesExistentes(db);
   const rep: ReporteFuente = {
     insertadas: 0,
