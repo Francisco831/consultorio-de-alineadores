@@ -54,6 +54,42 @@ async function main() {
   });
   console.log(`${casos.length} casos en la planilla · ${existentes.length} en la base · ` +
     `${nuevos.length} nuevos · ${cambiados.length} con precio cambiado · ${faltantes.size} doctores a crear`);
+
+  // CONTROL planilla vs ledger (el gemelo MX del control anti-Etchegoyen de la
+  // caja AR): el "pagado" de la barra sale de la planilla y el detalle de pagos
+  // del ledger (adminmx:{fila}:{slot}) — si divergen, alguien ve plata que no
+  // está o al revés. El ledger solo tiene pagos 2026, así que en casos viejos
+  // planilla > ledger es normal; lo anormal es (a) ledger > planilla en
+  // cualquier caso, (b) cualquier diferencia en casos iniciados en 2026.
+  {
+    const pagosLedger = await fetchAllRows<{ amount: string; external_key: string | null }>(
+      db, "movements", "amount, external_key",
+      (q) => q.eq("company_id", companyId).eq("kind", "income")
+        .like("external_key", "adminmx:%").neq("status", "void"));
+    const sumaFila = new Map<number, number>();
+    for (const pg of pagosLedger) {
+      const f = Number((pg.external_key ?? "").match(/^adminmx:(\d+):/)?.[1]);
+      if (f) sumaFila.set(f, (sumaFila.get(f) ?? 0) + Number(pg.amount));
+    }
+    const filasPlanilla = new Set(casos.map((c) => c.fila));
+    const huerfanos = [...sumaFila.keys()].filter((f) => !filasPlanilla.has(f));
+    const sospechosos = casos.filter((c) => {
+      const sum = sumaFila.get(c.fila) ?? 0;
+      return sum - c.pagado > 1 || ((c.fecha ?? "") >= "2026-01-01" && Math.abs(sum - c.pagado) > 1);
+    });
+    if (huerfanos.length) {
+      console.log(`\n⚠ ${huerfanos.length} fila(s) con pagos en el ledger que NO existen en la planilla: ${huerfanos.slice(0, 10).join(", ")}${huerfanos.length > 10 ? "…" : ""}`);
+    }
+    if (sospechosos.length) {
+      console.log(`\n⚠ ${sospechosos.length} caso(s) donde planilla y ledger dicen distinto:`);
+      for (const c of sospechosos.slice(0, 15)) {
+        console.log(`  · fila ${c.fila} ${c.paciente ?? "—"} (${c.fecha ?? "sin fecha"}): planilla ${c.pagado.toLocaleString("es-MX")} vs ledger ${(sumaFila.get(c.fila) ?? 0).toLocaleString("es-MX")}`);
+      }
+      if (sospechosos.length > 15) console.log(`  … y ${sospechosos.length - 15} más`);
+      console.log("  → revisar el sync planilla→CRM→finanzas antes de confiar en la barra de esos casos.");
+    }
+  }
+
   if (flags.dryRun) { console.log("DRY-RUN (sin --apply no escribe)."); return; }
 
   if (faltantes.size) {

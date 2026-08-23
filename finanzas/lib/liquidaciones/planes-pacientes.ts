@@ -61,12 +61,18 @@ export type PlanPaciente = {
   progresoPct: number;          // % del plan por PLATA pagada, no por cuotas
 };
 
-// Las cuotas son mensuales: hasta 45 días desde el último pago es ritmo
-// normal; 46-75 es un mes salteado; más de 75, dos o más — moroso.
-export function estadoPlan(pendienteCuotas: number, diasSinPagar: number): EstadoPlan {
+// Las cuotas AR son mensuales: hasta 45 días desde el último pago es ritmo
+// normal; 46-75 es un mes salteado; más de 75, dos o más — moroso. Los cortes
+// son configurables porque los casos MX pagan por etapa, no por mes (cadencia
+// real medida ago/26: p50 31d, p90 79d → allá se usa 60/90).
+export function estadoPlan(
+  pendienteCuotas: number,
+  diasSinPagar: number,
+  cortes: { alDia: number; atrasado: number } = { alDia: 45, atrasado: 75 },
+): EstadoPlan {
   if (pendienteCuotas <= 0) return "completo";
-  if (diasSinPagar <= 45) return "al_dia";
-  if (diasSinPagar <= 75) return "atrasado";
+  if (diasSinPagar <= cortes.alDia) return "al_dia";
+  if (diasSinPagar <= cortes.atrasado) return "atrasado";
   return "moroso";
 }
 

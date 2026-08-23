@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { planesPacientes, motivoCompleto, pareceCuota } from "./planes-pacientes";
+import { planesPacientes, motivoCompleto, pareceCuota, estadoPlan } from "./planes-pacientes";
 
 test("plan en curso: cuotas pagadas, pendiente estimado con la última cuota", () => {
   const r = planesPacientes([
@@ -162,4 +162,13 @@ test("el progreso nunca es negativo", () => {
     { paciente: "Nota C", fecha: "2026-05-01", ars: -900000, usd: 0, motivo: "ajuste", doctora: null },
   ], "2026-05-10");
   assert.equal(r[0].progresoPct, 0);
+});
+
+test("los cortes de cadencia son configurables (casos MX pagan por etapa: 60/90)", () => {
+  const MX = { alDia: 60, atrasado: 90 };
+  assert.equal(estadoPlan(1, 55), "atrasado");      // AR: más de 45 días
+  assert.equal(estadoPlan(1, 55, MX), "al_dia");    // MX: cadencia normal entre etapas
+  assert.equal(estadoPlan(1, 80, MX), "atrasado");
+  assert.equal(estadoPlan(1, 95, MX), "moroso");
+  assert.equal(estadoPlan(0, 500, MX), "completo");
 });

@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 import { requireEmpresa } from "@/lib/empresa-context";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/money";
-import { formatDateShort } from "@/lib/dates";
+import { formatDateShort, todayIn } from "@/lib/dates";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
+import { estadoPlan, type EstadoPlan } from "@/lib/liquidaciones/planes-pacientes";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 
@@ -17,6 +19,11 @@ type Plan = {
   } | null;
   doctor: { display_name: string } | null;
 };
+
+// Los casos MX pagan por etapa (anticipo/entrega/cierre), no por mes: la
+// cadencia real (ago/26) da p50 31d y p90 79d entre pagos — recién pasados
+// los 90 días un saldo vivo es moroso de verdad.
+const CORTES_MX = { alDia: 60, atrasado: 90 };
 
 export default async function CasosPage({
   params, searchParams,
@@ -32,15 +39,21 @@ export default async function CasosPage({
   const { locale } = ctx.config;
   const f = sp.f ?? "saldo";
 
-  // pagos reales por caso: external_key adminmx:{fila}:{slot}
-  const { data: pagosRaw } = await supabase
-    .from("movements")
-    .select("occurred_on, amount, external_key, meta")
-    .eq("company_id", ctx.companyId).eq("kind", "income")
-    .like("external_key", "adminmx:%").neq("status", "void")
-    .limit(3000);
+  // pagos reales por caso: external_key adminmx:{fila}:{slot}.
+  // fetchAll SIEMPRE: PostgREST corta en 1.000 filas sin avisar y la planilla
+  // ya pasa las 1.400 — con .limit() la página perdía justo los casos 2026.
+  const pagosRaw = await fetchAllRows<{
+    occurred_on: string; amount: string; external_key: string | null;
+    meta: { method_raw?: string } | null;
+  }>((from, to) =>
+    supabase.from("movements")
+      .select("occurred_on, amount, external_key, meta")
+      .eq("company_id", ctx.companyId).eq("kind", "income")
+      .like("external_key", "adminmx:%").neq("status", "void")
+      .order("external_key").range(from, to)
+  );
   const pagosPorFila = new Map<number, { fecha: string; monto: number; metodo: string | null }[]>();
-  for (const pg of pagosRaw ?? []) {
+  for (const pg of pagosRaw) {
     const fila = Number(pg.external_key?.match(/^adminmx:(\d+):/)?.[1]);
     if (!fila) continue;
     const arr = pagosPorFila.get(fila) ?? [];
@@ -52,22 +65,32 @@ export default async function CasosPage({
   }
   for (const arr of pagosPorFila.values()) arr.sort((a, b) => a.fecha.localeCompare(b.fecha));
 
-  const { data, error } = await supabase
-    .from("treatment_plans")
-    .select("id, total_amount, started_on, notes, ks_price_key, doctor:counterparties!treatment_plans_patient_id_company_id_fkey(display_name)")
-    .eq("company_id", ctx.companyId)
-    .neq("status", "cancelled")
-    .limit(3000);
-  if (error) throw new Error(`Error consultando casos: ${error.message}`);
+  // sin genérico: el tipo embebido del doctor lo infiere Supabase; el cast
+  // a Plan[] de abajo es el mismo que usaba la consulta original
+  const data = await fetchAllRows((from, to) =>
+    supabase
+      .from("treatment_plans")
+      .select("id, total_amount, started_on, notes, ks_price_key, doctor:counterparties!treatment_plans_patient_id_company_id_fkey(display_name)")
+      .eq("company_id", ctx.companyId)
+      .neq("status", "cancelled")
+      .order("id").range(from, to)
+  );
 
+  const hoy = todayIn(ctx.config.timezone);
   type Caso = {
     id: string; fila: number | null; doctor: string; caso: string; paciente: string; etapa: string;
     fecha: string | null; valor: number; pagado: number; saldo: number;
+    estado: EstadoPlan | null; dias: number;
   };
   let casos: Caso[] = ((data ?? []) as unknown as Plan[]).map((p) => {
     const k = p.ks_price_key ?? {};
     const valor = Number(p.total_amount ?? 0);
     const pagado = Number(k.pagado ?? 0);
+    const saldo = Math.max(0, valor - pagado);
+    // cadencia: último pago del ledger; si nunca pagó, desde el inicio del caso
+    const pagosCaso = k.fila ? (pagosPorFila.get(k.fila) ?? []) : [];
+    const ultimo = pagosCaso.length ? pagosCaso[pagosCaso.length - 1].fecha : p.started_on;
+    const dias = ultimo ? Math.max(0, Math.round((+new Date(hoy) - +new Date(ultimo)) / 86400000)) : 0;
     return {
       id: p.id,
       fila: k.fila ?? null,
@@ -76,8 +99,10 @@ export default async function CasosPage({
       paciente: k.paciente ?? "—",
       etapa: [k.tipo, k.etapa].filter(Boolean).join(" · "),
       fecha: p.started_on,
-      valor, pagado: Math.min(pagado, valor > 0 ? Math.max(pagado, valor) : pagado),
-      saldo: Math.max(0, valor - pagado),
+      valor, pagado,
+      saldo,
+      estado: valor > 0 && saldo > 1 && ultimo ? estadoPlan(1, dias, CORTES_MX) : null,
+      dias,
     };
   });
 
@@ -88,6 +113,8 @@ export default async function CasosPage({
   }
   if (f === "saldo") casos = casos.filter((c) => c.valor > 0 && c.saldo > 1);
   else if (f === "2026") casos = casos.filter((c) => (c.fecha ?? "") >= "2026-01-01");
+
+  const morosos = casos.filter((c) => c.estado === "moroso");
 
   // agrupar por doctor, deudores primero
   const porDoctor = new Map<string, Caso[]>();
@@ -115,12 +142,17 @@ export default async function CasosPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Casos por doctor</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             {f === "saldo" ? (
               <>Deuda viva: <span className="fig font-semibold text-red-600 dark:text-red-400">{formatMoney(saldoTotal, "MXN", locale)}</span> en {casos.length} casos.</>
             ) : (
               <>{casos.length.toLocaleString(locale)} casos · saldo {formatMoney(saldoTotal, "MXN", locale)}</>
             )}
+            {morosos.length ? (
+              <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-950 dark:text-red-300">
+                {morosos.length} moroso{morosos.length === 1 ? "" : "s"} · {formatMoney(morosos.reduce((a, c) => a + c.saldo, 0), "MXN", locale)}
+              </span>
+            ) : null}
           </p>
         </div>
         <form action={`/${empresa}/casos`} className="flex items-center gap-2">
@@ -169,6 +201,18 @@ export default async function CasosPage({
                       <td className="fig hidden w-24 px-2 py-2 text-xs text-muted-foreground sm:table-cell">
                         {c.fecha ? formatDateShort(c.fecha, locale) : "—"}
                       </td>
+                      <td className="w-28 px-2 py-2">
+                        {c.estado ? (
+                          <span className={cn("whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium",
+                            c.estado === "moroso" ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
+                              : c.estado === "atrasado" ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300")}>
+                            {c.estado === "moroso" ? `moroso · ${c.dias}d`
+                              : c.estado === "atrasado" ? `atrasado · ${c.dias}d`
+                              : "al día"}
+                          </span>
+                        ) : null}
+                      </td>
                       <td className="w-[220px] px-2 py-2">
                         {c.valor > 0 ? (
                           <div className="flex items-center gap-2">
@@ -193,7 +237,7 @@ export default async function CasosPage({
                     </tr>,
                     pagosCaso.length ? (
                       <tr key={`${c.id}-pagos`} className="border-b last:border-0">
-                        <td colSpan={6} className="bg-muted/20 px-4 py-0">
+                        <td colSpan={7} className="bg-muted/20 px-4 py-0">
                           <details className="group py-1.5">
                             <summary className="cursor-pointer select-none text-[11px] font-medium text-muted-foreground hover:text-foreground">
                               Ver los {pagosCaso.length} pago{pagosCaso.length === 1 ? "" : "s"} de {c.paciente.split(" ")[0]}
