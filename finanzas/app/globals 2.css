@@ -1,0 +1,194 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-rethink), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-rethink), ui-sans-serif, system-ui, sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Paleta KeepSmiling (keepsmiling.com.ar):
+   navy #001D57 · celeste #CBF2FE · naranja #EE5A24 · lima #D3D717
+   El color comunica marca (navy/celeste) y estado (verde/ámbar/rojo/naranja);
+   todo lo demás queda neutro. */
+:root {
+  --ks-navy: #001d57;
+  --ks-celeste: #cbf2fe;
+  --ks-naranja: #ee5a24;
+
+  --background: #ffffff;
+  --foreground: #101623;
+  --card: #ffffff;
+  --card-foreground: #101623;
+  --popover: #ffffff;
+  --popover-foreground: #101623;
+  --primary: #001d57;
+  --primary-foreground: #ffffff;
+  --secondary: #f2f5f9;
+  --secondary-foreground: #001d57;
+  --muted: #f5f7fa;
+  --muted-foreground: #5d6b80;
+  --accent: #ecf7fd;
+  --accent-foreground: #01275f;
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: #e3e8ef;
+  --input: #dde3ec;
+  --ring: #7fa3e8;
+  --chart-1: #2a5bd7;
+  --chart-2: #59a7d7;
+  --chart-3: #001d57;
+  --chart-4: #93b6f0;
+  --chart-5: #cbe6f8;
+  --radius: 0.625rem;
+  --sidebar: #001d57;
+  --sidebar-foreground: #b9c6e4;
+  --sidebar-primary: #cbf2fe;
+  --sidebar-primary-foreground: #001d57;
+  --sidebar-accent: #12316f;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #16326e;
+  --sidebar-ring: #7fa3e8;
+}
+
+.dark {
+  --background: #0b1120;
+  --foreground: #e7ecf5;
+  --card: #101a30;
+  --card-foreground: #e7ecf5;
+  --popover: #101a30;
+  --popover-foreground: #e7ecf5;
+  --primary: #9db9f2;
+  --primary-foreground: #06152e;
+  --secondary: #1a2440;
+  --secondary-foreground: #dbe4f5;
+  --muted: #17203a;
+  --muted-foreground: #8b99b5;
+  --accent: #14233f;
+  --accent-foreground: #cbe4f8;
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: #ffffff1a;
+  --input: #ffffff26;
+  --ring: #5b7fc4;
+  --chart-1: #7da2f7;
+  --chart-2: #6cc3ee;
+  --chart-3: #cbf2fe;
+  --chart-4: #3c67b4;
+  --chart-5: #24406e;
+  --sidebar: #071838;
+  --sidebar-foreground: #a9b8d9;
+  --sidebar-primary: #cbf2fe;
+  --sidebar-primary-foreground: #001d57;
+  --sidebar-accent: #12316f;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #ffffff14;
+  --sidebar-ring: #5b7fc4;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+/* ── Finanzas: tema por empresa ─────────────────────────────────────────
+   El contexto de empresa se marca con data-empresa en el wrapper del layout.
+   MX hereda el navy KeepSmiling de :root; AR redefine acento y sidebar en
+   verde bosque. El color de estado (verde/ámbar/rojo) es compartido. */
+[data-empresa="ar"] {
+  --primary: #0e3b2e;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f5f2;
+  --secondary-foreground: #0e3b2e;
+  --accent: #e9f5ef;
+  --accent-foreground: #0b2f25;
+  --ring: #5da88b;
+  --chart-1: #1f7a5c;
+  --chart-2: #63b598;
+  --chart-3: #0e3b2e;
+  --chart-4: #9ed0bc;
+  --chart-5: #d7ece3;
+  --sidebar: #0e3b2e;
+  --sidebar-foreground: #b7d2c7;
+  --sidebar-primary: #d9f2e6;
+  --sidebar-primary-foreground: #0e3b2e;
+  --sidebar-accent: #1c5a45;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #1b5240;
+  --sidebar-ring: #5da88b;
+}
+.dark [data-empresa="ar"],
+[data-empresa="ar"]:is(.dark *) {
+  --primary: #8fd4b8;
+  --primary-foreground: #06231a;
+  --secondary: #16352b;
+  --secondary-foreground: #d5eee2;
+  --accent: #13302a;
+  --accent-foreground: #c4ecd9;
+  --ring: #3e8a6c;
+  --chart-1: #6fc7a4;
+  --chart-2: #4da583;
+  --chart-3: #d9f2e6;
+  --chart-4: #2c6b52;
+  --chart-5: #1c4536;
+  --sidebar: #08251c;
+  --sidebar-foreground: #a5c6b9;
+  --sidebar-primary: #d9f2e6;
+  --sidebar-primary-foreground: #0e3b2e;
+  --sidebar-accent: #1c5a45;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #ffffff14;
+  --sidebar-ring: #3e8a6c;
+}
+
+@layer utilities {
+  /* toda cifra financiera usa dígitos tabulares */
+  .fig {
+    font-variant-numeric: tabular-nums;
+  }
+}

@@ -22,7 +22,6 @@ const PAGINAS: Array<{ href: string; label: string }> = [
   { href: "/impuestos", label: "Impuestos" },
   { href: "/sueldos", label: "Sueldos" },
   { href: "/liquidaciones", label: "Liquidaciones" },
-  { href: "/retiros", label: "Retiros" },
   { href: "/cashflow", label: "Cash Flow" },
   { href: "/costos", label: "Costos" },
   { href: "/presupuesto", label: "Presupuesto" },

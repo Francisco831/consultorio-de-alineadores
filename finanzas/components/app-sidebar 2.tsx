@@ -19,7 +19,6 @@ import {
   CalendarDays,
   Target,
   FileBarChart,
-  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -45,7 +44,6 @@ function nav(base: string, labelCostos: string, empresa: EmpresaSlug): { href: s
     { href: `${base}/impuestos`, label: "Impuestos", icon: Receipt, grupo: "Compromisos" },
     { href: `${base}/sueldos`, label: "Sueldos", icon: Users, grupo: "Compromisos" },
     { href: `${base}/liquidaciones`, label: "Liquidaciones", icon: Percent, grupo: "Compromisos" },
-    { href: `${base}/retiros`, label: "Retiros", icon: Wallet, grupo: "Compromisos" },
     { href: `${base}/cashflow`, label: "Cash Flow", icon: TrendingUp, grupo: "Análisis" },
     { href: `${base}/costos`, label: labelCostos, icon: Calculator, grupo: "Análisis" },
     { href: `${base}/presupuesto`, label: "Presupuesto", icon: Target, grupo: "Análisis" },
