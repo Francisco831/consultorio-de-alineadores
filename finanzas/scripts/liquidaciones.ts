@@ -59,6 +59,17 @@ async function main() {
   const difs: string[] = [];
   const crecidos: string[] = [];
   const retirosNuevos: string[] = [];
+  const pesificados: string[] = [];
+  // Cambio de criterio del 25/8/26: lo que entra en dólares se pesifica al blue
+  // de su fecha. Una doctora-mes que tuvo cobros en USD ya NO es comparable peso
+  // a peso contra la referencia vieja, que los llevaba en un bucket aparte. Se
+  // listan como lo que son —un cambio de criterio— en vez de dejar que el gate
+  // los reporte como regresión (cobrado USD que "desapareció") o como carga
+  // tardía (cobrado ARS que "creció").
+  const conUsd = new Set(
+    calc.movs.filter((m) => m.currency === "USD")
+      .map((m) => `${calc.periodoFinal.get(m.id)}|${calc.doctoraFinal.get(m.id)}`)
+  );
   for (const l of calculadas) {
     if (l.periodo > maxRef) continue;            // mes posterior a la foto
     const r = refPorClave.get(`${l.periodo}|${l.doctora}`);
@@ -66,7 +77,7 @@ async function main() {
       // Puede ser legítima: si no cobró nada ese mes pero se le pagó un retiro
       // (saldo de meses anteriores), la liquidación existe recién ahora porque
       // el retiro salió por Mercado Pago y el script viejo no lo veía.
-      if (l.cobradoArs === 0 && l.cobradoUsd === 0 && l.retiros > 0) {
+      if (l.cobradoArs === 0 && l.retiros > 0) {
         retirosNuevos.push(
           `${l.periodo} ${l.doctora}: retiro de ${l.retiros.toLocaleString("es-AR")} sin cobros en el mes ` +
           `(el script viejo no generaba esta liquidación)`
@@ -76,13 +87,20 @@ async function main() {
       }
       continue;
     }
+    if (conUsd.has(`${l.periodo}|${l.doctora}`)) {
+      pesificados.push(
+        `${l.periodo} ${l.doctora}: la referencia decía ` +
+        `$${r.cobrado_ars.toLocaleString("es-AR")} + US$ ${r.cobrado_usd.toLocaleString("es-AR")}` +
+        ` → ahora $${l.cobradoArs.toLocaleString("es-AR")} todo en pesos`
+      );
+      continue;
+    }
     // Los RETIROS quedan fuera de la comparación estricta a propósito: el script
     // viejo solo mira la caja y no ve los retiros que se pagaron por Mercado Pago
     // (2,68M entre junio y julio). Que aparezcan de más es la corrección, no un
     // error — se reportan aparte.
     const campos: Array<[string, number, number]> = [
       ["cobrado ARS", l.cobradoArs, r.cobrado_ars],
-      ["cobrado USD", l.cobradoUsd, r.cobrado_usd],
       ["costo KS", l.gastosTratamiento, r.gastos_tratamiento],
       ["liquidación ARS", l.liquidacionArs, r.liquidacion_ars],
     ];
@@ -108,12 +126,17 @@ async function main() {
     } else iguales++;
   }
 
-  console.log(`\nLiquidaciones calculadas: ${calculadas.length} · comparables con la referencia: ${iguales + difs.length}`);
+  console.log(`\nLiquidaciones calculadas: ${calculadas.length} · comparables con la referencia: ${iguales + difs.length}` +
+    (pesificados.length ? ` · ${pesificados.length} con cobros en dólares, ya no comparables` : ""));
   console.log(`  ✓ idénticas o crecidas por cargas tardías: ${iguales}`);
   console.log(`  ${difs.length ? "✗" : "✓"} con REGRESIONES: ${difs.length}`);
   if (crecidos.length) {
     console.log(`\n  Crecidas contra la foto vieja (cargas tardías en la caja — esperado):`);
     for (const c of crecidos) console.log(`     ${c}`);
+  }
+  if (pesificados.length) {
+    console.log(`\n  Fuera de comparación por el paso a pesos (blue del día, 25/8/26):`);
+    for (const c of pesificados) console.log(`     ${c}`);
   }
   if (retirosNuevos.length) {
     console.log(`\n  Retiros que el script viejo no veía (salieron por Mercado Pago):`);

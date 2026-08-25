@@ -32,6 +32,11 @@ else
   echo "-- CRM→finanzas: salteado (falló la etapa anterior)" >> "$LOG"
 fi
 
+# blue del día (Ámbito): sin la cotización de la fecha, un cobro en dólares
+# frena el recálculo de liquidaciones — a propósito, para no pesificar a ojo
+npx tsx scripts/sync-cotizaciones.ts --apply --yes >> "$LOG" 2>&1
+echo "-- cotizaciones blue: exit $?" >> "$LOG"
+
 # tipos de tratamiento desde Noloco (para el costo KS por paciente)
 npx tsx scripts/tipos-tratamiento-noloco.ts --yes --apply >> "$LOG" 2>&1
 echo "-- tipos Noloco: exit $?" >> "$LOG"

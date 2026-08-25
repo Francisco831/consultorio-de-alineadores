@@ -1,7 +1,12 @@
-// Único módulo de dinero de la app.
-// Regla de oro: las monedas NUNCA se convierten ni se suman entre sí;
-// todo total es un bucket por moneda. Por eso acá no existe (ni va a
-// existir) ninguna función de conversión.
+// Único módulo de dinero de la app: formatear y sumar.
+// Regla de oro: acá las monedas NUNCA se convierten ni se suman entre sí; todo
+// total es un bucket por moneda, y por eso este archivo no tiene ninguna
+// función de conversión.
+//
+// Convertir SÍ pasa, pero en un solo lugar y con la fecha a la vista: lib/fx.ts
+// pesifica al blue del día para las liquidaciones (regla de Pancho, 25/8/26).
+// Que viva allá y no acá es a propósito: una conversión sin fecha es un número
+// que nadie puede rehacer seis meses después.
 
 const SYMBOL_OVERRIDES: Record<string, string> = {
   // es-AR muestra USD como "US$"; el resto usa el símbolo del locale.

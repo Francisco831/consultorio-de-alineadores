@@ -10,9 +10,13 @@ import { RevisadoCheck } from "@/components/liquidaciones/revisado-check";
 import { COMISION_POR_TRATAMIENTO } from "@/lib/liquidaciones/comision-claudia";
 import { comisionClaudiaPorMes } from "@/lib/liquidaciones/comision-claudia-query";
 import { periodoDeMovimiento, type MovimientoBase } from "@/lib/liquidaciones/recalcular";
+import { FUENTE_TC, tablaTC, type Cotizacion } from "@/lib/fx";
 
 type Totales = {
   ARS?: { collected?: number; ks_cost?: number; base?: number; due?: number; withdrawn?: number; balance?: number };
+  // Desde el 25/8/26 las liquidaciones nuevas no tienen bucket USD: lo cobrado
+  // en dólares entra pesificado al blue del día. Las CONGELADAS de antes sí lo
+  // tienen y se siguen mostrando como se pagaron.
   USD?: { collected?: number; due?: number };
 };
 
@@ -136,9 +140,16 @@ export default async function LiquidacionesPage({
       if (!d || d.destino === "caja") return !m.meta?.doctora;
       return d.destino === "casa";
     });
-  const totalSinLiquidar = sinLiquidar
-    .filter((m) => m.currency !== "USD")
-    .reduce((a, m) => a + Number(m.amount), 0);
+  // Lo que entró en dólares se cuenta pesificado al blue de su fecha: dejarlo
+  // afuera del total (como antes) hacía que "sin liquidar" mostrara menos plata
+  // de la que realmente está sin asignar.
+  const { data: cotiz } = await supabase
+    .from("fx_rates").select("quote_date, buy, sell").eq("source", FUENTE_TC);
+  const tc = tablaTC(((cotiz ?? []) as Array<{ quote_date: string; buy: string; sell: string }>)
+    .map((c): Cotizacion => ({ fecha: c.quote_date, compra: Number(c.buy), venta: Number(c.sell) })));
+  const totalSinLiquidar = sinLiquidar.reduce(
+    (a, m) => a + Number(m.amount) * (m.currency === "USD" ? tc(m.occurred_on) ?? 0 : 1), 0
+  );
 
   // Claudia no liquida 40%: cobra $100.000 por tratamiento nuevo, pero se paga
   // en la misma tanda mensual — por eso aparece acá además de en Sueldos

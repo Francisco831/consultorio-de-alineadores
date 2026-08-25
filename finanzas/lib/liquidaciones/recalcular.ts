@@ -10,14 +10,19 @@
 //     así que siempre se calcula el año entero aunque se guarde un solo mes.
 //  2. Una liquidación confirmada o pagada está CONGELADA: no se toca.
 //  3. Una liquidación que se quedó sin cobros se ANULA, no se deja de fantasma.
+//  4. Lo que entró en dólares se pesifica al blue de SU fecha antes de entrar a
+//     la liquidación (regla de Pancho del 25/8/26). La caja sigue guardando el
+//     movimiento en dólares —esa es la verdad de lo que pasó—; lo que se
+//     pesifica es la liquidación, y el detalle impreso dice el t/c usado.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { FUENTE_TC, tablaTC, type Cotizacion, type TablaTC } from "../fx";
 import {
   costearCuotas, calcularLiquidaciones,
   type CobroAlineador, type MovimientoLiq, type LineaLiquidacion,
 } from "./costeo";
 import {
-  COSTO_ETAPA_ADICIONAL, ETAPA_ADICIONAL, PLAN_PACIENTE,
+  COSTO_ETAPA_ADICIONAL, DESCUENTO_KS_ESPECIAL, ETAPA_ADICIONAL, PLAN_PACIENTE,
   PRECIO_PACTADO, PRECIO_PACTADO_USD,
 } from "./pactos";
 import {
@@ -75,13 +80,46 @@ export function periodoDeMovimiento(m: MovimientoBase): string {
   return hit?.periodo ?? m.occurred_on.slice(0, 7);
 }
 
+/**
+ * Cómo entra un movimiento a una liquidación: su importe en pesos y, si vino en
+ * dólares, la nota que deja explicado el cambio en el detalle impreso. La
+ * doctora tiene que poder rehacer la cuenta sin preguntarle nada a nadie.
+ */
+function pesificador(tc: TablaTC) {
+  const arsDe = (m: MovimientoBase): number => {
+    const monto = Number(m.amount);
+    if (m.currency !== "USD") return monto;
+    const t = tc(m.occurred_on);
+    if (t == null) {
+      // calcularTodo() ya frenó antes por esto; acá sólo queda como red.
+      throw new Error(`sin cotización del blue para el ${m.occurred_on}`);
+    }
+    return Math.round(monto * t * 100) / 100;
+  };
+  const notaCambio = (m: MovimientoBase): string | null => {
+    if (m.currency !== "USD") return null;
+    const t = tc(m.occurred_on);
+    const fecha = tc.fechaUsada(m.occurred_on);
+    if (t == null || !fecha) return null;
+    const dm = `${fecha.slice(8, 10)}/${fecha.slice(5, 7)}`;
+    return (
+      `US$ ${Number(m.amount).toLocaleString("es-AR")} × t/c ` +
+      `${t.toLocaleString("es-AR")} (blue ${dm})`
+    );
+  };
+  return { arsDe, notaCambio };
+}
+
 export type Calculo = {
   calculadas: LineaLiquidacion[];
   movs: MovimientoBase[];
   doctoraFinal: Map<string, string | null>;
   periodoFinal: Map<string, string>;
   costoArs: Map<string, number>;
-  costoUsd: Map<string, number>;
+  /** Importe del movimiento en pesos: el suyo, o el pesificado si era en USD. */
+  arsDe: (m: MovimientoBase) => number;
+  /** Nota del cambio ("US$ 360 al t/c 1.505 del 03/07"), sólo para los USD. */
+  notaCambio: (m: MovimientoBase) => string | null;
   etiquetas: Map<string, string>;
   pctPorDoctora: Map<string, number>;
   idPorDoctora: Map<string, string>;
@@ -122,6 +160,34 @@ export async function calcularTodo(
     "id, occurred_on, kind, amount, currency, meta, counterparties(display_name)",
     (q) => q.eq("company_id", companyId).neq("status", "void")
   );
+
+  // ---------- el dólar de cada día ----------
+  // Se pesifica contra la serie guardada (fx_rates), no contra la fuente en
+  // vivo: una liquidación tiene que dar lo mismo dentro de un año.
+  const cotizaciones = await traerTodo<{ quote_date: string; buy: string; sell: string }>(
+    db, "fx_rates", "quote_date, buy, sell", (q) => q.eq("source", FUENTE_TC)
+  );
+  const tc = tablaTC(cotizaciones.map((c): Cotizacion => ({
+    fecha: c.quote_date, compra: Number(c.buy), venta: Number(c.sell),
+  })));
+  const enUsd = movs.filter((m) => m.currency === "USD");
+  if (enUsd.length && !cotizaciones.length) {
+    throw new Error(
+      `hay ${enUsd.length} movimientos en dólares y ninguna cotización cargada: ` +
+      `correr "npx tsx scripts/sync-cotizaciones.ts --apply" antes de liquidar.`
+    );
+  }
+  // Un cobro anterior a la primera cotización no se pesifica a ojo: se frena.
+  // Liquidar de menos es más caro que esperar a que alguien cargue el dato.
+  const sinCotizacion = enUsd.filter((m) => tc(m.occurred_on) == null);
+  if (sinCotizacion.length) {
+    const f = sinCotizacion.map((m) => m.occurred_on).sort();
+    throw new Error(
+      `${sinCotizacion.length} movimientos en dólares sin cotización del blue ` +
+      `(desde ${f[0]}): ampliar el rango de scripts/sync-cotizaciones.ts.`
+    );
+  }
+  const { arsDe, notaCambio } = pesificador(tc);
 
   // Correcciones de imputación (0022): el cobro se liquida a quien diga esta
   // tabla, y si dice NULL no se le liquida a nadie.
@@ -185,7 +251,7 @@ export async function calcularTodo(
     if (t.ingreso) ingresoPorPaciente.set(clave, t.ingreso.slice(0, 10));
   }
 
-  const { costoArs, costoUsd, etiquetas, sinCostear } = costearCuotas(cobrosAlineadores, {
+  const { costoArs, etiquetas, sinCostear } = costearCuotas(cobrosAlineadores, {
     precioDefault: {
       list_price: Number(precio.list_price), discount_pct: Number(precio.discount_pct),
     },
@@ -195,6 +261,8 @@ export async function calcularTodo(
     precioPactadoUsd: PRECIO_PACTADO_USD,
     etapaAdicional: ETAPA_ADICIONAL,
     costoEtapaAdicional: COSTO_ETAPA_ADICIONAL,
+    descuentoKsEspecial: DESCUENTO_KS_ESPECIAL,
+    tcPorFecha: tc,
   });
 
   // ---------- liquidaciones ----------
@@ -209,8 +277,7 @@ export async function calcularTodo(
       id: m.id,
       doctora: doctoraFinal.get(m.id)!,
       periodo: periodoFinal.get(m.id)!,
-      ars: m.currency === "USD" ? 0 : Number(m.amount),
-      usd: m.currency === "USD" ? Number(m.amount) : 0,
+      ars: arsDe(m),
       tipo:
         m.meta?.tipo_origen === "retiro_liquidacion" ? "retiro_liquidacion"
         : m.meta?.tipo_origen === "gasto_tratamiento" ? "gasto_tratamiento"
@@ -219,12 +286,12 @@ export async function calcularTodo(
     }));
 
   const calculadas = calcularLiquidaciones(
-    paraLiquidar, costoArs, costoUsd, (d) => pctPorDoctora.get(d) ?? 40
+    paraLiquidar, costoArs, (d) => pctPorDoctora.get(d) ?? 40
   ).filter((l) => !aparte.has(l.doctora));
 
   return {
-    calculadas, movs, doctoraFinal, periodoFinal, costoArs, costoUsd, etiquetas,
-    pctPorDoctora, idPorDoctora, nombrePorId, sinCostear, huerfanas,
+    calculadas, movs, doctoraFinal, periodoFinal, costoArs, arsDe, notaCambio,
+    etiquetas, pctPorDoctora, idPorDoctora, nombrePorId, sinCostear, huerfanas,
   };
 }
 
@@ -240,8 +307,8 @@ export async function guardarLiquidaciones(
   opts: { periodos?: string[] } = {}
 ): Promise<ResumenRecalculo> {
   const {
-    calculadas, movs, doctoraFinal, periodoFinal, costoArs, costoUsd, etiquetas,
-    pctPorDoctora, idPorDoctora, nombrePorId, sinCostear, huerfanas,
+    calculadas, movs, doctoraFinal, periodoFinal, costoArs, arsDe, notaCambio,
+    etiquetas, pctPorDoctora, idPorDoctora, nombrePorId, sinCostear, huerfanas,
   } = calc;
 
   const periodos = opts.periodos?.length
@@ -291,12 +358,14 @@ export async function guardarLiquidaciones(
       const { data: set, error } = await db.from("professional_settlements").upsert({
         company_id: companyId, professional_id: profId, period: l.periodo,
         status: "draft", pct: pctPorDoctora.get(l.doctora) ?? 40,
+        // Sin bucket USD: lo cobrado en dólares ya viene pesificado al blue de
+        // su fecha. Las liquidaciones viejas que se pagaron con un USD aparte
+        // están congeladas y conservan el suyo.
         totals: {
           ARS: {
             collected: l.cobradoArs, ks_cost: l.gastosTratamiento, base: l.baseArs,
             due: l.liquidacionArs, withdrawn: l.retiros, balance: l.saldo,
           },
-          USD: { collected: l.cobradoUsd, due: l.liquidacionUsd },
         },
       }, { onConflict: "company_id,professional_id,period" }).select("id").single();
       if (error) throw new Error(`liquidación ${l.periodo}/${l.doctora}: ${error.message}`);
@@ -308,9 +377,10 @@ export async function guardarLiquidaciones(
       if (cobrosDelMes.length) {
         const filas = cobrosDelMes.map((m) => ({
           company_id: companyId, settlement_id: set!.id, movement_id: m.id,
-          base_amount: Number(m.amount), currency: m.currency,
-          ks_cost: m.currency === "USD" ? (costoUsd.get(m.id) ?? 0) : (costoArs.get(m.id) ?? 0),
-          label: [m.meta?.motivo, etiquetas.get(m.id)].filter(Boolean).join(" · ") || null,
+          base_amount: arsDe(m), currency: "ARS",
+          ks_cost: costoArs.get(m.id) ?? 0,
+          label: [m.meta?.motivo, notaCambio(m), etiquetas.get(m.id)]
+            .filter(Boolean).join(" · ") || null,
         }));
         for (let i = 0; i < filas.length; i += 500) {
           const { error: e2 } = await db.from("settlement_items").insert(filas.slice(i, i + 500));

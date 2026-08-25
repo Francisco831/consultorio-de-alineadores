@@ -15,11 +15,21 @@
 //     de la PRIMERA cuota limpia (el pacto es el del ingreso; las cuotas
 //     siguientes ya vienen ajustadas por inflación).
 //
+//  3. TODO SE PESIFICA (Pancho, 25/8/26): un cobro en dólares se convierte a
+//     pesos al blue de SU fecha —promedio comprador/vendedor de Ámbito, ver
+//     lib/fx.ts— y la doctora cobra un solo número en pesos. Antes el t/c salía
+//     del "t/c 1510" que alguien hubiera escrito en el motivo, y sin eso de una
+//     constante: dos cobros del mismo día podían valer distinto según quién
+//     cargó la fila. Ahora el t/c de la fila es sólo una red por si falta la
+//     cotización de esa fecha.
+//
 // Detalles que siguen importando:
 //  - La identidad del paciente son sus tokens ORDENADOS de más de 2 letras: así
 //    "Pérez Viviana", "perez viviana" y "Viviana Perez" son la misma persona.
-//  - Un cobro en USD prorratea contra un pacto en USD y carga su costo en USD
-//    (al t/c de la fila), no en pesos.
+//  - El porcentaje del tratamiento que representa un cobro se calcula en la
+//    moneda del PACTO (un cobro en dólares contra un pacto en dólares no pasa
+//    por el t/c): pesificar antes de prorratear haría que el mismo cobro valga
+//    otro porcentaje según cómo se movió el dólar.
 //  - El orden de las filas decide qué cuota define el pacto y dónde muerde el
 //    tope; por eso los movimientos sembrados guardan su fila en meta.seq.
 
@@ -32,6 +42,7 @@ export const RE_TC = /t\/?c\s*\$?\s*([\d.,]+)/i;
 // una cuota entera — no sirve para inferir el valor de cuota del pacto
 export const RE_PARCIAL = /\bparte\b|\bresto\b|\bsaldo\b|\bseña\b|\ba\s*c(?:uo|uen)?ta\.?\s*de\b/i;
 
+/** Último recurso: no hay cotización de esa fecha NI t/c escrito en la fila. */
 export const TC_FALLBACK = 1500;
 
 /** Identidad del paciente: tokens ordenados de más de 2 letras. */
@@ -70,8 +81,8 @@ export type CobroAlineador = {
 };
 
 export type ResultadoCosteo = {
+  /** Costo KS por cobro, SIEMPRE en pesos (la lista KS es en pesos). */
   costoArs: Map<string, number>;
-  costoUsd: Map<string, number>;
   etiquetas: Map<string, string>;
   sinCostear: number;
 };
@@ -91,6 +102,13 @@ export function costearCuotas(
     // sobre la regla de "etapa adicional sin costo": la etapa sólo es gratis
     // cuando el tratamiento era Full.
     costoEtapaAdicional?: Record<string, number>;
+    // nombre → % de descuento EXTRA sobre el costo KS de lista, para los casos
+    // que la fábrica factura más barato que el precio de lista.
+    descuentoKsEspecial?: Record<string, number>;
+    // Blue de cada fecha (lib/fx.ts). Sin esto, el costeo cae al t/c escrito en
+    // la fila y después a TC_FALLBACK — que es exactamente lo que la regla del
+    // 25/8/26 vino a sacar del medio.
+    tcPorFecha?: (fecha: string) => number | undefined;
   }
 ): ResultadoCosteo {
   // Ingreso del caso por paciente: manda la fecha real de Noloco; si falta, se
@@ -111,11 +129,24 @@ export function costearCuotas(
   /** Full incluye las etapas adicionales (programa 1 a 4). Medium y Fast no. */
   const esFull = (k: string) =>
     (opts.tipoPorPaciente?.get(k) ?? TIPO_DEFAULT).split("/")[1] === "full";
+  const descuentoEspecial = new Map<string, number>();
+  for (const [nombre, v] of Object.entries(opts.descuentoKsEspecial ?? {})) {
+    descuentoEspecial.set(clavePaciente(nombre), v);
+  }
+  // Normalizado como todo lo demás: escrito "Daira Castellón" o "Castellón
+  // Daira", es el mismo caso. Sin esto, la variante que no estuviera en el
+  // orden alfabético de clavePaciente() no matcheaba nunca — y el caso
+  // terminaba pagando un costo que Pancho dijo que no lleva.
+  const etapaSinCosto = new Set(
+    [...(opts.etapaAdicional ?? [])].map((n) => clavePaciente(n))
+  );
 
   // precio del caso: lista vigente a su ingreso + tipo real de tratamiento
   // (Noloco); sin datos cae al default Full 2 maxilares adultos a lista actual.
   // Un caso anterior a la lista más vieja conocida usa esa (no hay mejor dato).
   const costoDe = (k: string) => {
+    // Un costo declarado a mano ya es el número acordado para ESE caso: el
+    // descuento especial no se le encima.
     const fijado = costoFijado.get(k);
     if (fijado != null) return fijado;
     let pr = opts.precioDefault;
@@ -124,10 +155,10 @@ export function costearCuotas(
       const lista = listas.filter((l) => l.validFrom <= fecha).pop() ?? listas[0];
       pr = lista.precios.get(opts.tipoPorPaciente?.get(k) ?? TIPO_DEFAULT) ?? pr;
     }
-    return pr.list_price * (1 - pr.discount_pct / 100);
+    const deLista = pr.list_price * (1 - pr.discount_pct / 100);
+    return deLista * (1 - (descuentoEspecial.get(k) ?? 0) / 100);
   };
   const costoArs = new Map<string, number>();
-  const costoUsd = new Map<string, number>();
   const etiquetas = new Map<string, string>();
   let sinCostear = 0;
 
@@ -177,10 +208,16 @@ export function costearCuotas(
     const texto = c.texto;
     // La etapa adicional viene incluida en el programa 1 a 4 — pero eso vale
     // para los tratamientos FULL. En un Medium o un Fast la etapa se cobra
-    // aparte y tiene su propio precio (Pancho, 25/8/26, sobre Daira Castellón).
+    // aparte y tiene su propio precio.
+    //
+    // Declarar el caso en ETAPA_ADICIONAL es decidir sobre ESE caso, y le gana
+    // al tipo de tratamiento: el tipo puede faltar en Noloco o venir mal, y no
+    // puede hacerle cargar un costo a un caso que Pancho dijo que no lo lleva
+    // (Daira Castellón, 26/8/26).
+    const declaradaSinCosto = etapaSinCosto.has(k);
     if (!costoFijado.has(k) &&
-        (norm(texto).includes("etapa adicional") || opts.etapaAdicional?.has(k))) {
-      if (esFull(k)) {
+        (norm(texto).includes("etapa adicional") || declaradaSinCosto)) {
+      if (declaradaSinCosto || esFull(k)) {
         etiquetas.set(c.id, "etapa adicional: sin costo (incluida en programa 1 a 4)");
       } else {
         // Callarse acá sería regalar el costo: se marca para que alguien lo cargue.
@@ -192,9 +229,15 @@ export function costearCuotas(
 
     const cur = c.ars > 0 ? "ARS" : "USD";
     const monto = c.ars > 0 ? c.ars : c.usd;
+    // El t/c manda desde la serie del blue, no desde lo que diga la fila: dos
+    // cobros del mismo día tienen que cruzarse al mismo dólar. El "t/c 1510"
+    // escrito a mano queda de red para una fecha sin cotización, y recién
+    // después la constante.
     const tcm = RE_TC.exec(texto);
-    let tc = tcm ? Number(tcm[1].replace(/\./g, "").replace(",", ".")) : TC_FALLBACK;
-    if (!Number.isFinite(tc) || tc < 100) tc = TC_FALLBACK;
+    const tcFila = tcm ? Number(tcm[1].replace(/\./g, "").replace(",", ".")) : undefined;
+    const candidatos = [opts.tcPorFecha?.(c.fecha), tcFila, TC_FALLBACK];
+    let tc = candidatos.find((v) => Number.isFinite(v) && (v as number) >= 100) as number;
+    if (tc == null) tc = TC_FALLBACK;
 
     // % del tratamiento que representa este cobro. El pacto declarado a mano
     // gana (en su moneda: Hogner paga en pesos un pacto en USD → se cruza al
@@ -227,29 +270,34 @@ export function costearCuotas(
     const tope = share + 0.5 < costoTotal * pct ? " — tope: el caso ya cargó su costo completo" : "";
     const aMano = costoFijado.has(k)
       ? ` · etapa adicional a $${costoTotal.toLocaleString("es-AR")}` : "";
+    const dto = descuentoEspecial.get(k);
+    const especial = dto ? ` · ${dto}% de descuento especial sobre el costo KS` : "";
     const pctTxt = `${(pct * 100).toLocaleString("es-AR", { maximumFractionDigits: 1 })}% del precio ${precioTxt}`;
-    if (cur === "ARS") {
-      costoArs.set(c.id, Math.round(share));
-      etiquetas.set(c.id, `costo KS $${Math.round(share).toLocaleString("es-AR")} (${pctTxt}${tope}${aMano})`);
-    } else {
-      costoUsd.set(c.id, Math.round(share / tc));
-      etiquetas.set(c.id, `costo KS USD ${Math.round(share / tc)} (${pctTxt}, t/c ${tc}${tope}${aMano})`);
-    }
+    // El costo va en pesos aunque el cobro haya entrado en dólares: `share` sale
+    // de la lista KS, que está en pesos, y la liquidación es un solo número.
+    // (el "US$ 360 × t/c 1.505" lo agrega recalcular.ts, que pesifica todo lo
+    // que entra a la liquidación, no sólo los cobros de alineadores)
+    costoArs.set(c.id, Math.round(share));
+    etiquetas.set(
+      c.id,
+      `costo KS $${Math.round(share).toLocaleString("es-AR")} (${pctTxt}${tope}${aMano}${especial})`
+    );
   }
 
-  return { costoArs, costoUsd, etiquetas, sinCostear };
+  return { costoArs, etiquetas, sinCostear };
 }
 
+// Desde el 25/8/26 una liquidación es UN número en pesos: los cobros en dólares
+// entran acá ya pesificados al blue de su fecha (lib/fx.ts). Por eso no hay
+// bucket USD — tenerlo obligaría a decidir en cada pantalla si se suma o no, y
+// esa duda es la que hacía que la planilla y el sistema no cerraran.
 export type LineaLiquidacion = {
   doctora: string;
   periodo: string;
   cobradoArs: number;
-  cobradoUsd: number;
   gastosTratamiento: number;   // costo KS en ARS
-  gastosUsd: number;
   baseArs: number;
   liquidacionArs: number;
-  liquidacionUsd: number;
   retiros: number;
   saldo: number;
 };
@@ -258,15 +306,13 @@ export type MovimientoLiq = {
   id: string;
   doctora: string | null;
   periodo: string;
-  ars: number;
-  usd: number;
+  ars: number;   // ya pesificado si el movimiento era en dólares
   tipo: "cobro" | "retiro_liquidacion" | "gasto_tratamiento" | "otro";
 };
 
 export function calcularLiquidaciones(
   movimientos: MovimientoLiq[],
   costoArs: Map<string, number>,
-  costoUsd: Map<string, number>,
   pctPorDoctora: (doctora: string) => number
 ): LineaLiquidacion[] {
   const acc = new Map<string, LineaLiquidacion>();
@@ -275,29 +321,24 @@ export function calcularLiquidaciones(
     const k = `${m.doctora}|${m.periodo}`;
     if (!acc.has(k)) {
       acc.set(k, {
-        doctora: m.doctora, periodo: m.periodo, cobradoArs: 0, cobradoUsd: 0,
-        gastosTratamiento: 0, gastosUsd: 0, baseArs: 0,
-        liquidacionArs: 0, liquidacionUsd: 0, retiros: 0, saldo: 0,
+        doctora: m.doctora, periodo: m.periodo, cobradoArs: 0,
+        gastosTratamiento: 0, baseArs: 0, liquidacionArs: 0, retiros: 0, saldo: 0,
       });
     }
     const l = acc.get(k)!;
     if (m.tipo === "cobro") {
       l.cobradoArs += m.ars;
-      l.cobradoUsd += m.usd;
       l.gastosTratamiento += costoArs.get(m.id) ?? 0;
-      l.gastosUsd += costoUsd.get(m.id) ?? 0;
     } else if (m.tipo === "retiro_liquidacion") {
       l.retiros += m.ars;
     } else if (m.tipo === "gasto_tratamiento") {
       l.gastosTratamiento += m.ars;
-      l.gastosUsd += m.usd;
     }
   }
   for (const l of acc.values()) {
     const pct = pctPorDoctora(l.doctora) / 100;
     l.baseArs = Math.round((l.cobradoArs - l.gastosTratamiento) * 100) / 100;
     l.liquidacionArs = Math.round(l.baseArs * pct);
-    l.liquidacionUsd = Math.round((l.cobradoUsd - l.gastosUsd) * pct);
     l.saldo = Math.round(l.liquidacionArs - l.retiros);
   }
   return [...acc.values()].sort(

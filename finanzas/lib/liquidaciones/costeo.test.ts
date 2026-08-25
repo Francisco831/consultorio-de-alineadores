@@ -105,17 +105,17 @@ test("el costo acumulado nunca supera el costo total del caso (tope)", () => {
 test("liquidación: 40% del cobrado neto de costo KS, menos retiros", () => {
   const costoArs = new Map([["c1", 682750]]);
   const l = calcularLiquidaciones([
-    { id: "c1", doctora: "Eugenia Digiano", periodo: "2026-01", ars: 2333500, usd: 0, tipo: "cobro" },
-  ], costoArs, new Map(), () => 40);
+    { id: "c1", doctora: "Eugenia Digiano", periodo: "2026-01", ars: 2333500, tipo: "cobro" },
+  ], costoArs, () => 40);
   assert.equal(l[0].baseArs, 1650750);
   assert.equal(l[0].liquidacionArs, 660300);   // el número real de enero
 });
 
 test("el retiro ya cobrado se descuenta del saldo", () => {
   const l = calcularLiquidaciones([
-    { id: "c1", doctora: "Mariana Matelli", periodo: "2026-01", ars: 1000000, usd: 0, tipo: "cobro" },
-    { id: "r1", doctora: "Mariana Matelli", periodo: "2026-01", ars: 300000, usd: 0, tipo: "retiro_liquidacion" },
-  ], new Map(), new Map(), () => 40);
+    { id: "c1", doctora: "Mariana Matelli", periodo: "2026-01", ars: 1000000, tipo: "cobro" },
+    { id: "r1", doctora: "Mariana Matelli", periodo: "2026-01", ars: 300000, tipo: "retiro_liquidacion" },
+  ], new Map(), () => 40);
   assert.equal(l[0].liquidacionArs, 400000);
   assert.equal(l[0].retiros, 300000);
   assert.equal(l[0].saldo, 100000);
@@ -212,4 +212,72 @@ test("etapa adicional de un no-Full sin precio cargado: se marca, no se regala",
   assert.equal(r.costoArs.get("x1"), undefined);
   assert.equal(r.sinCostear, 1);
   assert.match(r.etiquetas.get("x1")!, /falta su precio/);
+});
+
+test("el t/c manda desde la serie del blue, no desde el que escribió la caja", () => {
+  // la fila dice 1480 pero ese día el blue cerró en 1510: gana el blue
+  const r = costearCuotas([
+    cobro({ id: "a", seq: 1, ars: 604000, paciente: "Hogner Agustina",
+      motivo: "cuota 2 de 7 t/c 1480", texto: "cuota 2 de 7 t/c 1480" }),
+  ], {
+    precioDefault: PRECIO,
+    precioPactadoUsd: { "hogner agustina": 2800 },
+    tcPorFecha: () => 1510,
+  });
+  // 604.000 / 1510 = USD 400 → 400/2.800 = 1/7 del costo del caso
+  assert.equal(r.costoArs.get("a"), Math.round((2731000 * 0.6) / 7));
+  assert.match(r.etiquetas.get("a")!, /t\/c 1510/);
+});
+
+test("sin cotización de esa fecha, el t/c escrito en la fila sigue siendo la red", () => {
+  const r = costearCuotas([
+    cobro({ id: "a", seq: 1, ars: 592000, paciente: "Hogner Agustina",
+      motivo: "cuota 2 de 7 t/c 1480", texto: "cuota 2 de 7 t/c 1480" }),
+  ], {
+    precioDefault: PRECIO,
+    precioPactadoUsd: { "hogner agustina": 2800 },
+    tcPorFecha: () => undefined,
+  });
+  assert.equal(r.costoArs.get("a"), Math.round((2731000 * 0.6) / 7));
+});
+
+test("un cobro en dólares carga su costo KS en PESOS (caso Botto)", () => {
+  // cuota 3 de 5 de US$ 360 contra un pacto de US$ 2.800: 12,9% del caso. El
+  // porcentaje se saca en dólares (no pasa por el t/c), pero el costo sale en
+  // pesos, que es la moneda de la lista KS y de la liquidación.
+  const r = costearCuotas([
+    cobro({ id: "a", seq: 1, ars: 0, usd: 360, paciente: "Botto Agustina",
+      fecha: "2026-07-03", motivo: "Abona cuota 3 de 5", texto: "Abona cuota 3 de 5" }),
+  ], {
+    precioDefault: PRECIO,
+    precioPactadoUsd: { "botto agustina": 2800 },
+    tcPorFecha: () => 1505,
+  });
+  assert.equal(r.costoArs.get("a"), Math.round(2731000 * 0.6 * (360 / 2800)));
+  assert.equal(r.etiquetas.get("a")!.includes("USD"), true, "la etiqueta dice contra qué precio prorratea");
+});
+
+test("un caso declarado sin costo no paga la etapa adicional aunque no sea Full", () => {
+  // Daira Castellón: el tipo real de Noloco dice Medium, pero Pancho decidió
+  // que su etapa adicional no lleva costo. La decisión le gana al tipo.
+  const r = costearCuotas([
+    cobro({ id: "a", seq: 1, ars: 400000, paciente: "Daira Castellón",
+      motivo: "cuota 1 de 3 etapa adicional", texto: "cuota 1 de 3 etapa adicional" }),
+  ], {
+    precioDefault: PRECIO,
+    tipoPorPaciente: new Map([[clavePaciente("Daira Castellón"), "adultos/medium/2"]]),
+    etapaAdicional: new Set(["daira castellon"]),
+  });
+  assert.equal(r.costoArs.get("a") ?? 0, 0);
+  assert.equal(r.sinCostear, 0, "no se marca para revisar: ya está decidido");
+});
+
+test("descuento especial: el costo KS del caso baja 16% (Nisenbaum, Grillo, Etchegoyen)", () => {
+  const base = { id: "a", seq: 1, ars: 650000, motivo: "cuota 1 de 6", texto: "cuota 1 de 6" };
+  const sinDto = costearCuotas([cobro(base)], { precioDefault: PRECIO });
+  const conDto = costearCuotas([cobro(base)], {
+    precioDefault: PRECIO, descuentoKsEspecial: { "perez juan": 16 },
+  });
+  assert.equal(conDto.costoArs.get("a"), Math.round(sinDto.costoArs.get("a")! * 0.84));
+  assert.match(conDto.etiquetas.get("a")!, /16% de descuento especial/);
 });

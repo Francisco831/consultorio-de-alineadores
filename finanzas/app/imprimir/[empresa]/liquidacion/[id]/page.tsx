@@ -11,6 +11,10 @@ import { PrintButton } from "@/components/liquidaciones/print-button";
 
 type Totales = {
   ARS?: { collected?: number; ks_cost?: number; base?: number; due?: number };
+  // Sólo las liquidaciones congeladas de antes del 25/8/26 tienen bucket USD:
+  // desde esa fecha lo cobrado en dólares entra pesificado al blue del día y la
+  // doctora cobra un solo número. Se sigue mostrando para no reescribir lo que
+  // ya se pagó de otra forma.
   USD?: { collected?: number; due?: number };
 };
 
