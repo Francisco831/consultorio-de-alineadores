@@ -60,6 +60,7 @@ async function main() {
   const crecidos: string[] = [];
   const retirosNuevos: string[] = [];
   const pesificados: string[] = [];
+  const reimputadas: string[] = [];
   // Cambio de criterio del 25/8/26: lo que entra en dólares se pesifica al blue
   // de su fecha. Una doctora-mes que tuvo cobros en USD ya NO es comparable peso
   // a peso contra la referencia vieja, que los llevaba en un bucket aparte. Se
@@ -70,6 +71,21 @@ async function main() {
     calc.movs.filter((m) => m.currency === "USD")
       .map((m) => `${calc.periodoFinal.get(m.id)}|${calc.doctoraFinal.get(m.id)}`)
   );
+  // Igual con las IMPUTACIONES A MANO: cuando Pancho mueve un cobro de una
+  // doctora a otra (o lo saca de todas), el cobrado de la doctora de origen baja
+  // contra la referencia. Eso es la corrección funcionando, no una regresión —
+  // pero el gate, que sólo sabe comparar contra la foto del script viejo, lo
+  // leería como plata que se perdió y frenaría el guardado para siempre.
+  // Quedan fuera de la comparación las dos puntas: de quién salió y a quién fue.
+  const movidas = new Set<string>();
+  for (const m of calc.movs) {
+    const deLaCaja = m.meta?.doctora ?? null;
+    const final = calc.doctoraFinal.get(m.id) ?? null;
+    if (deLaCaja === final) continue;
+    const periodo = calc.periodoFinal.get(m.id);
+    if (deLaCaja) movidas.add(`${periodo}|${deLaCaja}`);
+    if (final) movidas.add(`${periodo}|${final}`);
+  }
   for (const l of calculadas) {
     if (l.periodo > maxRef) continue;            // mes posterior a la foto
     const r = refPorClave.get(`${l.periodo}|${l.doctora}`);
@@ -85,6 +101,14 @@ async function main() {
       } else {
         difs.push(`${l.periodo} ${l.doctora}: no está en la referencia`);
       }
+      continue;
+    }
+    if (movidas.has(`${l.periodo}|${l.doctora}`)) {
+      reimputadas.push(
+        `${l.periodo} ${l.doctora}: la referencia decía ` +
+        `$${r.cobrado_ars.toLocaleString("es-AR")} → ahora ` +
+        `$${l.cobradoArs.toLocaleString("es-AR")} (hay cobros movidos a mano en ese mes)`
+      );
       continue;
     }
     if (conUsd.has(`${l.periodo}|${l.doctora}`)) {
@@ -127,12 +151,17 @@ async function main() {
   }
 
   console.log(`\nLiquidaciones calculadas: ${calculadas.length} · comparables con la referencia: ${iguales + difs.length}` +
-    (pesificados.length ? ` · ${pesificados.length} con cobros en dólares, ya no comparables` : ""));
+    (pesificados.length ? ` · ${pesificados.length} con cobros en dólares, ya no comparables` : "") +
+    (reimputadas.length ? ` · ${reimputadas.length} con cobros movidos a mano` : ""));
   console.log(`  ✓ idénticas o crecidas por cargas tardías: ${iguales}`);
   console.log(`  ${difs.length ? "✗" : "✓"} con REGRESIONES: ${difs.length}`);
   if (crecidos.length) {
     console.log(`\n  Crecidas contra la foto vieja (cargas tardías en la caja — esperado):`);
     for (const c of crecidos) console.log(`     ${c}`);
+  }
+  if (reimputadas.length) {
+    console.log(`\n  Fuera de comparación por imputaciones a mano (vos moviste esos cobros):`);
+    for (const c of reimputadas) console.log(`     ${c}`);
   }
   if (pesificados.length) {
     console.log(`\n  Fuera de comparación por el paso a pesos (blue del día, 25/8/26):`);
