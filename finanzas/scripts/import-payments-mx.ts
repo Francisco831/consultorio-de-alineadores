@@ -11,6 +11,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { serviceClient, upsertBatched, fetchAllRows, argFlags } from "./lib/service-client";
+import { registrarSync } from "./lib/sync-run";
 
 type PagoMX = {
   external_key: string; doctor_nombre_raw: string | null; noloco_id: string | null;
@@ -106,6 +107,7 @@ async function main() {
 
   const written = await upsertBatched(db, "movements", rows, "company_id,external_key");
   console.log(`✓ ${written} pagos upserteados`);
+  const corrida = await registrarSync(db, "pagos_mx", companyId);
 
   // ---------- GATE Δ$0 ----------
   const enBase = await fetchAllRows<{ occurred_on: string; amount: string }>(
@@ -129,9 +131,11 @@ async function main() {
     falla = true;
   }
   if (falla) {
+    await corrida.fallo("Δ≠0 contra el ledger del CRM");
     console.error("\n✗ EL GATE FALLÓ: Δ≠0 contra el ledger del CRM. NO usar estos números.");
     process.exit(1);
   }
+  await corrida.ok({ leidas: pagos.length, escritas: written });
   console.log(`\n✓ GATE OK: Δ$0 mes a mes contra el ledger del CRM (${pagos.length} pagos).`);
 }
 

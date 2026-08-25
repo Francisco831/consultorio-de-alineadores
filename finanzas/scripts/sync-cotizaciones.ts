@@ -12,6 +12,7 @@
  * publicado; por eso el upsert actualiza en vez de ignorar.
  */
 import { serviceClient, upsertBatched, argFlags } from "./lib/service-client";
+import { registrarSync } from "./lib/sync-run";
 import { FUENTE_TC, parseAmbito, urlAmbito, tcDe } from "../lib/fx";
 
 function argValor(nombre: string): string | undefined {
@@ -63,8 +64,15 @@ async function main() {
     console.log("\n(dry-run: no se escribió nada — repetir con --apply)");
     return;
   }
-  const n = await upsertBatched(db, "fx_rates", filas, "source,quote_date");
-  console.log(`✓ ${n} cotizaciones guardadas en fx_rates`);
+  const corrida = await registrarSync(db, "blue_ambito");
+  try {
+    const n = await upsertBatched(db, "fx_rates", filas, "source,quote_date");
+    await corrida.ok({ leidas: cotizaciones.length, escritas: n, log: { ultima: ultima.fecha } });
+    console.log(`✓ ${n} cotizaciones guardadas en fx_rates`);
+  } catch (e) {
+    await corrida.fallo(e instanceof Error ? e.message : String(e));
+    throw e;
+  }
 }
 
 main().catch((e) => {

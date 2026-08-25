@@ -11,6 +11,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { serviceClient, upsertBatched, fetchAllRows, argFlags } from "./lib/service-client";
+import { registrarSync } from "./lib/sync-run";
 import { medioCanonico } from "../lib/import/medios";
 import { KeyBuilder } from "../lib/import/keys";
 import { pareceCuota } from "../lib/liquidaciones/planes-pacientes";
@@ -270,6 +271,10 @@ async function main() {
     console.log(`✓ ${desaparecidos.length} anuladas (status void)`);
   }
 
+  // Queda constancia de la corrida (sync_runs) para que la app pueda mostrar
+  // cuándo se sincronizó la caja por última vez, y si falló.
+  const corrida = await registrarSync(db, "caja_ar", companyId);
+
   // ---------- GATE ----------
   const enBase = await fetchAllRows<{ occurred_on: string; currency: string; kind: string; amount: string }>(
     db, "movements", "occurred_on, currency, kind, amount",
@@ -292,9 +297,11 @@ async function main() {
     falla = true;
   }
   if (falla) {
+    await corrida.fallo("el gate de totales no coincide con la fuente");
     console.error("\n✗ EL GATE FALLÓ: los totales de la base NO coinciden con la fuente.");
     process.exit(1);
   }
+  await corrida.ok({ leidas: movs.length, escritas: written });
   console.log(`\n✓ GATE OK: ${movs.length} movimientos, totales idénticos a la fuente mes a mes.`);
 }
 

@@ -11,7 +11,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatMoney } from "@/lib/money";
-import { currentPeriodIn } from "@/lib/dates";
+import { currentPeriodIn, todayIn } from "@/lib/dates";
+import { avisosDeSync, type EstadoSync } from "@/lib/alertas-sync";
 import type { EmpresaConfig } from "@/lib/empresas";
 
 export type Alerta = {
@@ -186,6 +187,23 @@ export async function calcularAlertas(
       severidad: "info",
       titulo: `${pend.liquidaciones} liquidación(es) en borrador sin confirmar`,
       href: `/${slug}/liquidaciones`,
+    });
+  }
+
+  // ---- sincronizaciones que dejaron de correr ----
+  // La regla vive en lib/alertas-sync.ts, que no importa "server-only" y por eso
+  // se puede testear. Acá sólo se consulta y se traduce a Alerta.
+  const { data: corridas } = await supabase
+    .from("sync_runs")
+    .select("source, started_at, status")
+    .order("started_at", { ascending: false })
+    .limit(200);
+  for (const av of avisosDeSync((corridas ?? []) as EstadoSync[], todayIn(timezone))) {
+    alertas.push({
+      id: `sync-${av.source}`,
+      severidad: av.severidad,
+      titulo: av.titulo,
+      detalle: av.detalle,
     });
   }
 
