@@ -107,6 +107,27 @@ export default async function LiquidacionesPage({
     }))
     .sort((a, b) => a.nombre.localeCompare(b.nombre));
 
+  // Lo que el último recálculo encontró mal (tabla settlement_issues, escrita
+  // por el propio motor). Antes esto sólo lo veía quien corriera el script en
+  // una terminal: un cobro sin costear entra con costo KS $0 y la doctora cobra
+  // el 40% del BRUTO, sin que ninguna pantalla lo diga.
+  const { data: issuesRaw } = await supabase
+    .from("settlement_issues")
+    .select("kind, period, professional, amount, currency, detail")
+    .eq("company_id", ctx.companyId)
+    .order("amount", { ascending: false, nullsFirst: false });
+  type Issue = {
+    kind: string; period: string | null; professional: string | null;
+    amount: number | null; currency: string | null; detail: string;
+  };
+  const issues = (issuesRaw ?? []) as Issue[];
+  const sinCostear = issues.filter((i) => i.kind === "sin_costear");
+  const otrosIssues = issues.filter((i) => i.kind !== "sin_costear");
+  // Los de una doctora que liquida por cuenta propia (Coni) no le cuestan plata
+  // a Pancho: se muestran igual, pero el total que duele es el otro.
+  const sinCostearPropios = sinCostear.filter((i) => i.professional !== "Coni");
+  const totalSinCostear = sinCostearPropios.reduce((a, i) => a + Number(i.amount ?? 0), 0);
+
   const { data: impRaw } = await supabase
     .from("settlement_imputations")
     .select("movement_id, destino, professional_id, revisado")
@@ -173,6 +194,46 @@ export default async function LiquidacionesPage({
           liquidación pasa a “Por pagar” y el retiro se registra desde ahí.
         </p>
       </div>
+
+      {sinCostear.length ? (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/40">
+          <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+            {sinCostear.length} cobro{sinCostear.length === 1 ? "" : "s"} sin costo KS
+            {totalSinCostear > 0 ? ` · ${formatMoney(totalSinCostear, "ARS", locale)} en liquidaciones tuyas` : ""}
+          </p>
+          <p className="mt-0.5 text-[13px] text-amber-800 dark:text-amber-300/90">
+            No se les pudo poner precio, así que entraron con costo $0 y a la
+            doctora se le liquida el 40% del <strong>bruto</strong> en vez del neto.
+            Se arregla cargando el precio pactado del paciente.
+          </p>
+          <table className="mt-3 w-full text-[13px]">
+            <tbody>
+              {sinCostear.map((i, n) => (
+                <tr key={n} className="border-t border-amber-200/70 dark:border-amber-900/60">
+                  <td className="py-1 pr-2 text-amber-700 dark:text-amber-400/80">{i.period ?? "—"}</td>
+                  <td className="py-1 pr-2 text-amber-900 dark:text-amber-200">
+                    {i.detail.split(":")[0]}
+                  </td>
+                  <td className="py-1 pr-2 text-amber-700 dark:text-amber-400/80">
+                    {i.professional === "Coni"
+                      ? "Coni — cuenta propia, no te cuesta"
+                      : i.professional ?? "sin doctora"}
+                  </td>
+                  <td className="fig py-1 text-right font-medium text-amber-900 dark:text-amber-200">
+                    {i.amount ? formatMoney(Number(i.amount), i.currency ?? "ARS", locale) : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      {otrosIssues.map((i, n) => (
+        <div key={n} className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-[13px] text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          {i.detail}
+        </div>
+      ))}
 
       {periodos.length === 0 ? (
         <div className="rounded-xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">

@@ -16,11 +16,17 @@ export default async function ConfiguracionPage({
   const { empresa } = await params;
   const ctx = await requireEmpresa(empresa);
   const supabase = await createClient();
-  const { data: balances } = await supabase
-    .from("v_account_balances")
-    .select("*")
-    .eq("company_id", ctx.companyId)
-    .order("name");
+  // v_account_balances no expone bank_name (0009_vistas.sql), y sin ese dato el
+  // formulario de edición nacía vacío y la acción lo guardaba en null: editar
+  // cualquier cosa de una cuenta le borraba el banco.
+  const [{ data: balances }, { data: cuentasRaw }] = await Promise.all([
+    supabase.from("v_account_balances").select("*")
+      .eq("company_id", ctx.companyId).order("name"),
+    supabase.from("accounts").select("id, bank_name").eq("company_id", ctx.companyId),
+  ]);
+  const bancoPorCuenta = new Map(
+    (cuentasRaw ?? []).map((a) => [a.id as string, (a.bank_name as string | null) ?? null])
+  );
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -68,6 +74,7 @@ export default async function ConfiguracionPage({
                     monedas={ctx.config.monedas}
                     cuenta={{
                       id: c.account_id, name: c.name, type: c.type, currency: c.currency,
+                      bankName: bancoPorCuenta.get(c.account_id) ?? null,
                       includeInTotals: c.include_in_totals, isActive: c.is_active,
                     }}
                   />

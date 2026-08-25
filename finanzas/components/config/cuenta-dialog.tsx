@@ -14,6 +14,7 @@ import type { EmpresaSlug } from "@/lib/empresas";
 
 type CuentaEdit = {
   id: string; name: string; type: string; currency: string;
+  bankName: string | null;
   includeInTotals: boolean; isActive: boolean;
 };
 
@@ -90,7 +91,10 @@ export function CuentaDialog({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="bankName">Banco (opcional)</Label>
-            <Input id="bankName" name="bankName" placeholder="BBVA, Macro…" />
+            {/* defaultValue o la edición lo borra: la acción escribe
+                bank_name = lo que venga en el form, y venía vacío siempre. */}
+            <Input id="bankName" name="bankName" placeholder="BBVA, Macro…"
+              defaultValue={cuenta?.bankName ?? ""} />
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input

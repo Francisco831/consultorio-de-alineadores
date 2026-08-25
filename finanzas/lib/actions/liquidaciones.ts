@@ -39,6 +39,15 @@ export async function recalcularPeriodo(empresa: "mx" | "ar", periodo: string) {
         // y ese cobro estaría en otra liquidación que la del panel muestra.
         (r.trabados.length
           ? ` · ⚠ ${r.trabados.length} cobro${r.trabados.length === 1 ? "" : "s"} no se movió: sigue${r.trabados.length === 1 ? "" : "n"} en una liquidación cerrada`
+          : "") +
+        // El dato existía desde siempre y el mensaje no lo decía: un cobro sin
+        // costear se liquida al 40% del bruto, así que es lo más caro que puede
+        // reportar este botón.
+        (r.sinCostear
+          ? ` · ⚠ ${r.sinCostear} cobro${r.sinCostear === 1 ? "" : "s"} sin costo KS (falta el precio pactado)`
+          : "") +
+        (r.huerfanas
+          ? ` · ⚠ ${r.huerfanas} imputación${r.huerfanas === 1 ? "" : "es"} apunta${r.huerfanas === 1 ? "" : "n"} a un movimiento anulado`
           : ""),
     };
   } catch (e) {

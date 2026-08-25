@@ -458,7 +458,65 @@ export async function guardarLiquidaciones(
     resumen.anuladas.push(`${s.periodo} ${s.doctora}`);
   }
 
+  await guardarDiagnostico(db, companyId, calc, resumen);
+
   return resumen;
+}
+
+/**
+ * Deja escrito lo que este cálculo encontró mal, para que el panel lo muestre
+ * sin recalcular (el cálculo completo tarda ~3 segundos).
+ *
+ * Es un ESPEJO del último recálculo, no historia: se borra entero y se
+ * reescribe. Si un problema se arregla, desaparece solo en la corrida
+ * siguiente — que es exactamente lo que uno quiere de una lista de pendientes.
+ *
+ * Se escribe SIEMPRE con el cálculo completo del año, aunque se hayan guardado
+ * sólo unos períodos: un cobro sin costear de marzo no deja de existir porque
+ * hoy se recalculó julio.
+ */
+async function guardarDiagnostico(
+  db: SupabaseClient, companyId: string, calc: Calculo, resumen: ResumenRecalculo
+): Promise<void> {
+  type Fila = {
+    company_id: string; kind: string; movement_id: string | null;
+    period: string | null; professional: string | null;
+    amount: number | null; currency: string | null; detail: string;
+  };
+  const filas: Fila[] = [];
+
+  for (const [id, etiqueta] of calc.etiquetas) {
+    if (!etiqueta.startsWith("SIN COSTEAR")) continue;
+    const m = calc.movs.find((x) => x.id === id);
+    if (!m) continue;
+    filas.push({
+      company_id: companyId, kind: "sin_costear", movement_id: id,
+      period: calc.periodoFinal.get(id) ?? null,
+      professional: calc.doctoraFinal.get(id) ?? null,
+      amount: Math.round(calc.arsDe(m) * 100) / 100, currency: "ARS",
+      detail: `${m.counterparties?.display_name ?? "sin paciente"}: ${etiqueta.replace("SIN COSTEAR: ", "")}`,
+    });
+  }
+  for (const t of resumen.trabados) {
+    filas.push({
+      company_id: companyId, kind: "cobro_trabado", movement_id: null,
+      period: t.slice(0, 7), professional: null, amount: null, currency: null, detail: t,
+    });
+  }
+  if (resumen.huerfanas) {
+    filas.push({
+      company_id: companyId, kind: "imputacion_huerfana", movement_id: null,
+      period: null, professional: null, amount: null, currency: null,
+      detail: `${resumen.huerfanas} imputación(es) apuntan a movimientos que la caja anuló: ya no corrigen nada`,
+    });
+  }
+
+  const { error: eDel } = await db.from("settlement_issues").delete().eq("company_id", companyId);
+  if (eDel) throw new Error(`limpiar diagnóstico: ${eDel.message}`);
+  for (let i = 0; i < filas.length; i += 500) {
+    const { error } = await db.from("settlement_issues").insert(filas.slice(i, i + 500));
+    if (error) throw new Error(`guardar diagnóstico: ${error.message}`);
+  }
 }
 
 /** Calcular y guardar de una: lo que aprieta el botón del panel. */
