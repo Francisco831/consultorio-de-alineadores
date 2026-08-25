@@ -33,7 +33,13 @@ export async function recalcularPeriodo(empresa: "mx" | "ar", periodo: string) {
         `${r.guardadas} liquidación${r.guardadas === 1 ? "" : "es"} recalculada${r.guardadas === 1 ? "" : "s"}` +
         ` · ${r.items} línea${r.items === 1 ? "" : "s"}` +
         (r.congeladas.length ? ` · ${r.congeladas.length} congelada${r.congeladas.length === 1 ? "" : "s"} sin tocar` : "") +
-        (r.anuladas.length ? ` · ${r.anuladas.length} anulada${r.anuladas.length === 1 ? "" : "s"} por quedarse sin cobros` : ""),
+        (r.anuladas.length ? ` · ${r.anuladas.length} anulada${r.anuladas.length === 1 ? "" : "s"} por quedarse sin cobros` : "") +
+        // Un cobro que el cálculo querría mover pero sigue liquidado en una
+        // cerrada: si no se dijera acá, el recálculo parecería haber funcionado
+        // y ese cobro estaría en otra liquidación que la del panel muestra.
+        (r.trabados.length
+          ? ` · ⚠ ${r.trabados.length} cobro${r.trabados.length === 1 ? "" : "s"} no se movió: sigue${r.trabados.length === 1 ? "" : "n"} en una liquidación cerrada`
+          : ""),
     };
   } catch (e) {
     return { error: (e as Error).message };

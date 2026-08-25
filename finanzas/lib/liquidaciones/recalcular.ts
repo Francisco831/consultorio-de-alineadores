@@ -51,6 +51,8 @@ export type ResumenRecalculo = {
   items: number;
   congeladas: string[];
   anuladas: string[];
+  /** Cobros que el cálculo querría mover pero siguen liquidados en una cerrada. */
+  trabados: string[];
   sinCostear: number;
   huerfanas: number;
 };
@@ -328,9 +330,30 @@ export async function guardarLiquidaciones(
   const estadoPorClave = new Map(existentes.map((e) => [`${e.doctora}|${e.periodo}`, e]));
 
   const resumen: ResumenRecalculo = {
-    periodos, guardadas: 0, items: 0, congeladas: [], anuladas: [],
+    periodos, guardadas: 0, items: 0, congeladas: [], anuladas: [], trabados: [],
     sinCostear, huerfanas,
   };
+
+  // Qué cobros ya están liquidados en una liquidación CONGELADA. Sus ítems son
+  // el respaldo de plata que ya se confirmó o se pagó: no se tocan ni para
+  // borrarlos ni para rehacerlos.
+  //
+  // Hasta el 26/8/26 el borrado de abajo iba por movimiento y sin este filtro,
+  // así que cada recálculo le comía el detalle a las liquidaciones congeladas
+  // del período: el total sobrevivía y las líneas desaparecían. Virginia julio
+  // quedó con cero líneas de esa forma.
+  const idsCongeladas = existentes.filter((e) => estaCongelada(e.status)).map((e) => e.id);
+  const enCongelada = new Map<string, string>();   // movement_id → doctora|período
+  for (let i = 0; i < idsCongeladas.length; i += 100) {
+    const { data, error } = await db.from("settlement_items")
+      .select("movement_id, settlement_id")
+      .in("settlement_id", idsCongeladas.slice(i, i + 100)).limit(2000);
+    if (error) throw new Error(`leer ítems congelados: ${error.message}`);
+    for (const it of data ?? []) {
+      const s = existentes.find((e) => e.id === it.settlement_id);
+      enCongelada.set(it.movement_id as string, s ? `${s.periodo} ${s.doctora}` : "una liquidación cerrada");
+    }
+  }
 
   for (const periodo of periodos) {
     // Los ítems se rehacen enteros: se limpian por MOVIMIENTO del período (no
@@ -338,11 +361,12 @@ export async function guardarLiquidaciones(
     // cuelga de otra liquidación. El unique(company_id, movement_id) rechazaría
     // el insert nuevo con un mensaje que no dice nada de esto.
     const movsDelPeriodo = movs.filter((m) => periodoFinal.get(m.id) === periodo);
-    if (movsDelPeriodo.length) {
-      for (let i = 0; i < movsDelPeriodo.length; i += 200) {
+    const limpiables = movsDelPeriodo.filter((m) => !enCongelada.has(m.id));
+    if (limpiables.length) {
+      for (let i = 0; i < limpiables.length; i += 200) {
         const { error } = await db.from("settlement_items").delete()
           .eq("company_id", companyId)
-          .in("movement_id", movsDelPeriodo.slice(i, i + 200).map((m) => m.id));
+          .in("movement_id", limpiables.slice(i, i + 200).map((m) => m.id));
         if (error) throw new Error(`limpiar ítems de ${periodo}: ${error.message}`);
       }
     }
@@ -374,8 +398,22 @@ export async function guardarLiquidaciones(
       const cobrosDelMes = movsDelPeriodo.filter(
         (m) => m.kind === "income" && doctoraFinal.get(m.id) === l.doctora
       );
-      if (cobrosDelMes.length) {
-        const filas = cobrosDelMes.map((m) => ({
+      // Un cobro que ya está liquidado en una congelada no se puede mover acá:
+      // el unique(company_id, movement_id) dice que un cobro se liquida UNA vez.
+      // Antes esto no pasaba nunca porque el borrado de arriba se lo llevaba
+      // puesto — es decir, el cobro se mudaba en silencio y la liquidación
+      // cerrada perdía la línea. Ahora se respeta la cerrada y se avisa.
+      const trabados = cobrosDelMes.filter((m) => enCongelada.has(m.id));
+      for (const m of trabados) {
+        const quien = m.counterparties?.display_name ?? "un cobro";
+        resumen.trabados.push(
+          `${l.periodo} ${l.doctora}: ${quien} ($${Math.round(arsDe(m)).toLocaleString("es-AR")}) ` +
+          `sigue liquidado en ${enCongelada.get(m.id)} — para moverlo hay que reabrir esa liquidación`
+        );
+      }
+      const aInsertar = cobrosDelMes.filter((m) => !enCongelada.has(m.id));
+      if (aInsertar.length) {
+        const filas = aInsertar.map((m) => ({
           company_id: companyId, settlement_id: set!.id, movement_id: m.id,
           base_amount: arsDe(m), currency: "ARS",
           ks_cost: costoArs.get(m.id) ?? 0,

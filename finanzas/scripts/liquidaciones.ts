@@ -188,6 +188,10 @@ async function main() {
   const r = await guardarLiquidaciones(db, companyId, calc);
   console.log(`\n✓ ${r.guardadas} liquidaciones guardadas con ${r.items} líneas de detalle` +
     (r.congeladas.length ? ` · ${r.congeladas.length} confirmadas/pagadas sin tocar` : "") + ".");
+  if (r.trabados.length) {
+    console.log(`\n⚠ ${r.trabados.length} cobro(s) que el cálculo querría mover siguen liquidados en una cerrada:`);
+    for (const t of r.trabados) console.log(`     ${t}`);
+  }
   if (r.anuladas.length) {
     console.log(`✓ ${r.anuladas.length} anuladas por quedarse sin cobros: ${r.anuladas.join(" · ")}`);
   }
