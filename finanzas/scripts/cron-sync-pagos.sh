@@ -12,7 +12,7 @@
 # el día que se le dé Full Disk Access a bash en Ajustes del Sistema.
 set -uo pipefail
 export PATH="/Users/franciscobasilico/.nvm/versions/node/v24.19.0/bin:/usr/bin:/bin:/usr/local/bin"
-REPO="/Users/franciscobasilico/Desktop/Claude/Periskope"
+REPO="/Users/franciscobasilico/dev/Periskope"
 LOG="$HOME/Library/Logs/ks-sync-pagos.log"
 
 echo "===== $(date '+%Y-%m-%d %H:%M:%S') sync pagos MX =====" >> "$LOG"

@@ -32,7 +32,7 @@ import openpyxl
 
 SCRATCH = ("/private/tmp/claude-501/-Users-franciscobasilico-Desktop-Claude-Periskope/"
            "dfb9ce39-9fac-4ca6-a9b4-daf01a381467/scratchpad/crm_sheets")
-DATA = "/Users/franciscobasilico/Desktop/Claude/Periskope/crm-mx/data"
+DATA = "/Users/franciscobasilico/dev/Periskope/crm-mx/data"
 
 F_MADRE = os.path.join(DATA, "madre_gestion.xlsx")  # export fresco del 8/8
 F_NORTE = os.path.join(DATA, "acredi_norte.xlsx")

@@ -1290,7 +1290,7 @@ anterior.
 
 **Media** · aislamiento · esfuerzo Bajo · estado: Confirmado (**sin verificación independiente**)
 
-**Ubicación:** `/Users/franciscobasilico/Desktop/Claude/Periskope/crm-mx/supabase/migrations/0004_rls.sql:36`
+**Ubicación:** `/Users/franciscobasilico/dev/Periskope/crm-mx/supabase/migrations/0004_rls.sql:36`
 
 **Evidencia:** El SELECT es total para todo autenticado, generado en loop sobre las 20 tablas base: 0004_rls.sql:35-38 execute format( 'create policy %I on %I for select to authenticated using (true)', t || '_select', t ); con 'payments', 'wa_conversations', 'wa_messages', 'contacts' y 'doctors' en el array de 0004:29-33. La capa AI replica el patrón: 0017:140-149 `create policy ai_recommendations_select on ai_recommendations for select to authenticated using (true);` (ídem doctor_ai_profile y agent_runs).
 
@@ -2139,7 +2139,7 @@ abiertos y leídos.
 
 **Baja** · autorizacion · esfuerzo Bajo · estado: Confirmado (**sin verificación independiente**)
 
-**Ubicación:** `/Users/franciscobasilico/Desktop/Claude/Periskope/crm-mx/app/(app)/calidad/page.tsx:74`
+**Ubicación:** `/Users/franciscobasilico/dev/Periskope/crm-mx/app/(app)/calidad/page.tsx:74`
 
 **Evidencia:** La página corta por manager: app/(app)/calidad/page.tsx:24 const MANAGER_ROLES = ["ADMIN", "COUNTRY_MANAGER", "SALES_MANAGER"]; app/(app)/calidad/page.tsx:74 const isManager = MANAGER_ROLES.includes(profile?.rol ?? ""); app/(app)/calidad/page.tsx:76 if (!isManager) { ...
 

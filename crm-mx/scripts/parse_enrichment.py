@@ -22,8 +22,8 @@ import openpyxl
 # ---------------------------------------------------------------- paths
 SHEETS_DIR = ("/private/tmp/claude-501/-Users-franciscobasilico-Desktop-Claude-Periskope/"
               "dfb9ce39-9fac-4ca6-a9b4-daf01a381467/scratchpad/crm_sheets")
-NOLOCO_JSON = "/Users/franciscobasilico/Desktop/Claude/Periskope/gestion-mx/data/noloco_mx.json"
-OUT_DIR = "/Users/franciscobasilico/Desktop/Claude/Periskope/crm-mx/data"
+NOLOCO_JSON = "/Users/franciscobasilico/dev/Periskope/gestion-mx/data/noloco_mx.json"
+OUT_DIR = "/Users/franciscobasilico/dev/Periskope/crm-mx/data"
 
 F_ADMIN = "12n4w566gJmHa1ky73dmsRwRoHMorYemq95BIOCSKXog.xlsx"   # Administración México
 F_BLEARN = "19epMNc-KzHt3hobw8cEjcvSdTLe8WQhwFlPgL40P3Dw.xlsx"  # B-Learning Bono
