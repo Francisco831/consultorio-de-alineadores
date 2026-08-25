@@ -4,47 +4,17 @@
 // El plan lo pedía explícito: correr los dos en paralelo y exigir Δ$0 ANTES de
 // apagar el script viejo. Sin --apply solo compara.
 //
+// El CÁLCULO ya no vive acá: está en lib/liquidaciones/recalcular.ts, que es lo
+// mismo que corre el botón "Recalcular" del panel. Este script es la comparación
+// contra la referencia histórica — el guard que el panel no puede hacer.
+//
 // Uso:  npx tsx scripts/liquidaciones.ts            (compara contra la referencia)
 //       npx tsx scripts/liquidaciones.ts --apply    (además las guarda en la base)
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { serviceClient, fetchAllRows, argFlags } from "./lib/service-client";
-import {
-  costearCuotas, calcularLiquidaciones,
-  type CobroAlineador, type MovimientoLiq,
-} from "../lib/liquidaciones/costeo";
-
-// Excepciones declaradas en build_liquidaciones.py
-const ETAPA_ADICIONAL = new Set(["cugat fernanda", "fernanda cugat"]);
-const PLAN_PACIENTE: Record<string, number> = { "hogner agustina": 7, "agustina hogner": 7 };
-// Precio TOTAL pactado con cada paciente — tabla pasada por Pancho el 24/8/26.
-// La clave es el nombre (se normaliza con clavePaciente); las variantes de
-// grafía de la caja se repiten para que el match no falle.
-const PRECIO_PACTADO: Record<string, number> = {
-  "ponce sarahi": 3800000,
-  "de donatis luz": 3626000, "de lonatis maria luz": 3626000,
-  "russo sofia": 3800000,
-  "herrera evelin": 4800000,
-  "tonello fiorella": 3760000,
-  "badiola ramiro": 3800000,
-  "de frankerberg josefina": 3650000,
-  "gallo gaston": 3900000,
-  "lazaro magdalena": 3700000, "magui lazaro": 3700000,
-  "daira castellon": 1200000,
-  "szalontai natalia": 3800000,
-  "agustina di natale": 3800000, "agustina di natale 39769016": 3800000,
-  "tapia macarena": 3000000,
-  "vicent patricia": 3800000,  // la tabla decía 380.000: typo confirmado por Pancho 24/8
-};
-const PRECIO_PACTADO_USD: Record<string, number> = {
-  "botto agustina": 2800,
-  "etchegoyen ignacio": 2250,
-  "grillo catalina": 2250,
-  "hogner agustina": 2800,     // paga en pesos al t/c de cada fila
-  "nisenbaum martin": 2300, "martin nissenbaum": 2300, "nisenbaum": 2300,
-  "de la torre guadalupe": 2700,
-};
+import { serviceClient, argFlags } from "./lib/service-client";
+import { calcularTodo, guardarLiquidaciones } from "../lib/liquidaciones/recalcular";
 
 type Ref = {
   periodo: string; doctora: string; cobrado_ars: number; cobrado_usd: number;
@@ -58,19 +28,6 @@ async function main() {
     readFileSync(resolve(__dirname, "../seed-data/liquidaciones_referencia.json"), "utf8")
   ).filas as Ref[];
 
-  // Imputación por devengado: algunos movimientos liquidan un período distinto
-  // del de su fecha (los pagos salen por MP ~el 24 del mes siguiente; Herrera
-  // se devengó en junio). seed-data/periodo_liquidacion_overrides.json.
-  const overrides = JSON.parse(
-    readFileSync(resolve(__dirname, "../seed-data/periodo_liquidacion_overrides.json"), "utf8")
-  ).filas as Array<{ occurred_on: string; monto: number; doctora: string; periodo: string }>;
-  const periodoOverride = new Map(
-    overrides.map((o) => [`${o.occurred_on}|${o.monto}|${o.doctora}`, o.periodo])
-  );
-  const periodoDe = (m: { occurred_on: string; amount: number | string; meta?: { doctora?: string } | null }) =>
-    periodoOverride.get(`${m.occurred_on}|${Math.round(Number(m.amount))}|${m.meta?.doctora ?? ""}`)
-      ?? m.occurred_on.slice(0, 7);
-
   const db = await serviceClient({
     accion: "calcular liquidaciones de doctoras y compararlas con el script viejo",
     auto: true,   // solo lee salvo --apply; el guard igual anuncia el destino
@@ -80,116 +37,16 @@ async function main() {
   if (!cia) throw new Error("empresa 'ar' inexistente");
   const companyId = cia.id;
 
-  const { data: precio } = await db.from("ks_price_list").select("*")
-    .eq("company_id", companyId).eq("audience", "adultos").eq("scope", "full")
-    .eq("arcades", 2).order("valid_from", { ascending: false }).limit(1).single();
-  if (!precio) throw new Error("falta la lista de precios KS: correr seed-etapa2");
-
-  const { data: profs } = await db.from("professionals")
-    .select("settlement_pct, settles_separately, cp:counterparties!inner(display_name)")
-    .eq("company_id", companyId);
-  const pctPorDoctora = new Map<string, number>();
-  const aparte = new Set<string>();
-  for (const p of profs ?? []) {
-    const nombre = (p.cp as unknown as { display_name: string }).display_name;
-    pctPorDoctora.set(nombre, Number(p.settlement_pct));
-    if (p.settles_separately) aparte.add(nombre);
+  const calc = await calcularTodo(db, companyId);
+  const { calculadas, sinCostear, huerfanas } = calc;
+  const cobros = calc.movs.filter((m) => m.kind === "income" && m.meta?.categoria_origen === "Alineadores").length;
+  console.log(`\nCobros de alineadores: ${cobros} · sin costear: ${sinCostear}`);
+  const cajaDice = new Map(calc.movs.map((m) => [m.id, m.meta?.doctora ?? null]));
+  const imputadas = [...calc.doctoraFinal].filter(([id, d]) => d !== cajaDice.get(id)).length;
+  if (imputadas) console.log(`Cobros con imputación corregida a mano: ${imputadas}`);
+  if (huerfanas) {
+    console.log(`⚠ ${huerfanas} imputaciones apuntan a movimientos anulados (la caja editó esa fila): revisarlas en el panel.`);
   }
-
-  const movs = await fetchAllRows<{
-    id: string; occurred_on: string; kind: string; amount: string; currency: string;
-    meta: {
-      doctora?: string; motivo?: string; obs?: string;
-      tipo_origen?: string; categoria_origen?: string; seq?: number;
-    };
-    counterparties: { display_name: string } | null;
-  }>(db, "movements",
-    "id, occurred_on, kind, amount, currency, meta, counterparties(display_name)",
-    (q) => q.eq("company_id", companyId).neq("status", "void"));
-
-  // El orden (meta.seq) solo decide QUÉ cuota se costea cuando hay pagos
-  // parciales, así que se exige únicamente a los cobros de alineadores. Los
-  // egresos cargados desde un extracto no participan del costeo.
-  const sinSeq = movs.filter(
-    (m) => m.kind === "income" && m.meta?.categoria_origen === "Alineadores" && m.meta?.seq == null
-  ).length;
-  if (sinSeq) {
-    console.error(`✗ ${sinSeq} cobros de alineadores sin meta.seq: correr scripts/backfill-seq.ts --apply`);
-    process.exit(1);
-  }
-
-  // cobros de alineadores → costeo KS (una fila por PATA de moneda, como el original)
-  const cobrosAlineadores: CobroAlineador[] = movs
-    .filter((m) => m.kind === "income" && m.meta?.categoria_origen === "Alineadores")
-    .map((m) => ({
-      id: m.id,
-      paciente: (m.counterparties as { display_name?: string } | null)?.display_name ?? "",
-      fecha: m.occurred_on,
-      ars: m.currency === "USD" ? 0 : Number(m.amount),
-      usd: m.currency === "USD" ? Number(m.amount) : 0,
-      motivo: m.meta?.motivo ?? "",
-      texto: `${m.meta?.motivo ?? ""} ${m.meta?.obs ?? ""}`,
-      seq: m.meta?.seq ?? 0,
-    }));
-
-  // Historial de listas KS con vigencia: el caso paga la lista vigente a su
-  // fecha de INGRESO (regla Pancho 24/8/26 — SIEMPRE la histórica).
-  const { data: listaKs } = await db.from("ks_price_list").select("*").eq("company_id", companyId);
-  const porVigencia = new Map<string, Map<string, { list_price: number; discount_pct: number }>>();
-  for (const r of listaKs ?? []) {
-    const m = porVigencia.get(r.valid_from) ?? new Map();
-    m.set(`${r.audience}/${r.scope}/${r.arcades}`,
-      { list_price: Number(r.list_price), discount_pct: Number(r.discount_pct) });
-    porVigencia.set(r.valid_from, m);
-  }
-  const listas = [...porVigencia].map(([validFrom, precios]) => ({ validFrom, precios }));
-  console.log(`Listas de precios KS: ${listas.map((l) => l.validFrom).sort().join(" · ")}`);
-
-  // tipo real de tratamiento + fecha de ingreso por paciente (Noloco)
-  const tipoPorPaciente = new Map<string, string>();
-  const ingresoPorPaciente = new Map<string, string>();
-  try {
-    const tipos = JSON.parse(readFileSync(resolve(__dirname, "../seed-data/tipos_tratamiento_ar.json"), "utf8"));
-    for (const [clave, t] of Object.entries<{ audience: string; scope: string; arcades: number; ingreso?: string | null }>(tipos.tipos ?? {})) {
-      tipoPorPaciente.set(clave, `${t.audience}/${t.scope}/${t.arcades}`);
-      if (t.ingreso) ingresoPorPaciente.set(clave, t.ingreso.slice(0, 10));
-    }
-    console.log(`Tipos de tratamiento desde Noloco: ${tipoPorPaciente.size} pacientes (${ingresoPorPaciente.size} con fecha de ingreso)`);
-  } catch { console.log("(sin tipos_tratamiento_ar.json: todos al tipo default)"); }
-
-  const { costoArs, costoUsd, etiquetas, sinCostear } = costearCuotas(cobrosAlineadores, {
-    precioDefault: {
-      list_price: Number(precio.list_price), discount_pct: Number(precio.discount_pct),
-    },
-    listas,
-    tipoPorPaciente,
-    ingresoPorPaciente,
-    planPorPaciente: PLAN_PACIENTE,
-    precioPactado: PRECIO_PACTADO,
-    precioPactadoUsd: PRECIO_PACTADO_USD,
-    etapaAdicional: ETAPA_ADICIONAL,
-  });
-  console.log(`\nCobros de alineadores: ${cobrosAlineadores.length} · sin costear: ${sinCostear}`);
-
-  const paraLiquidar: MovimientoLiq[] = movs
-    .filter((m) => m.meta?.doctora)
-    .map((m) => ({
-      id: m.id,
-      doctora: m.meta!.doctora!,
-      periodo: periodoDe(m),
-      ars: m.currency === "USD" ? 0 : Number(m.amount),
-      usd: m.currency === "USD" ? Number(m.amount) : 0,
-      tipo:
-        m.meta?.tipo_origen === "retiro_liquidacion" ? "retiro_liquidacion"
-        : m.meta?.tipo_origen === "gasto_tratamiento" ? "gasto_tratamiento"
-        : m.kind === "income" ? "cobro"
-        : "otro",
-    }));
-
-  const calculadas = calcularLiquidaciones(
-    paraLiquidar, costoArs, costoUsd,
-    (d) => pctPorDoctora.get(d) ?? 40
-  );
 
   // ---------- comparación contra el script viejo ----------
   const refPorClave = new Map(referencia.map((r) => [`${r.periodo}|${r.doctora}`, r]));
@@ -203,7 +60,6 @@ async function main() {
   const crecidos: string[] = [];
   const retirosNuevos: string[] = [];
   for (const l of calculadas) {
-    if (aparte.has(l.doctora)) continue;         // Coni: cuenta propia, fuera
     if (l.periodo > maxRef) continue;            // mes posterior a la foto
     const r = refPorClave.get(`${l.periodo}|${l.doctora}`);
     if (!r) {
@@ -277,59 +133,12 @@ async function main() {
   }
 
   // ---------- guardar ----------
-  const { data: cps } = await db.from("counterparties").select("id, display_name")
-    .eq("company_id", companyId).eq("kind", "professional");
-  const idPorNombre = new Map((cps ?? []).map((c) => [c.display_name, c.id]));
-
-  // una liquidación confirmada/pagada está CONGELADA: el recálculo no la toca
-  const { data: existentes } = await db.from("professional_settlements")
-    .select("id, professional_id, period, status").eq("company_id", companyId);
-  const estadoPorClave = new Map((existentes ?? []).map((e) => [`${e.professional_id}|${e.period}`, e]));
-
-  let guardadas = 0, congeladas = 0, itemsTotal = 0;
-  for (const l of calculadas) {
-    if (aparte.has(l.doctora)) continue;
-    const profId = idPorNombre.get(l.doctora);
-    if (!profId) continue;
-    const previa = estadoPorClave.get(`${profId}|${l.periodo}`);
-    if (previa && previa.status !== "draft") { congeladas++; continue; }
-    const { data: set, error } = await db.from("professional_settlements").upsert({
-      company_id: companyId, professional_id: profId, period: l.periodo,
-      status: "draft", pct: pctPorDoctora.get(l.doctora) ?? 40,
-      totals: {
-        ARS: { collected: l.cobradoArs, ks_cost: l.gastosTratamiento, base: l.baseArs, due: l.liquidacionArs, withdrawn: l.retiros, balance: l.saldo },
-        USD: { collected: l.cobradoUsd, due: l.liquidacionUsd },
-      },
-    }, { onConflict: "company_id,professional_id,period" }).select("id").single();
-    if (error) throw new Error(`settlement ${l.periodo}/${l.doctora}: ${error.message}`);
-    guardadas++;
-
-    // ---- detalle línea por línea: cada cobro del mes con su costo KS ----
-    const cobrosDelMes = movs.filter((m) =>
-      m.kind === "income" && m.meta?.doctora === l.doctora &&
-      periodoDe(m) === l.periodo);
-    await db.from("settlement_items").delete().eq("settlement_id", set!.id);
-    if (cobrosDelMes.length) {
-      // un cobro re-imputado por devengado (periodo_liquidacion_overrides) puede
-      // tener su ítem viejo bajo OTRA liquidación (la del mes de su fecha): se
-      // retira antes de insertar o la restricción única por movimiento lo rechaza
-      await db.from("settlement_items").delete()
-        .eq("company_id", companyId).in("movement_id", cobrosDelMes.map((m) => m.id));
-      const filas = cobrosDelMes.map((m) => ({
-        company_id: companyId, settlement_id: set!.id, movement_id: m.id,
-        base_amount: Number(m.amount), currency: m.currency,
-        ks_cost: m.currency === "USD" ? (costoUsd.get(m.id) ?? 0) : (costoArs.get(m.id) ?? 0),
-        label: [m.meta?.motivo, etiquetas.get(m.id)].filter(Boolean).join(" · ") || null,
-      }));
-      for (let i = 0; i < filas.length; i += 500) {
-        const { error: e2 } = await db.from("settlement_items").insert(filas.slice(i, i + 500));
-        if (e2) throw new Error(`items ${l.periodo}/${l.doctora}: ${e2.message}`);
-      }
-      itemsTotal += filas.length;
-    }
+  const r = await guardarLiquidaciones(db, companyId, calc);
+  console.log(`\n✓ ${r.guardadas} liquidaciones guardadas con ${r.items} líneas de detalle` +
+    (r.congeladas.length ? ` · ${r.congeladas.length} confirmadas/pagadas sin tocar` : "") + ".");
+  if (r.anuladas.length) {
+    console.log(`✓ ${r.anuladas.length} anuladas por quedarse sin cobros: ${r.anuladas.join(" · ")}`);
   }
-  console.log(`\n✓ ${guardadas} liquidaciones guardadas con ${itemsTotal} líneas de detalle` +
-    (congeladas ? ` · ${congeladas} confirmadas/pagadas sin tocar` : "") + ".");
 }
 
 main().catch((e) => { console.error(e.message ?? e); process.exit(1); });

@@ -4,8 +4,11 @@ import { formatMoney } from "@/lib/money";
 import { todayIn } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { ConfirmarLiquidacion } from "@/components/compromisos/liquidacion-controles";
+import { RecalcularBoton } from "@/components/liquidaciones/recalcular-boton";
+import { ImputarCobro, DESTINO_CAJA, DESTINO_CASA } from "@/components/liquidaciones/imputar-cobro";
 import { COMISION_POR_TRATAMIENTO } from "@/lib/liquidaciones/comision-claudia";
 import { comisionClaudiaPorMes } from "@/lib/liquidaciones/comision-claudia-query";
+import { periodoDeMovimiento, type MovimientoBase } from "@/lib/liquidaciones/recalcular";
 
 type Totales = {
   ARS?: { collected?: number; ks_cost?: number; base?: number; due?: number; withdrawn?: number; balance?: number };
@@ -18,6 +21,16 @@ const ESTADO: Record<string, { label: string; clase: string }> = {
   paid: { label: "Pagada", clase: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" },
   void: { label: "Anulada", clase: "bg-muted text-muted-foreground line-through" },
 };
+
+/** dd/mm de una fecha ISO. */
+const dm = (f?: string | null) => (f ? `${f.slice(8, 10)}/${f.slice(5, 7)}` : "—");
+
+/** Mes anterior y siguiente de un período 'AAAA-MM' (ventana de movimientos). */
+function ventana(periodo: string): { desde: string; hasta: string } {
+  const [a, m] = periodo.split("-").map(Number);
+  const iso = (y: number, mm: number) => `${y + Math.floor((mm - 1) / 12)}-${String(((mm - 1) % 12 + 12) % 12 + 1).padStart(2, "0")}`;
+  return { desde: `${iso(a, m - 1)}-01`, hasta: `${iso(a, m + 1)}-31` };
+}
 
 export default async function LiquidacionesPage({
   params, searchParams,
@@ -40,17 +53,20 @@ export default async function LiquidacionesPage({
   const filas = todas ?? [];
   const periodos = [...new Set(filas.map((f) => f.period))].sort().reverse();
   const periodo = sp.p && periodos.includes(sp.p) ? sp.p : periodos[0];
-  const delPeriodo = filas.filter((f) => f.period === periodo);
+  // Las anuladas no se listan: son las que se quedaron sin ningún cobro detrás
+  // (los que tenían se reimputaron). Mostrar sus totales viejos sería mentir.
+  const delPeriodo = filas.filter((f) => f.period === periodo && f.status !== "void");
 
   // detalle línea por línea del período: cada cobro con su paciente y costo KS
   type Item = {
-    settlement_id: string; base_amount: number; ks_cost: number; currency: string; label: string | null;
+    settlement_id: string; movement_id: string; base_amount: number; ks_cost: number;
+    currency: string; label: string | null;
     movement: { occurred_on: string; counterparty: { display_name: string } | null } | null;
   };
   const { data: itemsRaw } = delPeriodo.length
     ? await supabase
         .from("settlement_items")
-        .select("settlement_id, base_amount, ks_cost, currency, label, movement:movements(occurred_on, counterparty:counterparties(display_name))")
+        .select("settlement_id, movement_id, base_amount, ks_cost, currency, label, movement:movements(occurred_on, counterparty:counterparties(display_name))")
         .in("settlement_id", delPeriodo.map((f) => f.id))
         .limit(2000)
     : { data: [] };
@@ -66,6 +82,52 @@ export default async function LiquidacionesPage({
   const totalPeriodo = delPeriodo.reduce(
     (a, f) => a + Number((f.totals as Totales)?.ARS?.due ?? 0), 0
   );
+
+  // ---- a quién se le liquida cada cobro (correcciones a mano) ----
+  // Coni queda afuera del selector: cobra a cuenta propia, así que imputarle un
+  // cobro sería hacerlo desaparecer de todas las liquidaciones sin decirlo.
+  const { data: profsRaw } = await supabase
+    .from("professionals")
+    .select("counterparty_id, active, settles_separately, cp:counterparties!inner(display_name)")
+    .eq("company_id", ctx.companyId);
+  const doctoras = (profsRaw ?? [])
+    .filter((p) => p.active && !p.settles_separately)
+    .map((p) => ({ id: p.counterparty_id as string, nombre: (p.cp as unknown as { display_name: string }).display_name }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+  const { data: impRaw } = await supabase
+    .from("settlement_imputations")
+    .select("movement_id, professional_id")
+    .eq("company_id", ctx.companyId);
+  const imputadoA = new Map<string, string | null>(
+    (impRaw ?? []).map((i) => [i.movement_id as string, (i.professional_id as string | null) ?? null])
+  );
+
+  // Cobros del mes que NO se le liquidan a nadie: los que Pancho sacó de una
+  // doctora y los que la caja nunca atribuyó. Se buscan en una ventana de ±1 mes
+  // porque un cobro puede liquidar un período distinto del de su fecha (los
+  // devengados de periodo_liquidacion_overrides.json; todos caen dentro del mes
+  // anterior o el siguiente).
+  const { desde, hasta } = ventana(periodo ?? "");
+  const { data: movsVentana } = periodo
+    ? await supabase
+        .from("movements")
+        .select("id, occurred_on, kind, amount, currency, meta, counterparties(display_name)")
+        .eq("company_id", ctx.companyId).eq("kind", "income").neq("status", "void")
+        .gte("occurred_on", desde).lte("occurred_on", hasta)
+        .order("occurred_on").limit(1000)
+    : { data: [] };
+  const sinLiquidar = ((movsVentana ?? []) as unknown as MovimientoBase[])
+    .filter((m) => periodoDeMovimiento(m) === periodo)
+    .filter((m) => {
+      const doctoraFinal = imputadoA.has(m.id)
+        ? imputadoA.get(m.id)
+        : (m.meta?.doctora ?? null);
+      return !doctoraFinal;
+    });
+  const totalSinLiquidar = sinLiquidar
+    .filter((m) => m.currency !== "USD")
+    .reduce((a, m) => a + Number(m.amount), 0);
 
   // Claudia no liquida 40%: cobra $100.000 por tratamiento nuevo, pero se paga
   // en la misma tanda mensual — por eso aparece acá además de en Sueldos
@@ -89,7 +151,7 @@ export default async function LiquidacionesPage({
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {periodos.map((p) => (
               <a key={p} href={`/${empresa}/liquidaciones?p=${p}`}
                 className={cn(
@@ -100,6 +162,11 @@ export default async function LiquidacionesPage({
                 {p}
               </a>
             ))}
+            {periodo ? (
+              <div className="ml-auto">
+                <RecalcularBoton empresa={ctx.config.slug} periodo={periodo} />
+              </div>
+            ) : null}
           </div>
 
           <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
@@ -123,6 +190,7 @@ export default async function LiquidacionesPage({
                   const ars = t.ARS ?? {};
                   const nombre = (f.professional as unknown as { display_name?: string } | null)?.display_name ?? "—";
                   const est = ESTADO[f.status] ?? ESTADO.draft;
+                  const congelada = f.status === "confirmed" || f.status === "paid";
                   return [
                     <tr key={f.id} className="border-b last:border-0">
                       <td className="px-4 py-2.5 font-medium">{nombre}</td>
@@ -192,24 +260,43 @@ export default async function LiquidacionesPage({
                                   <th className="px-2 py-1 text-right font-medium">Cobrado</th>
                                   <th className="px-2 py-1 text-right font-medium">Costo KS</th>
                                   <th className="px-2 py-1 text-right font-medium">Neto</th>
+                                  <th className="px-2 py-1 font-medium">Se le liquida a</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {itemsPorSet.get(f.id)!.map((it, i) => {
                                   const pac = (it.movement?.counterparty as { display_name?: string } | null)?.display_name ?? "—";
+                                  const imp = imputadoA.get(it.movement_id);
                                   return (
                                     <tr key={i} className="border-t border-border/50">
                                       <td className="fig px-2 py-1 text-muted-foreground">
-                                        {it.movement?.occurred_on?.slice(8, 10)}/{it.movement?.occurred_on?.slice(5, 7)}
+                                        {dm(it.movement?.occurred_on)}
                                       </td>
                                       <td className="max-w-[180px] truncate px-2 py-1 font-medium">{pac}</td>
-                                      <td className="max-w-[300px] truncate px-2 py-1 text-muted-foreground">{it.label ?? "—"}</td>
+                                      <td className="max-w-[260px] truncate px-2 py-1 text-muted-foreground">{it.label ?? "—"}</td>
                                       <td className="fig px-2 py-1 text-right">{formatMoney(Number(it.base_amount), it.currency, locale)}</td>
                                       <td className="fig px-2 py-1 text-right text-muted-foreground">
                                         {Number(it.ks_cost) ? `−${formatMoney(Number(it.ks_cost), it.currency, locale)}` : "—"}
                                       </td>
                                       <td className="fig px-2 py-1 text-right">
                                         {formatMoney(Number(it.base_amount) - Number(it.ks_cost), it.currency, locale)}
+                                      </td>
+                                      <td className="px-2 py-1">
+                                        {congelada ? (
+                                          <span className="text-[11px] text-muted-foreground">liquidación cerrada</span>
+                                        ) : (
+                                          <ImputarCobro
+                                            empresa={ctx.config.slug}
+                                            movementId={it.movement_id}
+                                            valor={imputadoA.has(it.movement_id) ? (imp ?? DESTINO_CASA) : DESTINO_CAJA}
+                                            doctoraCaja={nombre}
+                                            doctoras={doctoras}
+                                            paciente={pac}
+                                            monto={Number(it.base_amount)}
+                                            moneda={it.currency}
+                                            locale={locale}
+                                          />
+                                        )}
                                       </td>
                                     </tr>
                                   );
@@ -233,6 +320,70 @@ export default async function LiquidacionesPage({
               </tfoot>
             </table>
           </div>
+
+          <div className="rounded-xl border bg-card p-4 shadow-sm">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <span className="text-sm font-semibold">No se liquidan a nadie — {periodo}</span>
+              <span className="fig text-sm font-semibold">{formatMoney(totalSinLiquidar, "ARS", locale)}</span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              La caja anota quién estaba en el consultorio, no quién hizo el
+              tratamiento. Cuando la paciente sólo pasa a retirar no hay trabajo
+              profesional detrás: ese cobro queda entero para vos. Acá están los
+              del mes, y desde el mismo selector se los podés devolver a la
+              doctora que corresponda.
+            </p>
+            {sinLiquidar.length === 0 ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Ninguno: todos los cobros del mes están imputados a una doctora.
+              </p>
+            ) : (
+              <table className="mt-3 w-full text-[12px]">
+                <thead>
+                  <tr className="text-left text-[11px] text-muted-foreground">
+                    <th className="w-16 px-2 py-1 font-medium">Fecha</th>
+                    <th className="px-2 py-1 font-medium">Paciente</th>
+                    <th className="px-2 py-1 font-medium">Concepto</th>
+                    <th className="px-2 py-1 text-right font-medium">Cobrado</th>
+                    <th className="px-2 py-1 font-medium">Se le liquida a</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sinLiquidar.map((m) => (
+                    <tr key={m.id} className="border-t border-border/50">
+                      <td className="fig px-2 py-1 text-muted-foreground">{dm(m.occurred_on)}</td>
+                      <td className="max-w-[180px] truncate px-2 py-1 font-medium">
+                        {m.counterparties?.display_name ?? "—"}
+                      </td>
+                      <td className="max-w-[300px] truncate px-2 py-1 text-muted-foreground">
+                        {m.meta?.motivo || m.meta?.categoria_origen || "—"}
+                        {m.meta?.doctora ? (
+                          <span className="ml-1 text-[11px]">· la caja decía {m.meta.doctora}</span>
+                        ) : null}
+                      </td>
+                      <td className="fig px-2 py-1 text-right">
+                        {formatMoney(Number(m.amount), m.currency, locale)}
+                      </td>
+                      <td className="px-2 py-1">
+                        <ImputarCobro
+                          empresa={ctx.config.slug}
+                          movementId={m.id}
+                          valor={imputadoA.has(m.id) ? (imputadoA.get(m.id) ?? DESTINO_CASA) : DESTINO_CAJA}
+                          doctoraCaja={m.meta?.doctora ?? null}
+                          doctoras={doctoras}
+                          paciente={m.counterparties?.display_name ?? "—"}
+                          monto={Number(m.amount)}
+                          moneda={m.currency}
+                          locale={locale}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
           {claudiaMes ? (
             <div className="rounded-xl border bg-card p-4 shadow-sm">
               <div className="flex flex-wrap items-baseline justify-between gap-2">

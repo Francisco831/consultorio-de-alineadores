@@ -10,7 +10,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "tsx --test \"scripts/**/*.test.ts\" \"lib/**/*.test.ts\"",
     "db:migrate": "tsx scripts/db-migrate.ts",
-    "test:aislamiento": "tsx scripts/test-aislamiento.ts"
+    "test:aislamiento": "tsx scripts/test-aislamiento.ts",
+    "test:permisos-liq": "tsx scripts/test-permisos-liquidaciones.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
