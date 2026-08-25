@@ -131,6 +131,30 @@ export type Calculo = {
 };
 
 /**
+ * Una línea del detalle de una liquidación, tal como se guarda.
+ *
+ * Vive acá y no dentro del guardado porque hay dos caminos que la escriben: el
+ * recálculo normal y la reconstrucción del detalle de liquidaciones viejas
+ * (scripts/reconstruir-detalle.ts). Si cada uno armara la fila por su cuenta,
+ * el día que se separen habría dos versiones de la misma plata y nadie se
+ * enteraría hasta que una doctora compare dos impresiones.
+ */
+export function filaDeItem(
+  calc: Calculo, companyId: string, settlementId: string, m: MovimientoBase
+) {
+  return {
+    company_id: companyId,
+    settlement_id: settlementId,
+    movement_id: m.id,
+    base_amount: calc.arsDe(m),
+    currency: "ARS",
+    ks_cost: calc.costoArs.get(m.id) ?? 0,
+    label: [m.meta?.motivo, calc.notaCambio(m), calc.etiquetas.get(m.id)]
+      .filter(Boolean).join(" · ") || null,
+  };
+}
+
+/**
  * Calcula TODO el año sin escribir nada. El costeo acumula el costo KS por caso
  * con tope, así que un mes suelto no se puede calcular sin los anteriores.
  */
@@ -308,9 +332,11 @@ export async function guardarLiquidaciones(
   calc: Calculo,
   opts: { periodos?: string[] } = {}
 ): Promise<ResumenRecalculo> {
+  // costoArs / notaCambio / etiquetas no se desestructuran: los usa filaDeItem()
+  // directamente desde `calc`, que es el único lugar donde se arma una línea.
   const {
-    calculadas, movs, doctoraFinal, periodoFinal, costoArs, arsDe, notaCambio,
-    etiquetas, pctPorDoctora, idPorDoctora, nombrePorId, sinCostear, huerfanas,
+    calculadas, movs, doctoraFinal, periodoFinal, arsDe,
+    pctPorDoctora, idPorDoctora, nombrePorId, sinCostear, huerfanas,
   } = calc;
 
   const periodos = opts.periodos?.length
@@ -413,13 +439,7 @@ export async function guardarLiquidaciones(
       }
       const aInsertar = cobrosDelMes.filter((m) => !enCongelada.has(m.id));
       if (aInsertar.length) {
-        const filas = aInsertar.map((m) => ({
-          company_id: companyId, settlement_id: set!.id, movement_id: m.id,
-          base_amount: arsDe(m), currency: "ARS",
-          ks_cost: costoArs.get(m.id) ?? 0,
-          label: [m.meta?.motivo, notaCambio(m), etiquetas.get(m.id)]
-            .filter(Boolean).join(" · ") || null,
-        }));
+        const filas = aInsertar.map((m) => filaDeItem(calc, companyId, set!.id, m));
         for (let i = 0; i < filas.length; i += 500) {
           const { error: e2 } = await db.from("settlement_items").insert(filas.slice(i, i + 500));
           if (e2) throw new Error(`ítems ${l.periodo}/${l.doctora}: ${e2.message}`);
