@@ -34,7 +34,8 @@ export function ImputarCobro({
   /** uuid de la profesional · "casa" (a nadie) · "caja" (como viene) */
   valor: string;
   doctoraCaja: string | null;
-  doctoras: Array<{ id: string; nombre: string }>;
+  /** `aparte` = cobra a cuenta propia (Coni): el cobro sale de las liquidaciones. */
+  doctoras: Array<{ id: string; nombre: string; aparte?: boolean }>;
   paciente: string;
   monto: number;
   moneda: string;
@@ -57,8 +58,13 @@ export function ImputarCobro({
     },
     ...doctoras.map((d) => ({
       value: d.id,
-      titulo: d.nombre,
-      detalle: d.nombre === doctoraCaja ? "Igual que la caja, pero fijado a mano" : "Se lo liquidás a ella",
+      titulo: d.aparte ? `${d.nombre} — cobra a cuenta propia` : d.nombre,
+      // Coni no tiene liquidación: el cobro es de ella y no entra en ninguna. Se
+      // dice acá, en la opción, porque si no el cobro desaparece de todas las
+      // liquidaciones y del total de la casa sin que nadie lo haya avisado.
+      detalle: d.aparte
+        ? "Ese cobro es de ella: no genera liquidación ni queda para la casa."
+        : d.nombre === doctoraCaja ? "Igual que la caja, pero fijado a mano" : "Se lo liquidás a ella",
     })),
     {
       value: DESTINO_CASA,

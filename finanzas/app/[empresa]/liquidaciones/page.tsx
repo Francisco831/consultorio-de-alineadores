@@ -89,15 +89,22 @@ export default async function LiquidacionesPage({
   );
 
   // ---- a quién se le liquida cada cobro (correcciones a mano) ----
-  // Coni queda afuera del selector: cobra a cuenta propia, así que imputarle un
-  // cobro sería hacerlo desaparecer de todas las liquidaciones sin decirlo.
+  // Coni también va en el selector (Pancho, 26/8/26): hay cobros que son de
+  // ella y hay que poder decirlo. Va marcada como "cobra a cuenta propia"
+  // porque imputarle un cobro lo saca de TODAS las liquidaciones y del total de
+  // la casa — es una salida legítima, pero tiene que estar dicha en la opción y
+  // no descubrirse después en un total que no cierra.
   const { data: profsRaw } = await supabase
     .from("professionals")
     .select("counterparty_id, active, settles_separately, cp:counterparties!inner(display_name)")
     .eq("company_id", ctx.companyId);
   const doctoras = (profsRaw ?? [])
-    .filter((p) => p.active && !p.settles_separately)
-    .map((p) => ({ id: p.counterparty_id as string, nombre: (p.cp as unknown as { display_name: string }).display_name }))
+    .filter((p) => p.active)
+    .map((p) => ({
+      id: p.counterparty_id as string,
+      nombre: (p.cp as unknown as { display_name: string }).display_name,
+      aparte: Boolean(p.settles_separately),
+    }))
     .sort((a, b) => a.nombre.localeCompare(b.nombre));
 
   const { data: impRaw } = await supabase
