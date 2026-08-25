@@ -77,12 +77,17 @@ async function main() {
     );
 
     await puede("imputar un cobro a NADIE (queda para la casa)",
-      `insert into settlement_imputations (company_id, movement_id, professional_id, reason)
-       values ($1::uuid, $2::uuid, null, 'test') on conflict (movement_id) do update set reason = excluded.reason`,
+      `insert into settlement_imputations (company_id, movement_id, destino, professional_id, reason, revisado)
+       values ($1::uuid, $2::uuid, 'casa', null, 'test', true)
+       on conflict (movement_id) do update set destino = excluded.destino, reason = excluded.reason`,
       [ar.id, mov.id]);
     await puede("reasignarlo a una doctora",
-      `update settlement_imputations set professional_id = $1::uuid where movement_id = $2::uuid`,
+      `update settlement_imputations set destino = 'profesional', professional_id = $1::uuid
+        where movement_id = $2::uuid`,
       [prof.counterparty_id, mov.id]);
+    await puede("tildarlo como revisado sin tocar la imputación",
+      `update settlement_imputations set revisado = true, revisado_at = now() where movement_id = $1::uuid`,
+      [mov.id]);
     await puede("volver a lo que dice la caja (borrar la imputación)",
       `delete from settlement_imputations where movement_id = $1::uuid`, [mov.id]);
 

@@ -8,6 +8,27 @@
 /** Casos con etapa adicional incluida en el programa (1 a 4): no cargan costo. */
 export const ETAPA_ADICIONAL = new Set(["cugat fernanda", "fernanda cugat"]);
 
+/**
+ * Precio KS de una ETAPA ADICIONAL, por paciente.
+ *
+ * La etapa adicional viene incluida en el programa 1 a 4 sólo cuando el
+ * tratamiento original es FULL. Si era Medium o Fast se cobra aparte, y su
+ * precio no sale de ks_price_list: esa lista tiene tratamientos, no etapas
+ * sueltas. Hasta que exista esa lista, el precio se declara acá.
+ *
+ * Daira Castellón: tratamiento Medium, etapa adicional $498.000 (Pancho,
+ * 25/8/26). No figura en tipos_tratamiento_ar.json, así que el costeo la daba
+ * por Full y le ponía costo cero.
+ *
+ * OJO: el valor es el costo TOTAL del caso de ese paciente. Alcanza mientras el
+ * caso SEA la etapa adicional (como el de Daira, que entró por eso). El día que
+ * un paciente tenga en la caja el tratamiento original Y una etapa adicional
+ * aparte, esto hay que partirlo en dos.
+ */
+export const COSTO_ETAPA_ADICIONAL: Record<string, number> = {
+  "daira castellon": 498000, "castellon daira": 498000,
+};
+
 /** Plan declarado a mano cuando la caja no dice "cuota N de Y". */
 export const PLAN_PACIENTE: Record<string, number> = {
   "hogner agustina": 7, "agustina hogner": 7,

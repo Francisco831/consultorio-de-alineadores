@@ -175,3 +175,41 @@ test("la fecha de ingreso real (Noloco) le gana a la inferida", () => {
   );
   assert.equal(r.costoArs.get("a"), 248300);
 });
+
+test("la etapa adicional es gratis en Full, se cobra en Medium", () => {
+  // Daira Castellón (Pancho, 25/8/26): su tratamiento era Medium, así que la
+  // etapa adicional NO viene incluida — cuesta $498.000. Sin esto, el texto
+  // "etapa adicional" la dejaba en cero como a cualquier Full.
+  const cobros = [
+    { id: "d1", paciente: "Daira Castellon", fecha: "2026-07-13", ars: 400000, usd: 0,
+      motivo: "cuota 1 de 3 etapa adicional", texto: "cuota 1 de 3 etapa adicional", seq: 1 },
+    // Cugat sigue sin costo: no tiene costo puesto a mano
+    { id: "c1", paciente: "Cugat Fernanda", fecha: "2026-07-13", ars: 400000, usd: 0,
+      motivo: "cuota 1 de 3 etapa adicional", texto: "cuota 1 de 3 etapa adicional", seq: 2 },
+  ];
+  const r = costearCuotas(cobros, {
+    precioDefault: { list_price: 2731000, discount_pct: 40 },
+    precioPactado: { "daira castellon": 1200000, "cugat fernanda": 1200000 },
+    etapaAdicional: new Set(["cugat fernanda"]),
+    costoEtapaAdicional: { "daira castellon": 498000 },
+  });
+  assert.equal(r.costoArs.get("d1"), 166000);            // 498.000 × 400.000/1.200.000
+  assert.equal(r.costoArs.get("c1"), undefined);         // sigue sin costo
+  assert.match(r.etiquetas.get("d1")!, /etapa adicional a \$498\.000/);
+  assert.match(r.etiquetas.get("c1")!, /sin costo/);
+});
+
+test("etapa adicional de un no-Full sin precio cargado: se marca, no se regala", () => {
+  const r = costearCuotas(
+    [{ id: "x1", paciente: "Medium Maria", fecha: "2026-07-01", ars: 400000, usd: 0,
+       motivo: "cuota 1 de 3 etapa adicional", texto: "cuota 1 de 3 etapa adicional", seq: 1 }],
+    {
+      precioDefault: { list_price: 2731000, discount_pct: 40 },
+      tipoPorPaciente: new Map([["maria medium", "adultos/medium/2"]]),
+      precioPactado: { "medium maria": 1200000 },
+    }
+  );
+  assert.equal(r.costoArs.get("x1"), undefined);
+  assert.equal(r.sinCostear, 1);
+  assert.match(r.etiquetas.get("x1")!, /falta su precio/);
+});

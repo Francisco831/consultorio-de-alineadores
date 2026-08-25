@@ -87,6 +87,10 @@ export function costearCuotas(
     precioPactado?: Record<string, number>;     // nombre → precio total pactado en ARS
     precioPactadoUsd?: Record<string, number>;  // nombre → precio total pactado en USD
     etapaAdicional?: Set<string>;
+    // nombre → precio de su ETAPA ADICIONAL. Gana sobre la lista de precios y
+    // sobre la regla de "etapa adicional sin costo": la etapa sólo es gratis
+    // cuando el tratamiento era Full.
+    costoEtapaAdicional?: Record<string, number>;
   }
 ): ResultadoCosteo {
   // Ingreso del caso por paciente: manda la fecha real de Noloco; si falta, se
@@ -100,11 +104,20 @@ export function costearCuotas(
     ingresoInferido.set(k, n > 1 ? restarMeses(c.fecha, n - 1) : c.fecha);
   }
   const listas = [...(opts.listas ?? [])].sort((a, b) => a.validFrom.localeCompare(b.validFrom));
+  const costoFijado = new Map<string, number>();
+  for (const [nombre, v] of Object.entries(opts.costoEtapaAdicional ?? {})) {
+    costoFijado.set(clavePaciente(nombre), v);
+  }
+  /** Full incluye las etapas adicionales (programa 1 a 4). Medium y Fast no. */
+  const esFull = (k: string) =>
+    (opts.tipoPorPaciente?.get(k) ?? TIPO_DEFAULT).split("/")[1] === "full";
 
   // precio del caso: lista vigente a su ingreso + tipo real de tratamiento
   // (Noloco); sin datos cae al default Full 2 maxilares adultos a lista actual.
   // Un caso anterior a la lista más vieja conocida usa esa (no hay mejor dato).
   const costoDe = (k: string) => {
+    const fijado = costoFijado.get(k);
+    if (fijado != null) return fijado;
     let pr = opts.precioDefault;
     if (listas.length) {
       const fecha = opts.ingresoPorPaciente?.get(k) ?? ingresoInferido.get(k) ?? "";
@@ -162,8 +175,18 @@ export function costearCuotas(
   for (const c of [...cobros].sort((a, b) => a.fecha.localeCompare(b.fecha) || a.seq - b.seq)) {
     const k = clavePaciente(c.paciente);
     const texto = c.texto;
-    if (norm(texto).includes("etapa adicional") || opts.etapaAdicional?.has(k)) {
-      etiquetas.set(c.id, "etapa adicional: sin costo (incluida en programa 1 a 4)");
+    // La etapa adicional viene incluida en el programa 1 a 4 — pero eso vale
+    // para los tratamientos FULL. En un Medium o un Fast la etapa se cobra
+    // aparte y tiene su propio precio (Pancho, 25/8/26, sobre Daira Castellón).
+    if (!costoFijado.has(k) &&
+        (norm(texto).includes("etapa adicional") || opts.etapaAdicional?.has(k))) {
+      if (esFull(k)) {
+        etiquetas.set(c.id, "etapa adicional: sin costo (incluida en programa 1 a 4)");
+      } else {
+        // Callarse acá sería regalar el costo: se marca para que alguien lo cargue.
+        etiquetas.set(c.id, "SIN COSTEAR: etapa adicional de un tratamiento no-Full, falta su precio");
+        sinCostear++;
+      }
       continue;
     }
 
@@ -202,13 +225,15 @@ export function costearCuotas(
     acumulado.set(k, ya + share);
 
     const tope = share + 0.5 < costoTotal * pct ? " — tope: el caso ya cargó su costo completo" : "";
+    const aMano = costoFijado.has(k)
+      ? ` · etapa adicional a $${costoTotal.toLocaleString("es-AR")}` : "";
     const pctTxt = `${(pct * 100).toLocaleString("es-AR", { maximumFractionDigits: 1 })}% del precio ${precioTxt}`;
     if (cur === "ARS") {
       costoArs.set(c.id, Math.round(share));
-      etiquetas.set(c.id, `costo KS $${Math.round(share).toLocaleString("es-AR")} (${pctTxt}${tope})`);
+      etiquetas.set(c.id, `costo KS $${Math.round(share).toLocaleString("es-AR")} (${pctTxt}${tope}${aMano})`);
     } else {
       costoUsd.set(c.id, Math.round(share / tc));
-      etiquetas.set(c.id, `costo KS USD ${Math.round(share / tc)} (${pctTxt}, t/c ${tc}${tope})`);
+      etiquetas.set(c.id, `costo KS USD ${Math.round(share / tc)} (${pctTxt}, t/c ${tc}${tope}${aMano})`);
     }
   }
 

@@ -17,7 +17,8 @@ import {
   type CobroAlineador, type MovimientoLiq, type LineaLiquidacion,
 } from "./costeo";
 import {
-  ETAPA_ADICIONAL, PLAN_PACIENTE, PRECIO_PACTADO, PRECIO_PACTADO_USD,
+  COSTO_ETAPA_ADICIONAL, ETAPA_ADICIONAL, PLAN_PACIENTE,
+  PRECIO_PACTADO, PRECIO_PACTADO_USD,
 } from "./pactos";
 import {
   doctoraDeLiquidacion, estaCongelada, liquidacionesSinRespaldo,
@@ -125,7 +126,7 @@ export async function calcularTodo(
   // Correcciones de imputación (0022): el cobro se liquida a quien diga esta
   // tabla, y si dice NULL no se le liquida a nadie.
   const { data: impRaw } = await db.from("settlement_imputations")
-    .select("movement_id, professional_id").eq("company_id", companyId);
+    .select("movement_id, destino, professional_id, revisado").eq("company_id", companyId);
   const vivos = new Set(movs.map((m) => m.id));
   const imputaciones: Imputaciones = new Map();
   let huerfanas = 0;
@@ -133,10 +134,11 @@ export async function calcularTodo(
     // la external_key de la caja es de contenido: si Claudia edita la fila, el
     // movimiento imputado se anula y esta corrección apunta a la nada
     if (!vivos.has(i.movement_id as string)) { huerfanas++; continue; }
-    imputaciones.set(
-      i.movement_id as string,
-      i.professional_id ? (nombrePorId.get(i.professional_id as string) ?? null) : null
-    );
+    imputaciones.set(i.movement_id as string, {
+      destino: i.destino as "caja" | "casa" | "profesional",
+      doctora: i.professional_id ? (nombrePorId.get(i.professional_id as string) ?? null) : null,
+      revisado: Boolean(i.revisado),
+    });
   }
 
   // El orden de la caja (meta.seq) decide qué cuota define el pacto cuando hay
@@ -192,6 +194,7 @@ export async function calcularTodo(
     precioPactado: PRECIO_PACTADO,
     precioPactadoUsd: PRECIO_PACTADO_USD,
     etapaAdicional: ETAPA_ADICIONAL,
+    costoEtapaAdicional: COSTO_ETAPA_ADICIONAL,
   });
 
   // ---------- liquidaciones ----------

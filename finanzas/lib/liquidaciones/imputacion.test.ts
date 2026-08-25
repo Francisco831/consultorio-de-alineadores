@@ -1,28 +1,54 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { doctoraDeLiquidacion, estaCongelada, liquidacionesSinRespaldo } from "./imputacion";
+import {
+  doctoraDeLiquidacion, estaRevisado, estaCongelada, liquidacionesSinRespaldo,
+  type Imputaciones,
+} from "./imputacion";
+
+const imp = (...filas: Array<[string, "caja" | "casa" | "profesional", string | null, boolean]>): Imputaciones =>
+  new Map(filas.map(([id, destino, doctora, revisado]) => [id, { destino, doctora, revisado }]));
 
 test("sin imputación manda la doctora de la caja", () => {
   assert.equal(doctoraDeLiquidacion("m1", "Mariana Franco", new Map()), "Mariana Franco");
 });
 
 test("imputar a otra doctora le gana a la caja", () => {
-  const imp = new Map([["m1", "Rocío Puig"]]);
-  assert.equal(doctoraDeLiquidacion("m1", "Mariana Franco", imp), "Rocío Puig");
+  assert.equal(
+    doctoraDeLiquidacion("m1", "Mariana Franco", imp(["m1", "profesional", "Rocío Puig", true])),
+    "Rocío Puig"
+  );
 });
 
-test("imputar a NADIE (null) no es lo mismo que no tener imputación", () => {
+test("destino 'casa' saca el cobro de toda liquidación", () => {
   // el caso que motivó todo: la paciente sólo retiró, la caja igual anotó
   // a la doctora que estaba en el consultorio
-  const imp = new Map<string, string | null>([["m1", null]]);
-  assert.equal(doctoraDeLiquidacion("m1", "Mariana Franco", imp), null);
-  assert.equal(doctoraDeLiquidacion("m2", "Mariana Franco", imp), "Mariana Franco");
+  const i = imp(["m1", "casa", null, true]);
+  assert.equal(doctoraDeLiquidacion("m1", "Mariana Franco", i), null);
+  assert.equal(doctoraDeLiquidacion("m2", "Mariana Franco", i), "Mariana Franco");
+});
+
+test("destino 'caja' liquida igual que no tener fila, pero deja constancia de que se miró", () => {
+  const i = imp(["m1", "caja", null, true]);
+  assert.equal(doctoraDeLiquidacion("m1", "Mónica González", i), "Mónica González");
+  assert.equal(estaRevisado("m1", i), true);
+  assert.equal(estaRevisado("m2", i), false);
 });
 
 test("un cobro sin doctora en la caja se puede asignar a mano", () => {
-  const imp = new Map([["m9", "Mónica González"]]);
-  assert.equal(doctoraDeLiquidacion("m9", null, imp), "Mónica González");
+  assert.equal(
+    doctoraDeLiquidacion("m9", null, imp(["m9", "profesional", "Mónica González", true])),
+    "Mónica González"
+  );
   assert.equal(doctoraDeLiquidacion("m8", null, new Map()), null);
+});
+
+test("revisar no cambia a quién se le liquida", () => {
+  const sinRevisar = imp(["m1", "caja", null, false]);
+  const revisado = imp(["m1", "caja", null, true]);
+  assert.equal(
+    doctoraDeLiquidacion("m1", "Virginia", sinRevisar),
+    doctoraDeLiquidacion("m1", "Virginia", revisado)
+  );
 });
 
 test("congelada es confirmada o pagada, no borrador ni anulada", () => {

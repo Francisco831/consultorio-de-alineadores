@@ -43,8 +43,9 @@ export async function recalcularPeriodo(empresa: "mx" | "ar", periodo: string) {
 const ImputarSchema = z.object({
   empresa: empresaEnum,
   movementId: z.string().uuid(),
-  // uuid de la profesional · "casa" = no se liquida a nadie · "caja" = borrar la
-  // corrección y volver a lo que diga la columna doctora de la caja
+  // uuid de la profesional · "casa" = no se liquida a nadie · "caja" = respetar
+  // la columna doctora de la caja (es lo mismo que no tener corrección, pero
+  // deja constancia de que la línea se miró)
   destino: z.union([z.string().uuid(), z.literal("casa"), z.literal("caja")]),
   motivo: z.string().trim().max(200).optional(),
 });
@@ -54,8 +55,8 @@ const ImputarSchema = z.object({
  *
  * "casa" es el caso que motivó todo: la paciente sólo pasó a retirar sus
  * alineadores, no hubo trabajo profesional detrás y esa plata no se le liquida
- * a nadie. Es una fila con professional_id NULL, no la ausencia de fila: la
- * diferencia entre "decidí que no se liquida" y "todavía nadie lo miró".
+ * a nadie. Elegir cualquier destino marca la línea como REVISADA: decidir ya es
+ * revisar, y obligar a tildar además sería pedir dos gestos para una decisión.
  */
 export async function imputarCobro(input: z.infer<typeof ImputarSchema>) {
   const parsed = ImputarSchema.safeParse(input);
@@ -69,25 +70,26 @@ export async function imputarCobro(input: z.infer<typeof ImputarSchema>) {
     .eq("company_id", ctx.companyId).eq("id", movementId).maybeSingle();
   if (!mov) return { error: "El movimiento no existe" };
   const periodo = periodoDeMovimiento(mov as unknown as MovimientoBase);
+  const doctoraCaja = (mov.meta as { doctora?: string } | null)?.doctora ?? "";
 
   // A quién le toca hoy y a quién le tocaría: si CUALQUIERA de las dos
   // liquidaciones de ese mes ya está confirmada o pagada, mover el cobro
   // cambiaría plata que ya se prometió. Se frena y se dice por qué.
   const { data: imp } = await supabase.from("settlement_imputations")
-    .select("professional_id").eq("company_id", ctx.companyId).eq("movement_id", movementId).maybeSingle();
+    .select("destino, professional_id, revisado")
+    .eq("company_id", ctx.companyId).eq("movement_id", movementId).maybeSingle();
   const { data: profs } = await supabase.from("professionals")
     .select("counterparty_id, cp:counterparties!inner(display_name)").eq("company_id", ctx.companyId);
   const idPorNombre = new Map((profs ?? []).map((p) =>
     [(p.cp as unknown as { display_name: string }).display_name, p.counterparty_id as string]));
+  const idDeLaCaja = idPorNombre.get(doctoraCaja) ?? null;
 
-  const actualId = imp
-    ? (imp.professional_id as string | null)
-    : (idPorNombre.get((mov.meta as { doctora?: string } | null)?.doctora ?? "") ?? null);
-  const destinoId = destino === "casa" ? null
-    : destino === "caja" ? (idPorNombre.get((mov.meta as { doctora?: string } | null)?.doctora ?? "") ?? null)
-    : destino;
+  const actualId = !imp || imp.destino === "caja"
+    ? idDeLaCaja
+    : (imp.professional_id as string | null);
+  const destinoId = destino === "casa" ? null : destino === "caja" ? idDeLaCaja : destino;
 
-  const afectadas = [actualId, destinoId].filter(Boolean) as string[];
+  const afectadas = [...new Set([actualId, destinoId].filter(Boolean) as string[])];
   if (afectadas.length) {
     const { data: sets } = await supabase.from("professional_settlements")
       .select("status, professional:counterparties(display_name)")
@@ -99,18 +101,14 @@ export async function imputarCobro(input: z.infer<typeof ImputarSchema>) {
     }
   }
 
-  if (destino === "caja") {
-    const { error } = await supabase.from("settlement_imputations").delete()
-      .eq("company_id", ctx.companyId).eq("movement_id", movementId);
-    if (error) return { error: error.message };
-  } else {
-    const { error } = await supabase.from("settlement_imputations").upsert({
-      company_id: ctx.companyId, movement_id: movementId,
-      professional_id: destino === "casa" ? null : destino,
-      reason: motivo ?? null, created_by: ctx.userId,
-    }, { onConflict: "movement_id" });
-    if (error) return { error: error.message };
-  }
+  const { error } = await supabase.from("settlement_imputations").upsert({
+    company_id: ctx.companyId, movement_id: movementId,
+    destino: destino === "casa" ? "casa" : destino === "caja" ? "caja" : "profesional",
+    professional_id: destino === "casa" || destino === "caja" ? null : destino,
+    reason: motivo ?? null, created_by: ctx.userId,
+    revisado: true, revisado_at: new Date().toISOString(), revisado_by: ctx.userId,
+  }, { onConflict: "movement_id" });
+  if (error) return { error: error.message };
 
   try {
     await recalcularLiquidaciones(supabase, ctx.companyId, { periodos: [periodo] });
@@ -119,4 +117,51 @@ export async function imputarCobro(input: z.infer<typeof ImputarSchema>) {
   }
   refrescar(empresa);
   return { ok: true, periodo };
+}
+
+const RevisarSchema = z.object({
+  empresa: empresaEnum,
+  movementId: z.string().uuid(),
+  revisado: z.boolean(),
+});
+
+/**
+ * Tilda (o destilda) una línea como revisada. NO mueve un peso: sólo deja dicho
+ * "esta ya la miré y está bien como viene", para no volver a revisarla el mes
+ * que viene. Por eso no recalcula nada.
+ */
+export async function marcarRevisado(input: z.infer<typeof RevisarSchema>) {
+  const parsed = RevisarSchema.safeParse(input);
+  if (!parsed.success) return { error: "Datos inválidos" };
+  const { empresa, movementId, revisado } = parsed.data;
+  const ctx = await requireEmpresa(empresa);
+  const supabase = await createClient();
+
+  const { data: mov } = await supabase.from("movements").select("id")
+    .eq("company_id", ctx.companyId).eq("id", movementId).maybeSingle();
+  if (!mov) return { error: "El movimiento no existe" };
+
+  const { data: imp } = await supabase.from("settlement_imputations")
+    .select("id, destino").eq("company_id", ctx.companyId).eq("movement_id", movementId).maybeSingle();
+
+  const marca = {
+    revisado,
+    revisado_at: revisado ? new Date().toISOString() : null,
+    revisado_by: revisado ? ctx.userId : null,
+  };
+  // Si la línea ya tenía una corrección se toca SÓLO el tilde: destildar no
+  // puede devolverle un cobro a una doctora de la que Pancho lo había sacado.
+  // Son dos decisiones distintas y perder plata por destildar sería una trampa.
+  const { error } = imp
+    ? await supabase.from("settlement_imputations").update(marca).eq("id", imp.id)
+    : revisado
+      ? await supabase.from("settlement_imputations").insert({
+          company_id: ctx.companyId, movement_id: movementId,
+          destino: "caja", professional_id: null, created_by: ctx.userId, ...marca,
+        })
+      : { error: null };   // nada que destildar
+  if (error) return { error: error.message };
+
+  refrescar(empresa);
+  return { ok: true };
 }

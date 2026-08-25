@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { ConfirmarLiquidacion } from "@/components/compromisos/liquidacion-controles";
 import { RecalcularBoton } from "@/components/liquidaciones/recalcular-boton";
 import { ImputarCobro, DESTINO_CAJA, DESTINO_CASA } from "@/components/liquidaciones/imputar-cobro";
+import { RevisadoCheck } from "@/components/liquidaciones/revisado-check";
 import { COMISION_POR_TRATAMIENTO } from "@/lib/liquidaciones/comision-claudia";
 import { comisionClaudiaPorMes } from "@/lib/liquidaciones/comision-claudia-query";
 import { periodoDeMovimiento, type MovimientoBase } from "@/lib/liquidaciones/recalcular";
@@ -97,11 +98,22 @@ export default async function LiquidacionesPage({
 
   const { data: impRaw } = await supabase
     .from("settlement_imputations")
-    .select("movement_id, professional_id")
+    .select("movement_id, destino, professional_id, revisado")
     .eq("company_id", ctx.companyId);
-  const imputadoA = new Map<string, string | null>(
-    (impRaw ?? []).map((i) => [i.movement_id as string, (i.professional_id as string | null) ?? null])
+  type Decidido = { destino: "caja" | "casa" | "profesional"; profesionalId: string | null; revisado: boolean };
+  const decidido = new Map<string, Decidido>(
+    (impRaw ?? []).map((i) => [i.movement_id as string, {
+      destino: i.destino as Decidido["destino"],
+      profesionalId: (i.professional_id as string | null) ?? null,
+      revisado: Boolean(i.revisado),
+    }])
   );
+  /** Qué muestra el selector de una línea: uuid de doctora, "casa" o "caja". */
+  const valorSelector = (movementId: string) => {
+    const d = decidido.get(movementId);
+    if (!d || d.destino === "caja") return DESTINO_CAJA;
+    return d.destino === "casa" ? DESTINO_CASA : (d.profesionalId ?? DESTINO_CAJA);
+  };
 
   // Cobros del mes que NO se le liquidan a nadie: los que Pancho sacó de una
   // doctora y los que la caja nunca atribuyó. Se buscan en una ventana de ±1 mes
@@ -120,10 +132,9 @@ export default async function LiquidacionesPage({
   const sinLiquidar = ((movsVentana ?? []) as unknown as MovimientoBase[])
     .filter((m) => periodoDeMovimiento(m) === periodo)
     .filter((m) => {
-      const doctoraFinal = imputadoA.has(m.id)
-        ? imputadoA.get(m.id)
-        : (m.meta?.doctora ?? null);
-      return !doctoraFinal;
+      const d = decidido.get(m.id);
+      if (!d || d.destino === "caja") return !m.meta?.doctora;
+      return d.destino === "casa";
     });
   const totalSinLiquidar = sinLiquidar
     .filter((m) => m.currency !== "USD")
@@ -249,6 +260,14 @@ export default async function LiquidacionesPage({
                           <details className="group py-2">
                             <summary className="cursor-pointer select-none text-xs font-medium text-muted-foreground hover:text-foreground">
                               Ver las {itemsPorSet.get(f.id)!.length} líneas de {nombre.split(" ")[0]}
+                              {(() => {
+                                const revisadas = itemsPorSet.get(f.id)!.filter((x) => decidido.get(x.movement_id)?.revisado).length;
+                                return revisadas ? (
+                                  <span className="ml-1.5 font-normal">
+                                    · {revisadas} de {itemsPorSet.get(f.id)!.length} revisadas
+                                  </span>
+                                ) : null;
+                              })()}
                               <span className="ml-1 inline-block transition-transform group-open:rotate-90">›</span>
                             </summary>
                             <table className="mt-2 w-full text-[12px]">
@@ -261,12 +280,13 @@ export default async function LiquidacionesPage({
                                   <th className="px-2 py-1 text-right font-medium">Costo KS</th>
                                   <th className="px-2 py-1 text-right font-medium">Neto</th>
                                   <th className="px-2 py-1 font-medium">Se le liquida a</th>
+                                  <th className="w-14 px-2 py-1 text-center font-medium" title="Ya la miré y está bien">Revisada</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {itemsPorSet.get(f.id)!.map((it, i) => {
                                   const pac = (it.movement?.counterparty as { display_name?: string } | null)?.display_name ?? "—";
-                                  const imp = imputadoA.get(it.movement_id);
+                                  const yaRevisada = decidido.get(it.movement_id)?.revisado ?? false;
                                   return (
                                     <tr key={i} className="border-t border-border/50">
                                       <td className="fig px-2 py-1 text-muted-foreground">
@@ -288,13 +308,25 @@ export default async function LiquidacionesPage({
                                           <ImputarCobro
                                             empresa={ctx.config.slug}
                                             movementId={it.movement_id}
-                                            valor={imputadoA.has(it.movement_id) ? (imp ?? DESTINO_CASA) : DESTINO_CAJA}
+                                            valor={valorSelector(it.movement_id)}
                                             doctoraCaja={nombre}
                                             doctoras={doctoras}
                                             paciente={pac}
                                             monto={Number(it.base_amount)}
                                             moneda={it.currency}
                                             locale={locale}
+                                          />
+                                        )}
+                                      </td>
+                                      <td className="px-2 py-1 text-center">
+                                        {congelada ? (
+                                          <span className="text-muted-foreground">—</span>
+                                        ) : (
+                                          <RevisadoCheck
+                                            empresa={ctx.config.slug}
+                                            movementId={it.movement_id}
+                                            revisado={yaRevisada}
+                                            paciente={pac}
                                           />
                                         )}
                                       </td>
@@ -346,6 +378,7 @@ export default async function LiquidacionesPage({
                     <th className="px-2 py-1 font-medium">Concepto</th>
                     <th className="px-2 py-1 text-right font-medium">Cobrado</th>
                     <th className="px-2 py-1 font-medium">Se le liquida a</th>
+                    <th className="w-14 px-2 py-1 text-center font-medium">Revisada</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -368,13 +401,21 @@ export default async function LiquidacionesPage({
                         <ImputarCobro
                           empresa={ctx.config.slug}
                           movementId={m.id}
-                          valor={imputadoA.has(m.id) ? (imputadoA.get(m.id) ?? DESTINO_CASA) : DESTINO_CAJA}
+                          valor={valorSelector(m.id)}
                           doctoraCaja={m.meta?.doctora ?? null}
                           doctoras={doctoras}
                           paciente={m.counterparties?.display_name ?? "—"}
                           monto={Number(m.amount)}
                           moneda={m.currency}
                           locale={locale}
+                        />
+                      </td>
+                      <td className="px-2 py-1 text-center">
+                        <RevisadoCheck
+                          empresa={ctx.config.slug}
+                          movementId={m.id}
+                          revisado={decidido.get(m.id)?.revisado ?? false}
+                          paciente={m.counterparties?.display_name ?? "—"}
                         />
                       </td>
                     </tr>
