@@ -5,6 +5,7 @@
 // Los pacientes de la caja Coni quedan afuera (contabilidad separada).
 
 import { PACIENTES_DE_CONI } from "./pacientes-coni";
+import { COSTO_ETAPA_ADICIONAL, ETAPA_ADICIONAL } from "./pactos";
 
 export const COMISION_POR_TRATAMIENTO = 100_000;
 
@@ -30,14 +31,31 @@ const empiezaAMitad = (desc: string | null | undefined) =>
   /(?:saldo\s+de\s+)?cuota\s*(?:n[°º]?\s*)?([2-9]|1[0-9])\s*de\s*\d+/i.test(desc ?? "") ||
   /saldo de cuota/i.test(desc ?? "");
 
+// Una ETAPA ADICIONAL no es un tratamiento nuevo: es el mismo paciente que sigue
+// (Pancho, 26/8/26, sobre Daira Castellón). Aunque su fila diga "cuota 1 de 3"
+// —y por eso no la agarra empiezaAMitad—, Claudia no vendió nada nuevo ahí.
+//
+// Se detecta por el texto de la caja y, además, por los casos declarados a mano
+// en pactos.ts: la caja no siempre lo aclara, y cuando no lo aclara el sistema
+// le estaría pagando $100.000 de más a Claudia sin que nadie lo note.
+const ETAPAS_DECLARADAS = new Set(
+  [...ETAPA_ADICIONAL, ...Object.keys(COSTO_ETAPA_ADICIONAL)].map(claveNombre)
+);
+const esEtapaAdicional = (p: PagoAlineadores) =>
+  /etapa\s+adicional/i.test(p.descripcion ?? "") ||
+  ETAPAS_DECLARADAS.has(claveNombre(p.paciente ?? ""));
+
 export type TratamientoNuevo = { mes: string; fecha: string; paciente: string };
 
 export function tratamientosNuevos(
   pagos: PagoAlineadores[], ajenos: string[] = PACIENTES_DE_CONI
 ): TratamientoNuevo[] {
   const deOtro = new Set(ajenos.map(claveNombre));
+  // Las etapas adicionales se descartan ANTES de buscar la primera aparición:
+  // así, si un paciente tiene su tratamiento original y además una etapa, sigue
+  // contando por el original y no por la que llegue primero.
   const propios = pagos.filter(
-    (p) => !p.separada && !deOtro.has(claveNombre(p.paciente ?? ""))
+    (p) => !p.separada && !deOtro.has(claveNombre(p.paciente ?? "")) && !esEtapaAdicional(p)
   );
   // primera aparición por paciente (nombre normalizado; sin nombre, el id)
   const primeros = new Map<string, PagoAlineadores>();

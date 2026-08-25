@@ -78,3 +78,34 @@ it("los pacientes de Coni no cuentan como tratamiento nuevo aunque la plata sea 
   assert.equal(r.length, 1);
   assert.equal(r[0].paciente, "Lucio Bustos");
 });
+
+describe("etapas adicionales", () => {
+  it("una etapa adicional NO es un tratamiento nuevo, aunque diga cuota 1", () => {
+    // Daira Castellón (Pancho, 26/8/26): su fila dice "cuota 1 de 3 etapa
+    // adicional" — no empieza a mitad, pero Claudia no vendió nada nuevo.
+    const n = tratamientosNuevos([
+      pago({
+        counterparty_id: "x", paciente: "Daira Castellón", occurred_on: "2026-07-13",
+        descripcion: "cuota 1 de 3 etapa adicional",
+      }),
+    ]);
+    assert.equal(n.length, 0);
+  });
+
+  it("un paciente con etapa adicional Y tratamiento original cuenta una sola vez, por el original", () => {
+    const n = tratamientosNuevos([
+      pago({ counterparty_id: "y", paciente: "Juana", occurred_on: "2026-05-02", descripcion: "cuota 1 de 3 etapa adicional" }),
+      pago({ counterparty_id: "y", paciente: "Juana", occurred_on: "2026-06-02", descripcion: "cuota 1 de 6" }),
+    ]);
+    assert.equal(n.length, 1);
+    assert.equal(n[0].mes, "2026-06", "cuenta por el tratamiento, no por la etapa");
+  });
+
+  it("un caso declarado como etapa adicional no cuenta ni cuando la caja no lo dice", () => {
+    // la caja escribe cualquier cosa; el declarado en pactos.ts manda igual
+    const n = tratamientosNuevos([
+      pago({ counterparty_id: "z", paciente: "Cugat Fernanda", occurred_on: "2026-04-02", descripcion: "abona" }),
+    ]);
+    assert.equal(n.length, 0);
+  });
+});
