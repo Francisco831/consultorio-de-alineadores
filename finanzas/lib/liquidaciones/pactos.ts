@@ -16,16 +16,22 @@
 export const ETAPA_ADICIONAL = new Set(["cugat fernanda", "fernanda cugat"]);
 
 /**
- * Precio KS de una ETAPA ADICIONAL, por paciente.
+ * Precio DE LISTA de una ETAPA ADICIONAL, por paciente.
  *
  * La etapa adicional viene incluida en el programa 1 a 4 sólo cuando el
  * tratamiento original es FULL. Si era Medium o Fast se cobra aparte, y su
  * precio no sale de ks_price_list: esa lista tiene tratamientos, no etapas
  * sueltas. Hasta que exista esa lista, el precio se declara acá.
  *
- * Daira Castellón: tratamiento Medium, etapa adicional $498.000 (Pancho,
- * 25/8/26, reconfirmado el 26/8). No figura en tipos_tratamiento_ar.json, así
- * que el costeo la daba por Full y le ponía costo cero.
+ * OJO: el número es el precio DE LISTA, no el costo. El costeo le aplica el
+ * mismo descuento que a los tratamientos (40%), porque es lo que la doctora
+ * paga: la etapa de un Medium sale $498.000 de lista → $298.800 de costo KS
+ * (regla de Pancho, 26/8/26). Y ese costo se imputa ENTERO en el primer cobro
+ * que la paga: KS la factura de una vez, no por cuota.
+ *
+ * Daira Castellón: tratamiento Medium, etapa adicional $498.000 de lista. No
+ * figura en tipos_tratamiento_ar.json, así que el costeo la daba por Full y le
+ * ponía costo cero.
  *
  * OJO: el valor es el costo TOTAL del caso de ese paciente. Alcanza mientras el
  * caso SEA la etapa adicional (como el de Daira, que entró por eso). El día que

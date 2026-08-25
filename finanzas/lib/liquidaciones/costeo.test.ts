@@ -178,8 +178,9 @@ test("la fecha de ingreso real (Noloco) le gana a la inferida", () => {
 
 test("la etapa adicional es gratis en Full, se cobra en Medium", () => {
   // Daira Castellón (Pancho, 25/8/26): su tratamiento era Medium, así que la
-  // etapa adicional NO viene incluida — cuesta $498.000. Sin esto, el texto
-  // "etapa adicional" la dejaba en cero como a cualquier Full.
+  // etapa adicional NO viene incluida — sale $498.000 de LISTA, y la doctora la
+  // paga con su 40% de descuento: $298.800. Sin esto, el texto "etapa
+  // adicional" la dejaba en cero como a cualquier Full.
   const cobros = [
     { id: "d1", paciente: "Daira Castellon", fecha: "2026-07-13", ars: 400000, usd: 0,
       motivo: "cuota 1 de 3 etapa adicional", texto: "cuota 1 de 3 etapa adicional", seq: 1 },
@@ -193,9 +194,9 @@ test("la etapa adicional es gratis en Full, se cobra en Medium", () => {
     etapaAdicional: new Set(["cugat fernanda"]),
     costoEtapaAdicional: { "daira castellon": 498000 },
   });
-  assert.equal(r.costoArs.get("d1"), 166000);            // 498.000 × 400.000/1.200.000
+  assert.equal(r.costoArs.get("d1"), 298800);            // 498.000 − 40%, completo
   assert.equal(r.costoArs.get("c1"), undefined);         // sigue sin costo
-  assert.match(r.etiquetas.get("d1")!, /etapa adicional a \$498\.000/);
+  assert.match(r.etiquetas.get("d1")!, /\$498\.000 de lista menos 40%/);
   assert.match(r.etiquetas.get("c1")!, /sin costo/);
 });
 
@@ -273,18 +274,33 @@ test("un caso declarado sin costo no paga la etapa adicional aunque no sea Full"
   assert.equal(r.sinCostear, 0, "no se marca para revisar: ya está decidido");
 });
 
-test("la etapa adicional con precio declarado SÍ carga costo (caso Daira)", () => {
-  // Medium: la etapa se cobra aparte. $400.000 sobre un pacto de $1.200.000 es
-  // el 33,3% de una etapa de $498.000 → $166.000.
-  const r = costearCuotas([
-    cobro({ id: "a", seq: 1, ars: 400000, paciente: "Daira Castellón",
-      motivo: "cuota 1 de 3 etapa adicional", texto: "cuota 1 de 3 etapa adicional" }),
-  ], {
+test("la etapa adicional NO se prorratea: el costo entra entero en el primer cobro", () => {
+  // KS la factura de una vez (Pancho, 26/8/26), así que el costo no se reparte
+  // entre las cuotas: la cuota 1 se lo lleva completo y las siguientes, cero.
+  const cuota = (id: string, seq: number, n: number) =>
+    cobro({ id, seq, ars: 400000, paciente: "Daira Castellón",
+      fecha: `2026-0${6 + seq}-13`,
+      motivo: `cuota ${n} de 3 etapa adicional`, texto: `cuota ${n} de 3 etapa adicional` });
+  const r = costearCuotas([cuota("a", 1, 1), cuota("b", 2, 2), cuota("c", 3, 3)], {
     precioDefault: PRECIO,
     precioPactado: { "daira castellon": 1200000 },
     costoEtapaAdicional: { "daira castellon": 498000 },
   });
-  assert.equal(r.costoArs.get("a"), 166000);
+  assert.equal(r.costoArs.get("a"), 298800, "el primer cobro carga la etapa entera");
+  assert.equal(r.costoArs.get("b"), 0, "la cuota 2 ya no cuesta nada");
+  assert.equal(r.costoArs.get("c"), 0);
+});
+
+test("el descuento de la etapa adicional sale de la lista del caso, no de una constante", () => {
+  const conOtroDto = costearCuotas([
+    cobro({ id: "a", seq: 1, ars: 400000, paciente: "Daira Castellón",
+      motivo: "cuota 1 de 3 etapa adicional", texto: "cuota 1 de 3 etapa adicional" }),
+  ], {
+    precioDefault: { list_price: 2731000, discount_pct: 50 },
+    precioPactado: { "daira castellon": 1200000 },
+    costoEtapaAdicional: { "daira castellon": 498000 },
+  });
+  assert.equal(conOtroDto.costoArs.get("a"), 249000);   // 498.000 − 50%
 });
 
 test("descuento especial: el costo KS del caso baja 16% (Nisenbaum, Grillo, Etchegoyen)", () => {

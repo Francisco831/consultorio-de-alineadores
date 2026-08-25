@@ -141,20 +141,26 @@ export function costearCuotas(
     [...(opts.etapaAdicional ?? [])].map((n) => clavePaciente(n))
   );
 
+  /** La lista que le toca a un caso: la vigente a su ingreso, para su tipo. */
+  const listaDe = (k: string): PrecioKS => {
+    if (!listas.length) return opts.precioDefault;
+    const fecha = opts.ingresoPorPaciente?.get(k) ?? ingresoInferido.get(k) ?? "";
+    const lista = listas.filter((l) => l.validFrom <= fecha).pop() ?? listas[0];
+    return lista.precios.get(opts.tipoPorPaciente?.get(k) ?? TIPO_DEFAULT) ?? opts.precioDefault;
+  };
+
   // precio del caso: lista vigente a su ingreso + tipo real de tratamiento
   // (Noloco); sin datos cae al default Full 2 maxilares adultos a lista actual.
   // Un caso anterior a la lista más vieja conocida usa esa (no hay mejor dato).
   const costoDe = (k: string) => {
-    // Un costo declarado a mano ya es el número acordado para ESE caso: el
-    // descuento especial no se le encima.
+    const pr = listaDe(k);
+    // El precio declarado de una etapa adicional es DE LISTA, igual que el de
+    // un tratamiento: la doctora la paga con el mismo 40% de descuento (regla
+    // de Pancho, 26/8/26 — la etapa de un Medium sale $498.000 y se imputa
+    // $298.800). El descuento especial por paciente no se le encima: el precio
+    // de la etapa se declaró para ese caso puntual.
     const fijado = costoFijado.get(k);
-    if (fijado != null) return fijado;
-    let pr = opts.precioDefault;
-    if (listas.length) {
-      const fecha = opts.ingresoPorPaciente?.get(k) ?? ingresoInferido.get(k) ?? "";
-      const lista = listas.filter((l) => l.validFrom <= fecha).pop() ?? listas[0];
-      pr = lista.precios.get(opts.tipoPorPaciente?.get(k) ?? TIPO_DEFAULT) ?? pr;
-    }
+    if (fijado != null) return fijado * (1 - pr.discount_pct / 100);
     const deLista = pr.list_price * (1 - pr.discount_pct / 100);
     return deLista * (1 - (descuentoEspecial.get(k) ?? 0) / 100);
   };
@@ -246,7 +252,12 @@ export function costearCuotas(
     const base = cuotaBase.get(`${k}|${cur}`);
     let pct: number | undefined;
     let precioTxt = "";
-    if (cur === "ARS" && pArs) { pct = monto / pArs; precioTxt = `$${pArs.toLocaleString("es-AR")}`; }
+    // Una etapa adicional con precio declarado NO se prorratea: KS la factura de
+    // una vez, así que su costo se imputa ENTERO en el primer cobro que la paga
+    // (regla de Pancho, 26/8/26). Las cuotas siguientes de esa misma etapa
+    // quedan en cero por el tope acumulado de más abajo.
+    if (costoFijado.has(k)) { pct = 1; }
+    else if (cur === "ARS" && pArs) { pct = monto / pArs; precioTxt = `$${pArs.toLocaleString("es-AR")}`; }
     else if (cur === "USD" && pUsd) { pct = monto / pUsd; precioTxt = `USD ${pUsd.toLocaleString("es-AR")}`; }
     else if (cur === "ARS" && pUsd) { pct = monto / tc / pUsd; precioTxt = `USD ${pUsd.toLocaleString("es-AR")} (t/c ${tc})`; }
     else if (cur === "USD" && pArs) { pct = (monto * tc) / pArs; precioTxt = `$${pArs.toLocaleString("es-AR")} (t/c ${tc})`; }
@@ -267,11 +278,14 @@ export function costearCuotas(
     acumulado.set(k, ya + share);
 
     const tope = share + 0.5 < costoTotal * pct ? " — tope: el caso ya cargó su costo completo" : "";
-    const aMano = costoFijado.has(k)
-      ? ` · etapa adicional a $${costoTotal.toLocaleString("es-AR")}` : "";
     const dto = descuentoEspecial.get(k);
     const especial = dto ? ` · ${dto}% de descuento especial sobre el costo KS` : "";
-    const pctTxt = `${(pct * 100).toLocaleString("es-AR", { maximumFractionDigits: 1 })}% del precio ${precioTxt}`;
+    // La etapa adicional cuenta su propia historia: precio de lista y descuento,
+    // que es de donde sale el número. Un "100% del precio" no diría nada.
+    const pctTxt = costoFijado.has(k)
+      ? `etapa adicional: $${costoFijado.get(k)!.toLocaleString("es-AR")} de lista ` +
+        `menos ${listaDe(k).discount_pct}%`
+      : `${(pct * 100).toLocaleString("es-AR", { maximumFractionDigits: 1 })}% del precio ${precioTxt}`;
     // El costo va en pesos aunque el cobro haya entrado en dólares: `share` sale
     // de la lista KS, que está en pesos, y la liquidación es un solo número.
     // (el "US$ 360 × t/c 1.505" lo agrega recalcular.ts, que pesifica todo lo
@@ -279,7 +293,7 @@ export function costearCuotas(
     costoArs.set(c.id, Math.round(share));
     etiquetas.set(
       c.id,
-      `costo KS $${Math.round(share).toLocaleString("es-AR")} (${pctTxt}${tope}${aMano}${especial})`
+      `costo KS $${Math.round(share).toLocaleString("es-AR")} (${pctTxt}${tope}${especial})`
     );
   }
 
