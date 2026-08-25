@@ -1,8 +1,44 @@
 [
-  {"fecha": "2026-05-08", "monto": 100000, "nombre": "Cisilotto Santiago", "motivo": "efectivo/Tr KS — consolidado 21/8, decisión Pancho: no recargar"},
-  {"fecha": "2026-05-28", "monto": 60000, "nombre": "Aitana Zerpa", "motivo": "consulta en efectivo — consolidado 21/8"},
-  {"fecha": "2026-06-10", "monto": 135000, "nombre": "Vianini Sonsoles", "motivo": "efectivo — consolidado 21/8"},
-  {"fecha": "2026-06-10", "monto": 35000, "nombre": "Ricci Francisco", "motivo": "efectivo — consolidado 21/8"},
-  {"fecha": "2026-06-24", "monto": 35000, "nombre": "Schorr Alex", "motivo": "duplicado en la hoja de facturación: el pago real es del 17/6 y ya está en caja"},
-  {"fecha": "2026-08-07", "monto": 200000, "nombre": "Avendaño Natalia", "motivo": "ex paciente de Euge, manejado por afuera — consolidado 21/8"}
+ {
+  "fecha": "2026-05-08",
+  "monto": 100000,
+  "nombre": "Cisilotto Santiago",
+  "motivo": "efectivo/Tr KS — consolidado 21/8, decisión Pancho: no recargar"
+ },
+ {
+  "fecha": "2026-05-28",
+  "monto": 60000,
+  "nombre": "Aitana Zerpa",
+  "motivo": "consulta en efectivo — consolidado 21/8"
+ },
+ {
+  "fecha": "2026-06-10",
+  "monto": 135000,
+  "nombre": "Vianini Sonsoles",
+  "motivo": "efectivo — consolidado 21/8"
+ },
+ {
+  "fecha": "2026-06-10",
+  "monto": 35000,
+  "nombre": "Ricci Francisco",
+  "motivo": "efectivo — consolidado 21/8"
+ },
+ {
+  "fecha": "2026-06-24",
+  "monto": 35000,
+  "nombre": "Schorr Alex",
+  "motivo": "duplicado en la hoja de facturación: el pago real es del 17/6 y ya está en caja"
+ },
+ {
+  "fecha": "2026-08-07",
+  "monto": 200000,
+  "nombre": "Avendaño Natalia",
+  "motivo": "ex paciente de Euge, manejado por afuera — consolidado 21/8"
+ },
+ {
+  "fecha": "2026-07-15",
+  "monto": 330000,
+  "nombre": "ingreso de Dra Matelli",
+  "motivo": "paciente Bianchi Ana — decisión Pancho 24/8/26: no aplica a la liquidación; anulada también en caja"
+ }
 ]

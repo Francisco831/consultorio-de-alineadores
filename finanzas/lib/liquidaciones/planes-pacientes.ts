@@ -2,7 +2,7 @@
 // caja: qué cuotas pagó cada paciente ("cuota X de Y") y cuánto le falta.
 // El pendiente es un ESTIMADO: cuotas pendientes × última cuota conocida
 // (las cuotas se ajustan por inflación, así que es piso, no contrato).
-import { RE_CUOTA, RE_CUOTA_DOBLE, clavePaciente } from "./costeo";
+import { RE_CUOTA, RE_CUOTA_DOBLE, RE_PARCIAL, clavePaciente } from "./costeo";
 import { tokEq } from "../conciliacion/matcher";
 
 // apodos que la caja usa indistintamente con el nombre real
@@ -14,11 +14,9 @@ const claveConApodos = (nombre: string) =>
 // "cuota 3" a secas (sin "de Y"): cuenta como cuota numerada del plan ya conocido
 const RE_CUOTA_SUELTA = /c(?:uo)?ta\s*\.?\s*(\d+)\b(?!\s*de)/i;
 
-// "parte de cuota 3", "a cta de cuota 2", "resto/saldo de cuota": el monto NO
-// es una cuota entera — no puede pisar la última cuota conocida (bug real:
-// la fila de USD 300 de Etchegoyen "cuota 2 + a cta de cuota 3" desinflaba
-// el pendiente). Como mucho la sube, si es lo único que hay.
-const RE_PARCIAL = /\bparte\b|\bresto\b|\bsaldo\b|\bse\u00f1a\b|\ba\s*c(?:uo|uen)?ta\.?\s*de\b/i;
+// RE_PARCIAL (importado de costeo): un pago parcial no puede pisar la última
+// cuota conocida (bug real: la fila de USD 300 de Etchegoyen "cuota 2 + a cta
+// de cuota 3" desinflaba el pendiente). Como mucho la sube, si es lo único que hay.
 
 // "tc 1550" / "t/c $1.550": cuota en dólares con el tipo de cambio anotado
 const RE_TC = /\bt\/?c\s*\$?\s*[\d.,]+/i;

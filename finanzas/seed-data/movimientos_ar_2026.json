@@ -8895,6 +8895,21 @@
   "categoria": "Alineadores"
  },
  {
+  "fecha": "2026-08-24",
+  "mes": 8,
+  "doctora": "Mariana Matelli",
+  "atribucion_clara": true,
+  "tab": "MARIANA  MATELLI",
+  "paciente": "Enrique Bermudez",
+  "ars": 200000.0,
+  "usd": 0.0,
+  "medio": "TR Mp",
+  "motivo": "contenciones",
+  "obs": "",
+  "tipo": "cobro",
+  "categoria": "Contención"
+ },
+ {
   "fecha": "2026-01-13",
   "mes": 1,
   "doctora": "Mariana Franco",

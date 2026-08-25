@@ -1,0 +1,12 @@
+{
+  "nota": "Movimientos imputados a un período de liquidación distinto del de su fecha (criterio devengado). Regla Pancho 24/8/26: los pagos que salieron por MP el 24/7 liquidan JUNIO (el pago sale ~el 24 del mes siguiente); las cuotas de Herrera cobradas el 4/7 se devengaron en junio y ya se pagaron. Match por fecha + monto redondeado + doctora (meta.doctora del movimiento).",
+  "filas": [
+    { "occurred_on": "2026-07-24", "monto": 30180, "doctora": "Rocío Puig", "periodo": "2026-06", "detalle": "pago liquidación junio" },
+    { "occurred_on": "2026-07-24", "monto": 1711272, "doctora": "Mariana Matelli", "periodo": "2026-06", "detalle": "pago liquidación junio (a cuenta de Abad Gustavo)" },
+    { "occurred_on": "2026-07-24", "monto": 104624, "doctora": "Eugenia Digiano", "periodo": "2026-06", "detalle": "pago liquidación junio" },
+    { "occurred_on": "2026-07-24", "monto": 568054, "doctora": "Eugenia Digiano", "periodo": "2026-06", "detalle": "pago deuda anterior — cerrado con junio" },
+    { "occurred_on": "2026-07-24", "monto": 1416830, "doctora": "Mariana Franco", "periodo": "2026-06", "detalle": "cierre Franco (junio + Herrera)" },
+    { "occurred_on": "2026-07-08", "monto": 558828, "doctora": "Mariana Franco", "periodo": "2026-06", "detalle": "pago período anterior — cerrado con junio" },
+    { "occurred_on": "2026-07-04", "monto": 1200000, "doctora": "Mariana Franco", "periodo": "2026-06", "detalle": "cuota Herrera devengada junio (aplica a las dos)" }
+  ]
+}

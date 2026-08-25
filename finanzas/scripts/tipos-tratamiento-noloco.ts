@@ -80,7 +80,7 @@ async function main() {
   const token = login.login.token;
 
   const CAMPOS = "idExterno paciente pais maxilares etapaTratamientoSuperior etapaTratamientoInferior fechaIngreso doctores { nombre }";
-  const tipos: Record<string, { paciente: string; case: string; doctora: string | null; audience: string; scope: string; arcades: number }> = {};
+  const tipos: Record<string, { paciente: string; case: string; doctora: string | null; ingreso: string | null; audience: string; scope: string; arcades: number }> = {};
   let sinCaso = 0, sinTipo = 0;
   for (const [clave, nombre] of pacientes) {
     // se busca por el token más largo del nombre (mejor selectividad)
@@ -106,7 +106,8 @@ async function main() {
     const caso = candidatos[0];               // el más nuevo
     const t = derivar(caso);
     if (!t) { sinTipo++; continue; }
-    tipos[clave] = { paciente: nombre, case: caso.idExterno, doctora: caso.doctores?.nombre ?? null, ...t };
+    // fechaIngreso decide qué lista de precios histórica paga el caso
+    tipos[clave] = { paciente: nombre, case: caso.idExterno, doctora: caso.doctores?.nombre ?? null, ingreso: caso.fechaIngreso?.slice(0, 10) ?? null, ...t };
   }
 
   const resumen = new Map<string, number>();

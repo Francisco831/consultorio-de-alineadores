@@ -18,6 +18,33 @@ import {
 // Excepciones declaradas en build_liquidaciones.py
 const ETAPA_ADICIONAL = new Set(["cugat fernanda", "fernanda cugat"]);
 const PLAN_PACIENTE: Record<string, number> = { "hogner agustina": 7, "agustina hogner": 7 };
+// Precio TOTAL pactado con cada paciente — tabla pasada por Pancho el 24/8/26.
+// La clave es el nombre (se normaliza con clavePaciente); las variantes de
+// grafía de la caja se repiten para que el match no falle.
+const PRECIO_PACTADO: Record<string, number> = {
+  "ponce sarahi": 3800000,
+  "de donatis luz": 3626000, "de lonatis maria luz": 3626000,
+  "russo sofia": 3800000,
+  "herrera evelin": 4800000,
+  "tonello fiorella": 3760000,
+  "badiola ramiro": 3800000,
+  "de frankerberg josefina": 3650000,
+  "gallo gaston": 3900000,
+  "lazaro magdalena": 3700000, "magui lazaro": 3700000,
+  "daira castellon": 1200000,
+  "szalontai natalia": 3800000,
+  "agustina di natale": 3800000, "agustina di natale 39769016": 3800000,
+  "tapia macarena": 3000000,
+  "vicent patricia": 3800000,  // la tabla decía 380.000: typo confirmado por Pancho 24/8
+};
+const PRECIO_PACTADO_USD: Record<string, number> = {
+  "botto agustina": 2800,
+  "etchegoyen ignacio": 2250,
+  "grillo catalina": 2250,
+  "hogner agustina": 2800,     // paga en pesos al t/c de cada fila
+  "nisenbaum martin": 2300, "martin nissenbaum": 2300, "nisenbaum": 2300,
+  "de la torre guadalupe": 2700,
+};
 
 type Ref = {
   periodo: string; doctora: string; cobrado_ars: number; cobrado_usd: number;
@@ -30,6 +57,19 @@ async function main() {
   const referencia = JSON.parse(
     readFileSync(resolve(__dirname, "../seed-data/liquidaciones_referencia.json"), "utf8")
   ).filas as Ref[];
+
+  // Imputación por devengado: algunos movimientos liquidan un período distinto
+  // del de su fecha (los pagos salen por MP ~el 24 del mes siguiente; Herrera
+  // se devengó en junio). seed-data/periodo_liquidacion_overrides.json.
+  const overrides = JSON.parse(
+    readFileSync(resolve(__dirname, "../seed-data/periodo_liquidacion_overrides.json"), "utf8")
+  ).filas as Array<{ occurred_on: string; monto: number; doctora: string; periodo: string }>;
+  const periodoOverride = new Map(
+    overrides.map((o) => [`${o.occurred_on}|${o.monto}|${o.doctora}`, o.periodo])
+  );
+  const periodoDe = (m: { occurred_on: string; amount: number | string; meta?: { doctora?: string } | null }) =>
+    periodoOverride.get(`${m.occurred_on}|${Math.round(Number(m.amount))}|${m.meta?.doctora ?? ""}`)
+      ?? m.occurred_on.slice(0, 7);
 
   const db = await serviceClient({
     accion: "calcular liquidaciones de doctoras y compararlas con el script viejo",
@@ -92,27 +132,41 @@ async function main() {
       seq: m.meta?.seq ?? 0,
     }));
 
-  // tipo real de tratamiento por paciente (Noloco → seed-data/tipos_tratamiento_ar.json)
+  // Historial de listas KS con vigencia: el caso paga la lista vigente a su
+  // fecha de INGRESO (regla Pancho 24/8/26 — SIEMPRE la histórica).
   const { data: listaKs } = await db.from("ks_price_list").select("*").eq("company_id", companyId);
-  const precioPorClave = new Map(
-    (listaKs ?? []).map((r) => [`${r.audience}/${r.scope}/${r.arcades}`,
-      { list_price: Number(r.list_price), discount_pct: Number(r.discount_pct) }]));
-  const precioPorPaciente = new Map<string, { list_price: number; discount_pct: number }>();
+  const porVigencia = new Map<string, Map<string, { list_price: number; discount_pct: number }>>();
+  for (const r of listaKs ?? []) {
+    const m = porVigencia.get(r.valid_from) ?? new Map();
+    m.set(`${r.audience}/${r.scope}/${r.arcades}`,
+      { list_price: Number(r.list_price), discount_pct: Number(r.discount_pct) });
+    porVigencia.set(r.valid_from, m);
+  }
+  const listas = [...porVigencia].map(([validFrom, precios]) => ({ validFrom, precios }));
+  console.log(`Listas de precios KS: ${listas.map((l) => l.validFrom).sort().join(" · ")}`);
+
+  // tipo real de tratamiento + fecha de ingreso por paciente (Noloco)
+  const tipoPorPaciente = new Map<string, string>();
+  const ingresoPorPaciente = new Map<string, string>();
   try {
     const tipos = JSON.parse(readFileSync(resolve(__dirname, "../seed-data/tipos_tratamiento_ar.json"), "utf8"));
-    for (const [clave, t] of Object.entries<{ audience: string; scope: string; arcades: number }>(tipos.tipos ?? {})) {
-      const pr = precioPorClave.get(`${t.audience}/${t.scope}/${t.arcades}`);
-      if (pr) precioPorPaciente.set(clave, pr);
+    for (const [clave, t] of Object.entries<{ audience: string; scope: string; arcades: number; ingreso?: string | null }>(tipos.tipos ?? {})) {
+      tipoPorPaciente.set(clave, `${t.audience}/${t.scope}/${t.arcades}`);
+      if (t.ingreso) ingresoPorPaciente.set(clave, t.ingreso.slice(0, 10));
     }
-    console.log(`Tipos de tratamiento desde Noloco: ${precioPorPaciente.size} pacientes con precio propio`);
-  } catch { console.log("(sin tipos_tratamiento_ar.json: todos al precio default)"); }
+    console.log(`Tipos de tratamiento desde Noloco: ${tipoPorPaciente.size} pacientes (${ingresoPorPaciente.size} con fecha de ingreso)`);
+  } catch { console.log("(sin tipos_tratamiento_ar.json: todos al tipo default)"); }
 
   const { costoArs, costoUsd, etiquetas, sinCostear } = costearCuotas(cobrosAlineadores, {
     precioDefault: {
       list_price: Number(precio.list_price), discount_pct: Number(precio.discount_pct),
     },
-    precioPorPaciente,
+    listas,
+    tipoPorPaciente,
+    ingresoPorPaciente,
     planPorPaciente: PLAN_PACIENTE,
+    precioPactado: PRECIO_PACTADO,
+    precioPactadoUsd: PRECIO_PACTADO_USD,
     etapaAdicional: ETAPA_ADICIONAL,
   });
   console.log(`\nCobros de alineadores: ${cobrosAlineadores.length} · sin costear: ${sinCostear}`);
@@ -122,7 +176,7 @@ async function main() {
     .map((m) => ({
       id: m.id,
       doctora: m.meta!.doctora!,
-      periodo: m.occurred_on.slice(0, 7),
+      periodo: periodoDe(m),
       ars: m.currency === "USD" ? 0 : Number(m.amount),
       usd: m.currency === "USD" ? Number(m.amount) : 0,
       tipo:
@@ -253,9 +307,14 @@ async function main() {
     // ---- detalle línea por línea: cada cobro del mes con su costo KS ----
     const cobrosDelMes = movs.filter((m) =>
       m.kind === "income" && m.meta?.doctora === l.doctora &&
-      m.occurred_on.slice(0, 7) === l.periodo);
+      periodoDe(m) === l.periodo);
     await db.from("settlement_items").delete().eq("settlement_id", set!.id);
     if (cobrosDelMes.length) {
+      // un cobro re-imputado por devengado (periodo_liquidacion_overrides) puede
+      // tener su ítem viejo bajo OTRA liquidación (la del mes de su fecha): se
+      // retira antes de insertar o la restricción única por movimiento lo rechaza
+      await db.from("settlement_items").delete()
+        .eq("company_id", companyId).in("movement_id", cobrosDelMes.map((m) => m.id));
       const filas = cobrosDelMes.map((m) => ({
         company_id: companyId, settlement_id: set!.id, movement_id: m.id,
         base_amount: Number(m.amount), currency: m.currency,

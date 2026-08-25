@@ -5,6 +5,7 @@
    "paciente": "GULINO MARIA LAURA",
    "case": "BF037",
    "doctora": "Gonzalez Zuazquita Monica",
+   "ingreso": "2025-08-22",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -13,6 +14,25 @@
    "paciente": "Cerdeira Nicolás",
    "case": "BH461",
    "doctora": "Puig Rocio",
+   "ingreso": "2025-10-06",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "joaquin tognelli": {
+   "paciente": "Tognelli Joaquin",
+   "case": "AM242",
+   "doctora": "Basilico Constanza",
+   "ingreso": "2024-08-13",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 1
+  },
+  "mercedes negri": {
+   "paciente": "Negri Mercedes",
+   "case": "BS879",
+   "doctora": "Burgos Ana Griselda",
+   "ingreso": "2026-05-28",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -21,6 +41,7 @@
    "paciente": "Morabito Romina",
    "case": "BJ633",
    "doctora": "Franco Mariana",
+   "ingreso": "2025-11-18",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -29,6 +50,7 @@
    "paciente": "Belart Sofia",
    "case": "BI533",
    "doctora": "Gonzalez Zuazquita Monica",
+   "ingreso": "2025-10-28",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -37,6 +59,7 @@
    "paciente": "Garat Magdalena",
    "case": "BQ384",
    "doctora": "Gonzalez Zuazquita Monica",
+   "ingreso": "2026-04-13",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -45,6 +68,43 @@
    "paciente": "Maria José Colimodio",
    "case": "BK416",
    "doctora": "Matelli Mariana Guadalupe",
+   "ingreso": "2025-12-02",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "ileana rossi": {
+   "paciente": "Rossi Ileana",
+   "case": "BR328",
+   "doctora": "Franco Mariana",
+   "ingreso": "2026-04-28",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "monica wainstein": {
+   "paciente": "Wainstein Monica",
+   "case": "BQ220",
+   "doctora": "Franco Mariana",
+   "ingreso": "2026-04-09",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "mariel rinaldini": {
+   "paciente": "Rinaldini Mariel",
+   "case": "CON-126",
+   "doctora": "Basilico Constanza",
+   "ingreso": "2025-01-08",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "alzaga elisa gonzalez": {
+   "paciente": "Gonzalez Alzaga Elisa",
+   "case": "BX105",
+   "doctora": "Matelli Mariana Guadalupe",
+   "ingreso": "2026-08-18",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -53,6 +113,7 @@
    "paciente": "Zidar Helena",
    "case": "BW451",
    "doctora": "Matelli Mariana Guadalupe",
+   "ingreso": "2026-08-05",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -61,6 +122,7 @@
    "paciente": "Perez Viviana",
    "case": "BT889",
    "doctora": "Gonzalez Zuazquita Monica",
+   "ingreso": "2026-06-16",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -69,6 +131,16 @@
    "paciente": "Vidal Teresita",
    "case": "BN144",
    "doctora": "Franco Mariana",
+   "ingreso": "2026-02-06",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "felipe linares": {
+   "paciente": "Linares Felipe",
+   "case": "CON-701",
+   "doctora": "Basilico Constanza",
+   "ingreso": "2026-04-07",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -77,6 +149,7 @@
    "paciente": "Pampuri Silvana",
    "case": "BN435",
    "doctora": "Di Giano Eugenia",
+   "ingreso": "2026-02-12",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -85,6 +158,7 @@
    "paciente": "Badiola Ramiro",
    "case": "BN409",
    "doctora": "Matelli Mariana Guadalupe",
+   "ingreso": "2026-02-12",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -93,6 +167,7 @@
    "paciente": "Tonello Fiorella",
    "case": "BP632",
    "doctora": "Franco Mariana",
+   "ingreso": "2026-03-27",
    "audience": "adultos",
    "scope": "medium",
    "arcades": 2
@@ -101,6 +176,16 @@
    "paciente": "Colimodio Maria",
    "case": "BK416",
    "doctora": "Matelli Mariana Guadalupe",
+   "ingreso": "2025-12-02",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "ferrari jose maria": {
+   "paciente": "Ferrari Maria josé",
+   "case": "BQ215",
+   "doctora": "Matelli Mariana Guadalupe",
+   "ingreso": "2026-04-09",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -109,6 +194,7 @@
    "paciente": "Olmos Magdalena",
    "case": "BQ184",
    "doctora": "Basilico Constanza",
+   "ingreso": "2026-04-08",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -117,6 +203,7 @@
    "paciente": "Evelin Herrera",
    "case": "BQ994",
    "doctora": "Franco Mariana",
+   "ingreso": "2026-04-22",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -125,6 +212,7 @@
    "paciente": "Gallo Gaston",
    "case": "BR342",
    "doctora": "Matelli Mariana Guadalupe",
+   "ingreso": "2026-04-28",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -133,14 +221,16 @@
    "paciente": "De Donatis Luz",
    "case": "BO843",
    "doctora": "Franco Mariana",
+   "ingreso": "2026-03-12",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
   },
   "ponce sarahi": {
-   "paciente": "Ponce Sarahi",
+   "paciente": "Sarahi Ponce",
    "case": "BE987",
    "doctora": "Puig Rocio",
+   "ingreso": "2025-09-18",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -149,6 +239,7 @@
    "paciente": "Russo Sofia",
    "case": "BT937",
    "doctora": "Franco Mariana",
+   "ingreso": "2026-06-17",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -157,6 +248,7 @@
    "paciente": "Nisenbaum Martín",
    "case": "BT246",
    "doctora": "Gonzalez Zuazquita Monica",
+   "ingreso": "2026-06-03",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -165,6 +257,7 @@
    "paciente": "Szalontai Natalia",
    "case": "BU677",
    "doctora": "Matelli Mariana Guadalupe",
+   "ingreso": "2026-06-30",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -173,6 +266,7 @@
    "paciente": "Agustina Di Natale",
    "case": "BX159",
    "doctora": "Heredia Castelli Virginia",
+   "ingreso": "2026-08-19",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -181,6 +275,7 @@
    "paciente": "TApia Macarena",
    "case": "BU398",
    "doctora": "Matelli Mariana Guadalupe",
+   "ingreso": "2026-06-25",
    "audience": "adultos",
    "scope": "medium",
    "arcades": 2
@@ -189,6 +284,7 @@
    "paciente": "VICENT PATRICIA",
    "case": "BW036",
    "doctora": "Matelli Mariana Guadalupe",
+   "ingreso": "2026-07-28",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2
@@ -197,6 +293,16 @@
    "paciente": "Lucio Bustos",
    "case": "BW559",
    "doctora": "Gonzalez Zuazquita Monica",
+   "ingreso": "2026-08-07",
+   "audience": "adultos",
+   "scope": "full",
+   "arcades": 2
+  },
+  "guadalupe torre": {
+   "paciente": "De la Torre Guadalupe",
+   "case": "BX276",
+   "doctora": "Gonzalez Zuazquita Monica",
+   "ingreso": "2026-08-21",
    "audience": "adultos",
    "scope": "full",
    "arcades": 2

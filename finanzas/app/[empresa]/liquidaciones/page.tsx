@@ -155,6 +155,15 @@ export default async function LiquidacionesPage({
                         </span>
                       </td>
                       <td className="px-4 py-2.5 text-right">
+                        <a
+                          href={`/imprimir/${empresa}/liquidacion/${f.id}`}
+                          target="_blank"
+                          rel="noopener"
+                          className="mr-2 inline-block rounded-md border px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                          title={`Exportar la liquidación de ${nombre} en PDF`}
+                        >
+                          PDF
+                        </a>
                         {f.status === "draft" && Number(ars.due ?? 0) > 0 ? (
                           <ConfirmarLiquidacion
                             empresa={ctx.config.slug}

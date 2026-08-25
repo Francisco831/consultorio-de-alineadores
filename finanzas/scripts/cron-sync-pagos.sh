@@ -48,6 +48,10 @@ echo "-- caja AR: exit $CAJA_RC" >> "$LOG"
 if [ $CAJA_RC -eq 0 ]; then
   npx tsx scripts/import-movimientos-ar.ts --apply --yes >> "$LOG" 2>&1
   echo "-- caja AR import: exit $?" >> "$LOG"
+  # el import regenera meta y PISA meta.seq; sin esto, liquidaciones.ts se
+  # frena con "cobros sin meta.seq" (el costeo depende del orden de la caja)
+  npx tsx scripts/backfill-seq.ts --apply --yes >> "$LOG" 2>&1
+  echo "-- caja AR seq: exit $?" >> "$LOG"
   npx tsx scripts/control-solicitud.ts --yes >> "$LOG" 2>&1
   echo "-- control solicitud: exit $?" >> "$LOG"
 fi

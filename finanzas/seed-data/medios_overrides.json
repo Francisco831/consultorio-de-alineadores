@@ -1,104 +1,108 @@
 {
-  "caja:5a4c41916471eaee": {
-    "cuenta": "Mercado Pago",
-    "moneda": "ARS",
-    "nota": "Perez Viviana 22/4: el extracto MP tiene $400 ARS ese día — pesos en la columna USD de la caja (cuota 6 de 6 simbólica)"
-  },
-  "caja:59a258537ef6414d": {
-    "cuenta": "Mercado Pago",
-    "moneda": "ARS",
-    "nota": "Botto Agustina 28/4: el extracto MP tiene $1.000 ARS el 27/4 — ídem; el 'USD Transferencia' de la caja parece error"
-  },
-  "caja:6c247faeb6e96725": {
-    "cuenta": "Cuenta KS",
-    "nota": "Sande 10/3 cuota 3 de 4: la cuota 4 (14/4) figura en caja como Tr Ks — mismo canal; no está en extracto MP"
-  },
-  "caja:94f35e0ac40c0442": {
-    "cuenta": "Mercado Pago",
-    "nota": "Colimodio 5/5: es la transferencia del 29/4 al MP (extracto, 'COLOMIDIO' con typo); cuotas 4-5-6 fueron todas a MP"
-  },
-  "caja:047369f9094f7739": {
-    "cuenta": "Cuenta KS",
-    "nota": "Hogner 19/6 $592.000 (USD 400 t/c 1480): no está en el extracto MP de ningún mes; ella transfiere siempre — Cuenta KS"
-  },
-  "caja:0a9f2b1496985f7b": {
-    "cuenta": "Coni – cuenta propia",
-    "nota": "Linares Felipe: paciente de la pestaña de Coni — su contabilidad"
-  },
-  "caja:fc1f1b1141b428ca": {
-    "cuenta": "Efectivo USD",
-    "nota": "Etchegoyen cuota USD 27/3: las cuotas en dólares de la pareja son billetes (sus transferencias en pesos van a MP con comprobante; para los USD nunca hay)"
-  },
-  "caja:66b55a06e0fc901e": {
-    "cuenta": "Efectivo USD",
-    "nota": "Etchegoyen USD 300 6/5 — billetes (ver 27/3)"
-  },
-  "caja:ca6053731b6cf60c": {
-    "cuenta": "Efectivo USD",
-    "nota": "Grillo USD 400 6/5 — billetes"
-  },
-  "caja:2a750a661cdd6062": {
-    "cuenta": "Efectivo USD",
-    "nota": "Etchegoyen USD 400 17/6 — billetes"
-  },
-  "caja:7cfedb65a8cdd5ec": {
-    "cuenta": "Efectivo USD",
-    "nota": "Grillo USD 400 17/6 — billetes"
-  },
-  "caja:d9021eaa9d5749e1": {
-    "cuenta": "Efectivo USD",
-    "nota": "Grillo USD 500 21/8 (tc 1550) — billetes"
-  },
-  "caja:00ee924359b36bd6": {
-    "cuenta": "Efectivo USD",
-    "nota": "Etchegoyen USD 500 21/8 (tc 1550) — billetes"
-  },
-  "caja:78f94fadec453045": {
-    "cuenta": "Efectivo",
-    "moneda": "ARS",
-    "nota": "21/4: -60.000 en la columna USD de una fila vacía — Pancho: es en PESOS (gasto/retiro), imposible USD 60.000"
-  },
-  "caja:09bc97377d884167": {
-    "cuenta": "Efectivo",
-    "moneda": "ARS",
-    "nota": "29/4: 66.965 en la columna USD de la fila del retiro de Matelli — Pancho: es en PESOS; el retiro fue -50.000 y -66.965"
-  },
-  "caja:dc15cc851ef3c231": {
-    "cuenta": "Sin medio (a revisar)",
-    "nota": "Capria 27/1: irrastreable (pre-extracto, MP no era canal) — decisión Pancho 21/8, queda como ingreso de medio desconocido"
-  },
-  "caja:5618c11efea35927": {
-    "cuenta": "Sin medio (a revisar)",
-    "nota": "Doherty 27/1: ídem irrastreable"
-  },
-  "caja:91c3f39c820ae513": {
-    "cuenta": "Sin medio (a revisar)",
-    "nota": "Florio 27/1: ídem irrastreable"
-  },
-  "caja:b58001da9c5d93ab": {
-    "cuenta": "Sin medio USD (a revisar)",
-    "nota": "USD 100 retira Maru, caja de Coni — Pancho: no interesa"
-  },
-  "caja:18bfe6de3ab99886": {
-    "cuenta": "Mercado Pago",
-    "nota": "Tamara Cejas 19/8 (1ra consulta): la pagó MARIA AGUSTINA VENINI — transferencia Galicia $35.000 19/8 14:11, op 42686292686. Venini NO es paciente (cero filas en la caja 2026) y su línea era la única suelta del MP ese día."
-  },
-  "caja:be407cf8e2478458": {
-    "cuenta": "Cuenta KS",
-    "nota": "Cordoni Laura $1.000 18/3: irrastreable (el extracto MP de marzo solo cubre 25, 27 y 31). Decisión Pancho 21/8: a Cuenta KS, como el resto de las filas de Matelli de ese día."
-  },
-  "caja:79771578c4e8eced": {
-    "cuenta": "Efectivo",
-    "moneda": "ARS",
-    "monto": 454500,
-    "nota": "24/8/26: Pancho habló con Coni — Tapia queda en los libros de Pancho; doctora Mariana Matelli (ya venía así en la liquidación). Cuota 1 de 6 cobrada en pesos en efectivo (la caja anota USD 300 pero la obs dice 'en pesos $454.500 al tc $1515')."
-  },
-  "caja:694332ef15139eff": {
-    "cuenta": "Mercado Pago",
-    "nota": "24/8/26: Pancho habló con Coni — Tapia queda en los libros de Pancho; doctora Mariana Matelli (ya venía así en la liquidación). 1ra consulta 24/6, parte que entró por MP ($25.000)."
-  },
-  "caja:f289fdc85d99bbeb": {
-    "cuenta": "Efectivo",
-    "nota": "24/8/26: Pancho habló con Coni — Tapia queda en los libros de Pancho; doctora Mariana Matelli (ya venía así en la liquidación). 1ra consulta 24/6, parte en efectivo ($10.000)."
-  }
+    "caja:5a4c41916471eaee": {
+        "cuenta": "Mercado Pago",
+        "moneda": "ARS",
+        "nota": "Perez Viviana 22/4: el extracto MP tiene $400 ARS ese día — pesos en la columna USD de la caja (cuota 6 de 6 simbólica)"
+    },
+    "caja:59a258537ef6414d": {
+        "cuenta": "Mercado Pago",
+        "moneda": "ARS",
+        "nota": "Botto Agustina 28/4: el extracto MP tiene $1.000 ARS el 27/4 — ídem; el 'USD Transferencia' de la caja parece error"
+    },
+    "caja:6c247faeb6e96725": {
+        "cuenta": "Cuenta KS",
+        "nota": "Sande 10/3 cuota 3 de 4: la cuota 4 (14/4) figura en caja como Tr Ks — mismo canal; no está en extracto MP"
+    },
+    "caja:94f35e0ac40c0442": {
+        "cuenta": "Mercado Pago",
+        "nota": "Colimodio 5/5: es la transferencia del 29/4 al MP (extracto, 'COLOMIDIO' con typo); cuotas 4-5-6 fueron todas a MP"
+    },
+    "caja:047369f9094f7739": {
+        "cuenta": "Cuenta KS",
+        "nota": "Hogner 19/6 $592.000 (USD 400 t/c 1480): no está en el extracto MP de ningún mes; ella transfiere siempre — Cuenta KS"
+    },
+    "caja:0a9f2b1496985f7b": {
+        "cuenta": "Coni – cuenta propia",
+        "nota": "Linares Felipe: paciente de la pestaña de Coni — su contabilidad"
+    },
+    "caja:fc1f1b1141b428ca": {
+        "cuenta": "Efectivo USD",
+        "nota": "Etchegoyen cuota USD 27/3: las cuotas en dólares de la pareja son billetes (sus transferencias en pesos van a MP con comprobante; para los USD nunca hay)"
+    },
+    "caja:66b55a06e0fc901e": {
+        "cuenta": "Efectivo USD",
+        "nota": "Etchegoyen USD 300 6/5 — billetes (ver 27/3)"
+    },
+    "caja:ca6053731b6cf60c": {
+        "cuenta": "Efectivo USD",
+        "nota": "Grillo USD 400 6/5 — billetes"
+    },
+    "caja:2a750a661cdd6062": {
+        "cuenta": "Efectivo USD",
+        "nota": "Etchegoyen USD 400 17/6 — billetes"
+    },
+    "caja:7cfedb65a8cdd5ec": {
+        "cuenta": "Efectivo USD",
+        "nota": "Grillo USD 400 17/6 — billetes"
+    },
+    "caja:d9021eaa9d5749e1": {
+        "cuenta": "Efectivo USD",
+        "nota": "Grillo USD 500 21/8 (tc 1550) — billetes"
+    },
+    "caja:00ee924359b36bd6": {
+        "cuenta": "Efectivo USD",
+        "nota": "Etchegoyen USD 500 21/8 (tc 1550) — billetes"
+    },
+    "caja:78f94fadec453045": {
+        "cuenta": "Efectivo",
+        "moneda": "ARS",
+        "nota": "21/4: -60.000 en la columna USD de una fila vacía — Pancho: es en PESOS (gasto/retiro), imposible USD 60.000"
+    },
+    "caja:09bc97377d884167": {
+        "cuenta": "Efectivo",
+        "moneda": "ARS",
+        "nota": "29/4: 66.965 en la columna USD de la fila del retiro de Matelli — Pancho: es en PESOS; el retiro fue -50.000 y -66.965"
+    },
+    "caja:dc15cc851ef3c231": {
+        "cuenta": "Sin medio (a revisar)",
+        "nota": "Capria 27/1: irrastreable (pre-extracto, MP no era canal) — decisión Pancho 21/8, queda como ingreso de medio desconocido"
+    },
+    "caja:5618c11efea35927": {
+        "cuenta": "Sin medio (a revisar)",
+        "nota": "Doherty 27/1: ídem irrastreable"
+    },
+    "caja:91c3f39c820ae513": {
+        "cuenta": "Sin medio (a revisar)",
+        "nota": "Florio 27/1: ídem irrastreable"
+    },
+    "caja:b58001da9c5d93ab": {
+        "cuenta": "Sin medio USD (a revisar)",
+        "nota": "USD 100 retira Maru, caja de Coni — Pancho: no interesa"
+    },
+    "caja:18bfe6de3ab99886": {
+        "cuenta": "Mercado Pago",
+        "nota": "Tamara Cejas 19/8 (1ra consulta): la pagó MARIA AGUSTINA VENINI — transferencia Galicia $35.000 19/8 14:11, op 42686292686. Venini NO es paciente (cero filas en la caja 2026) y su línea era la única suelta del MP ese día."
+    },
+    "caja:be407cf8e2478458": {
+        "cuenta": "Cuenta KS",
+        "nota": "Cordoni Laura $1.000 18/3: irrastreable (el extracto MP de marzo solo cubre 25, 27 y 31). Decisión Pancho 21/8: a Cuenta KS, como el resto de las filas de Matelli de ese día."
+    },
+    "caja:79771578c4e8eced": {
+        "cuenta": "Efectivo",
+        "moneda": "ARS",
+        "monto": 454500,
+        "nota": "24/8/26: Pancho habló con Coni — Tapia queda en los libros de Pancho; doctora Mariana Matelli (ya venía así en la liquidación). Cuota 1 de 6 cobrada en pesos en efectivo (la caja anota USD 300 pero la obs dice 'en pesos $454.500 al tc $1515')."
+    },
+    "caja:694332ef15139eff": {
+        "cuenta": "Mercado Pago",
+        "nota": "24/8/26: Pancho habló con Coni — Tapia queda en los libros de Pancho; doctora Mariana Matelli (ya venía así en la liquidación). 1ra consulta 24/6, parte que entró por MP ($25.000)."
+    },
+    "caja:f289fdc85d99bbeb": {
+        "cuenta": "Efectivo",
+        "nota": "24/8/26: Pancho habló con Coni — Tapia queda en los libros de Pancho; doctora Mariana Matelli (ya venía así en la liquidación). 1ra consulta 24/6, parte en efectivo ($10.000)."
+    },
+    "caja:4153d36ba4901d24": {
+        "ignorar": true,
+        "nota": "ingreso de Dra Matelli 15/7 $330.000 'Paciente Bianchi Ana': decisión Pancho 24/8/26 — no aplica a la liquidación, fuera del ledger (se anula en la base)"
+    }
 }

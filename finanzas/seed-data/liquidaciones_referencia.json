@@ -221,14 +221,15 @@
   {
    "periodo": "2026-04",
    "doctora": "Mónica González",
-   "cobrado_ars": 3769000.0,
-   "cobrado_usd": 2160.0,
-   "gastos_tratamiento": 0.0,
-   "base_ars": 3769000.0,
-   "liquidacion_ars": 1507600.0,
-   "liquidacion_usd": 573.0,
+   "cobrado_ars": 3770400.0,
+   "cobrado_usd": 760.0,
+   "gastos_tratamiento": 546200.0,
+   "base_ars": 3224200.0,
+   "liquidacion_ars": 1289680.0,
+   "liquidacion_usd": 304.0,
    "retiros": 100000.0,
-   "saldo": 1407600.0
+   "saldo": 1189680.0,
+   "nota": "Corregida 24/8/26: Perez Viviana 400 y Botto 1.000 del 22-28/4 eran PESOS en la columna USD (decisión Pancho 21/8, medios_overrides caja:5a4c4191/caja:59a25853) y el costeo nuevo costea las cuotas 5-6 de Belart (546.200) que el script viejo no veía."
   },
   {
    "periodo": "2026-04",
@@ -377,26 +378,27 @@
   {
    "periodo": "2026-07",
    "doctora": "Mariana Franco",
-   "cobrado_ars": 2770000.0,
+   "cobrado_ars": 370000.0,
    "cobrado_usd": 0.0,
-   "gastos_tratamiento": 819300.0,
-   "base_ars": 1950700.0,
-   "liquidacion_ars": 780280.0,
+   "gastos_tratamiento": 0.0,
+   "base_ars": 370000.0,
+   "liquidacion_ars": 148000.0,
    "liquidacion_usd": 0.0,
    "retiros": 0.0,
-   "saldo": 780280.0
+   "saldo": 148000.0,
+   "nota": "Corregida 24/8/26: Herrera (2x1.200.000 cobradas 4/7) se devengó y pagó en JUNIO — imputada a 2026-06 vía periodo_liquidacion_overrides. Queda solo el bucket ex-Franco a reasignar (Lo Pardo 300.000 + Tonello 70.000)."
   },
   {
    "periodo": "2026-07",
    "doctora": "Mariana Matelli",
-   "cobrado_ars": 4734000.0,
+   "cobrado_ars": 4404000.0,
    "cobrado_usd": 0.0,
    "gastos_tratamiento": 955850.0,
-   "base_ars": 3778150.0,
-   "liquidacion_ars": 1511260.0,
+   "base_ars": 3448150.0,
+   "liquidacion_ars": 1379260,
    "liquidacion_usd": 0.0,
    "retiros": 0.0,
-   "saldo": 1511260.0
+   "saldo": 1379260.0
   },
   {
    "periodo": "2026-07",

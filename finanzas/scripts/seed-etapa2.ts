@@ -11,18 +11,44 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { serviceClient, argFlags } from "./lib/service-client";
 
-// Precio de lista del Programa KeepSmiling (tratamiento 1 a 4). El consultorio
-// paga lista − 40%. Fuente: consultorio-gestion/build_liquidaciones.py (LISTA_KS).
-const LISTA_KS: Array<[string, string, number, number]> = [
-  ["adultos", "full", 2, 2731000], ["adultos", "full", 1, 2084500],
-  ["adultos", "medium", 2, 1748000], ["adultos", "medium", 1, 1315000],
-  ["adultos", "fast", 2, 1353000], ["adultos", "fast", 1, 1010000],
-  ["teens", "full", 2, 2550000], ["teens", "full", 1, 1945000],
-  ["teens", "medium", 2, 1573000], ["teens", "medium", 1, 1183000],
-  ["teens", "fast", 2, 1217000], ["teens", "fast", 1, 908000],
-  ["kids", "full", 2, 2266000], ["kids", "full", 1, 1730000],
-  ["kids", "medium", 2, 1398000], ["kids", "medium", 1, 1052000],
-  ["kids", "fast", 2, 1081000], ["kids", "fast", 1, 808000],
+// Listas de precios del Programa KeepSmiling (tratamiento 1 a 4) con su
+// vigencia. El consultorio paga lista − 40% y cada caso usa la lista vigente a
+// su fecha de INGRESO (lista histórica — regla Pancho 24/8/26). Fuente: mails
+// "Aranceles" de areadeodontologos@ + tablas pasadas por Pancho el 24/8/26.
+const LISTAS_KS: Array<{ desde: string; precios: Array<[string, string, number, number]> }> = [
+  { desde: "2025-12-01", precios: [   // vigente 1/12/25 → 30/4/26
+    ["adultos", "full", 2, 2483000], ["adultos", "full", 1, 1895000],
+    ["adultos", "medium", 2, 1589000], ["adultos", "medium", 1, 1195000],
+    ["adultos", "fast", 2, 1230000], ["adultos", "fast", 1, 918000],
+    ["teens", "full", 2, 2318000], ["teens", "full", 1, 1768000],
+    ["teens", "medium", 2, 1430000], ["teens", "medium", 1, 1075000],
+    ["teens", "fast", 2, 1106000], ["teens", "fast", 1, 825000],
+    ["kids", "full", 2, 2060000], ["kids", "full", 1, 1572000],
+    ["kids", "medium", 2, 1271000], ["kids", "medium", 1, 956000],
+    ["kids", "fast", 2, 983000], ["kids", "fast", 1, 734000],
+  ] },
+  { desde: "2026-05-01", precios: [   // "Aranceles mayo 2026" — vigente 1/5 → 31/8/26
+    ["adultos", "full", 2, 2731000], ["adultos", "full", 1, 2084500],
+    ["adultos", "medium", 2, 1748000], ["adultos", "medium", 1, 1315000],
+    ["adultos", "fast", 2, 1353000], ["adultos", "fast", 1, 1010000],
+    ["teens", "full", 2, 2550000], ["teens", "full", 1, 1945000],
+    ["teens", "medium", 2, 1573000], ["teens", "medium", 1, 1183000],
+    ["teens", "fast", 2, 1217000], ["teens", "fast", 1, 908000],
+    ["kids", "full", 2, 2266000], ["kids", "full", 1, 1730000],
+    ["kids", "medium", 2, 1398000], ["kids", "medium", 1, 1052000],
+    ["kids", "fast", 2, 1081000], ["kids", "fast", 1, 808000],
+  ] },
+  { desde: "2026-09-01", precios: [   // "Aranceles septiembre 2026" — vigente 1/9 → 30/11/26
+    ["adultos", "full", 2, 2990000], ["adultos", "full", 1, 2290000],
+    ["adultos", "medium", 2, 1923000], ["adultos", "medium", 1, 1445000],
+    ["adultos", "fast", 2, 1489000], ["adultos", "fast", 1, 1110000],
+    ["teens", "full", 2, 2690000], ["teens", "full", 1, 2063000],
+    ["teens", "medium", 2, 1730000], ["teens", "medium", 1, 1295000],
+    ["teens", "fast", 2, 1337000], ["teens", "fast", 1, 998000],
+    ["kids", "full", 2, 2392000], ["kids", "full", 1, 1834000],
+    ["kids", "medium", 2, 1538000], ["kids", "medium", 1, 1157000],
+    ["kids", "fast", 2, 1189000], ["kids", "fast", 1, 889000],
+  ] },
 ];
 
 // Las doctoras liquidan 40%; Coni cobra a cuenta propia y queda fuera.
@@ -113,7 +139,7 @@ async function main() {
   }
 
   if (flags.dryRun) {
-    console.log(`\nDRY-RUN. Además: ${LISTA_KS.length} precios KS y ${PROFESIONALES.length} profesionales.`);
+    console.log(`\nDRY-RUN. Además: ${LISTAS_KS.reduce((a, l) => a + l.precios.length, 0)} precios KS (${LISTAS_KS.length} vigencias) y ${PROFESIONALES.length} profesionales.`);
     return;
   }
 
@@ -137,15 +163,23 @@ async function main() {
   }
   console.log(`✓ ${PROFESIONALES.length} profesionales`);
 
-  // ---- lista de precios KS
-  for (const [audience, scope, arcades, price] of LISTA_KS) {
-    const { error } = await db.from("ks_price_list").upsert({
-      company_id: companyId, audience, scope, arcades,
-      list_price: price, currency: "ARS", discount_pct: 40, valid_from: "2026-01-01",
-    }, { onConflict: "company_id,audience,scope,arcades,valid_from" });
-    if (error) throw new Error(`precio ${audience}/${scope}/${arcades}: ${error.message}`);
+  // ---- listas de precios KS (historial con vigencias)
+  for (const lista of LISTAS_KS) {
+    for (const [audience, scope, arcades, price] of lista.precios) {
+      const { error } = await db.from("ks_price_list").upsert({
+        company_id: companyId, audience, scope, arcades,
+        list_price: price, currency: "ARS", discount_pct: 40, valid_from: lista.desde,
+      }, { onConflict: "company_id,audience,scope,arcades,valid_from" });
+      if (error) throw new Error(`precio ${audience}/${scope}/${arcades} @${lista.desde}: ${error.message}`);
+    }
   }
-  console.log(`✓ ${LISTA_KS.length} precios de lista KS`);
+  // las filas viejas con valid_from 2026-01-01 eran la lista de mayo mal
+  // fechada (antes había una sola lista): se retiran para no duplicar
+  const { data: stale, error: eStale } = await db.from("ks_price_list").delete()
+    .eq("company_id", companyId).eq("valid_from", "2026-01-01").select("id");
+  if (eStale) throw new Error(`limpiando lista 2026-01-01: ${eStale.message}`);
+  if (stale?.length) console.log(`  (retiradas ${stale.length} filas de la lista mal fechada 2026-01-01)`);
+  console.log(`✓ ${LISTAS_KS.reduce((a, l) => a + l.precios.length, 0)} precios de lista KS en ${LISTAS_KS.length} vigencias`);
 
   // ---- empleadas + corridas de sueldos
   for (const [periodo, personas] of nomina) {
