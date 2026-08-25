@@ -133,10 +133,10 @@ export function costearCuotas(
   for (const [nombre, v] of Object.entries(opts.descuentoKsEspecial ?? {})) {
     descuentoEspecial.set(clavePaciente(nombre), v);
   }
-  // Normalizado como todo lo demás: escrito "Daira Castellón" o "Castellón
-  // Daira", es el mismo caso. Sin esto, la variante que no estuviera en el
-  // orden alfabético de clavePaciente() no matcheaba nunca — y el caso
-  // terminaba pagando un costo que Pancho dijo que no lleva.
+  // Normalizado como todo lo demás: escrito "Fernanda Cugat" o "Cugat
+  // Fernanda", es el mismo caso. Sin esto, la variante que no estuviera en el
+  // orden alfabético de clavePaciente() no matcheaba nunca, y el Set sólo
+  // funcionaba por tener cargadas las dos grafías.
   const etapaSinCosto = new Set(
     [...(opts.etapaAdicional ?? [])].map((n) => clavePaciente(n))
   );
@@ -208,12 +208,11 @@ export function costearCuotas(
     const texto = c.texto;
     // La etapa adicional viene incluida en el programa 1 a 4 — pero eso vale
     // para los tratamientos FULL. En un Medium o un Fast la etapa se cobra
-    // aparte y tiene su propio precio.
+    // aparte y tiene su propio precio (Pancho, 25/8/26, sobre Daira Castellón).
     //
     // Declarar el caso en ETAPA_ADICIONAL es decidir sobre ESE caso, y le gana
     // al tipo de tratamiento: el tipo puede faltar en Noloco o venir mal, y no
-    // puede hacerle cargar un costo a un caso que Pancho dijo que no lo lleva
-    // (Daira Castellón, 26/8/26).
+    // debería hacerle cargar un costo a un caso declarado sin costo.
     const declaradaSinCosto = etapaSinCosto.has(k);
     if (!costoFijado.has(k) &&
         (norm(texto).includes("etapa adicional") || declaradaSinCosto)) {

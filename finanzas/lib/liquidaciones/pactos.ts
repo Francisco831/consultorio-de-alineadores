@@ -8,16 +8,12 @@
 /**
  * Etapas adicionales que NO cargan costo KS: vienen incluidas en el programa.
  *
- * Estar acá es una decisión declarada, y le gana al tipo de tratamiento: sin
- * esto, el caso queda a merced de lo que diga (o no diga) Noloco. Daira
- * Castellón entró el 25/8/26 por decisión de Pancho — ese mismo día se había
- * cargado su etapa a $498.000 por creerla un Medium, y al día siguiente
- * confirmó que no lleva costo.
+ * Estar acá es una decisión declarada sobre ESE caso, y le gana al tipo de
+ * tratamiento: sin eso, el caso queda a merced de lo que diga (o no diga)
+ * Noloco. Es la lista de "esto no se cobra", no la de "esto es una etapa
+ * adicional" — un caso que sí lleva costo va en COSTO_ETAPA_ADICIONAL.
  */
-export const ETAPA_ADICIONAL = new Set([
-  "cugat fernanda", "fernanda cugat",
-  "daira castellon", "castellon daira",
-]);
+export const ETAPA_ADICIONAL = new Set(["cugat fernanda", "fernanda cugat"]);
 
 /**
  * Precio KS de una ETAPA ADICIONAL, por paciente.
@@ -27,12 +23,18 @@ export const ETAPA_ADICIONAL = new Set([
  * precio no sale de ks_price_list: esa lista tiene tratamientos, no etapas
  * sueltas. Hasta que exista esa lista, el precio se declara acá.
  *
+ * Daira Castellón: tratamiento Medium, etapa adicional $498.000 (Pancho,
+ * 25/8/26, reconfirmado el 26/8). No figura en tipos_tratamiento_ar.json, así
+ * que el costeo la daba por Full y le ponía costo cero.
+ *
  * OJO: el valor es el costo TOTAL del caso de ese paciente. Alcanza mientras el
- * caso SEA la etapa adicional. El día que un paciente tenga en la caja el
- * tratamiento original Y una etapa adicional aparte, esto hay que partirlo en
- * dos.
+ * caso SEA la etapa adicional (como el de Daira, que entró por eso). El día que
+ * un paciente tenga en la caja el tratamiento original Y una etapa adicional
+ * aparte, esto hay que partirlo en dos.
  */
-export const COSTO_ETAPA_ADICIONAL: Record<string, number> = {};
+export const COSTO_ETAPA_ADICIONAL: Record<string, number> = {
+  "daira castellon": 498000, "castellon daira": 498000,
+};
 
 /** Plan declarado a mano cuando la caja no dice "cuota N de Y". */
 export const PLAN_PACIENTE: Record<string, number> = {

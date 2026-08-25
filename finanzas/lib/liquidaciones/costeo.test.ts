@@ -258,18 +258,33 @@ test("un cobro en dólares carga su costo KS en PESOS (caso Botto)", () => {
 });
 
 test("un caso declarado sin costo no paga la etapa adicional aunque no sea Full", () => {
-  // Daira Castellón: el tipo real de Noloco dice Medium, pero Pancho decidió
-  // que su etapa adicional no lleva costo. La decisión le gana al tipo.
+  // Declarar el caso es decidir sobre ÉL: le gana al tipo de tratamiento, que
+  // puede faltar en Noloco o venir mal. Y la grafía del Set no importa: se
+  // normaliza igual que el resto ("Cugat Fernanda" ≡ "Fernanda Cugat").
+  const r = costearCuotas([
+    cobro({ id: "a", seq: 1, ars: 400000, paciente: "Fernanda Cugat",
+      motivo: "cuota 1 de 3 etapa adicional", texto: "cuota 1 de 3 etapa adicional" }),
+  ], {
+    precioDefault: PRECIO,
+    tipoPorPaciente: new Map([[clavePaciente("Fernanda Cugat"), "adultos/medium/2"]]),
+    etapaAdicional: new Set(["Fernanda Cugat"]),
+  });
+  assert.equal(r.costoArs.get("a") ?? 0, 0);
+  assert.equal(r.sinCostear, 0, "no se marca para revisar: ya está decidido");
+});
+
+test("la etapa adicional con precio declarado SÍ carga costo (caso Daira)", () => {
+  // Medium: la etapa se cobra aparte. $400.000 sobre un pacto de $1.200.000 es
+  // el 33,3% de una etapa de $498.000 → $166.000.
   const r = costearCuotas([
     cobro({ id: "a", seq: 1, ars: 400000, paciente: "Daira Castellón",
       motivo: "cuota 1 de 3 etapa adicional", texto: "cuota 1 de 3 etapa adicional" }),
   ], {
     precioDefault: PRECIO,
-    tipoPorPaciente: new Map([[clavePaciente("Daira Castellón"), "adultos/medium/2"]]),
-    etapaAdicional: new Set(["daira castellon"]),
+    precioPactado: { "daira castellon": 1200000 },
+    costoEtapaAdicional: { "daira castellon": 498000 },
   });
-  assert.equal(r.costoArs.get("a") ?? 0, 0);
-  assert.equal(r.sinCostear, 0, "no se marca para revisar: ya está decidido");
+  assert.equal(r.costoArs.get("a"), 166000);
 });
 
 test("descuento especial: el costo KS del caso baja 16% (Nisenbaum, Grillo, Etchegoyen)", () => {
