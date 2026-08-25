@@ -42,6 +42,13 @@ export const RE_TC = /t\/?c\s*\$?\s*([\d.,]+)/i;
 // una cuota entera — no sirve para inferir el valor de cuota del pacto
 export const RE_PARCIAL = /\bparte\b|\bresto\b|\bsaldo\b|\bseña\b|\ba\s*c(?:uo|uen)?ta\.?\s*de\b/i;
 
+// Una CONTENCIÓN o una placa suelta no lleva costo KS (Pancho, 26/8/26). La
+// caja las carga bajo "Alineadores" —son del mismo paciente y del mismo
+// tratamiento— y el costeo las trataba como una cuota sin precio: quedaban
+// "SIN COSTEAR", que es como decir costo $0 pero con un cartel de alarma al
+// lado. Son 7 de los 12 casos sin costear al 26/8/26.
+export const RE_CONTENCION = /contenci[oó]n|placa\s*bis/i;
+
 /** Último recurso: no hay cotización de esa fecha NI t/c escrito en la fila. */
 export const TC_FALLBACK = 1500;
 
@@ -219,6 +226,14 @@ export function costearCuotas(
     // Declarar el caso en ETAPA_ADICIONAL es decidir sobre ESE caso, y le gana
     // al tipo de tratamiento: el tipo puede faltar en Noloco o venir mal, y no
     // debería hacerle cargar un costo a un caso declarado sin costo.
+    // Una contención no es una cuota del tratamiento: no cuesta. Se pide además
+    // que la fila NO declare "cuota N de Y" para no perderle el costo a un cobro
+    // que sea las dos cosas ("cuota 3 de 6 + contención").
+    if (RE_CONTENCION.test(texto) && !RE_CUOTA.test(texto)) {
+      etiquetas.set(c.id, "contención o placa suelta: sin costo KS");
+      continue;
+    }
+
     const declaradaSinCosto = etapaSinCosto.has(k);
     if (!costoFijado.has(k) &&
         (norm(texto).includes("etapa adicional") || declaradaSinCosto)) {

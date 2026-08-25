@@ -312,3 +312,27 @@ test("descuento especial: el costo KS del caso baja 16% (Nisenbaum, Grillo, Etch
   assert.equal(conDto.costoArs.get("a"), Math.round(sinDto.costoArs.get("a")! * 0.84));
   assert.match(conDto.etiquetas.get("a")!, /16% de descuento especial/);
 });
+
+test("una contención no lleva costo KS aunque la caja la ponga en Alineadores", () => {
+  // Pancho, 26/8/26. Son cobros del mismo paciente y del mismo tratamiento, pero
+  // no son una cuota: antes quedaban marcados "SIN COSTEAR" con alarma al lado.
+  const r = costearCuotas([
+    cobro({ id: "a", seq: 1, ars: 200000, motivo: "Contenciones", texto: "Contenciones" }),
+    cobro({ id: "b", seq: 2, ars: 60000, motivo: "placa bis de tratamiento", texto: "placa bis de tratamiento" }),
+    cobro({ id: "c", seq: 3, ars: 50000, motivo: "contenciones de tratamiento entregadas por Maru",
+      texto: "contenciones de tratamiento entregadas por Maru" }),
+  ], { precioDefault: PRECIO });
+  assert.equal(r.costoArs.get("a"), undefined);
+  assert.equal(r.costoArs.get("b"), undefined);
+  assert.equal(r.costoArs.get("c"), undefined);
+  assert.equal(r.sinCostear, 0, "no se marcan como problema: es una regla, no un dato faltante");
+  assert.match(r.etiquetas.get("a")!, /sin costo KS/);
+});
+
+test("un cobro que es cuota Y contención sigue costeando la cuota", () => {
+  const r = costearCuotas([
+    cobro({ id: "a", seq: 1, ars: 650000, motivo: "cuota 1 de 6 + contención",
+      texto: "cuota 1 de 6 + contención" }),
+  ], { precioDefault: PRECIO });
+  assert.equal(r.costoArs.get("a"), CUOTA_DE_6);
+});
