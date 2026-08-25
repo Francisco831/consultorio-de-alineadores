@@ -234,6 +234,28 @@ export async function obligacionAPagar(empresa: "mx" | "ar", obligacionId: strin
 }
 
 // ----------------------------------------------------------- liquidaciones
+/**
+ * Vuelve una liquidación confirmada a borrador para poder recalcularla.
+ *
+ * La cuenta la hace reopen_settlement() en la base (0027/0028) y no acá: reabrir
+ * toca payables, que el rol de la app no puede escribir a propósito ("las deudas
+ * se anulan con status, nunca se borran"). La función anula la deuda, y
+ * confirm_settlement sabe revivirla — así una liquidación se puede reabrir y
+ * volver a confirmar sin chocar contra el unique de una deuda por liquidación.
+ *
+ * Una liquidación PAGADA no se reabre: la función la rechaza. Esa plata ya salió.
+ */
+export async function reabrirLiquidacion(empresa: "mx" | "ar", settlementId: string) {
+  if (!empresaEnum.safeParse(empresa).success) return { error: "Datos inválidos" };
+  await requireEmpresa(empresa);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("reopen_settlement", { p_settlement_id: settlementId });
+  if (error) return { error: error.message };
+  refrescar(empresa);
+  revalidatePath(`/${empresa}/liquidaciones`);
+  return { ok: true };
+}
+
 export async function confirmarLiquidacion(
   empresa: "mx" | "ar", settlementId: string, dueOn?: string
 ) {

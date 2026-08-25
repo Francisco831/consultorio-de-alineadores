@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/money";
 import { todayIn } from "@/lib/dates";
 import { cn } from "@/lib/utils";
-import { ConfirmarLiquidacion } from "@/components/compromisos/liquidacion-controles";
+import { ConfirmarLiquidacion, ReabrirLiquidacion } from "@/components/compromisos/liquidacion-controles";
 import { RecalcularBoton } from "@/components/liquidaciones/recalcular-boton";
 import { ImputarCobro, DESTINO_CAJA, DESTINO_CASA } from "@/components/liquidaciones/imputar-cobro";
 import { RevisadoCheck } from "@/components/liquidaciones/revisado-check";
@@ -322,6 +322,14 @@ export default async function LiquidacionesPage({
                         >
                           PDF
                         </a>
+                        {f.status === "confirmed" ? (
+                          <ReabrirLiquidacion
+                            empresa={ctx.config.slug}
+                            settlementId={f.id}
+                            profesional={nombre}
+                            periodo={f.period}
+                          />
+                        ) : null}
                         {f.status === "draft" && Number(ars.due ?? 0) > 0 ? (
                           <ConfirmarLiquidacion
                             empresa={ctx.config.slug}

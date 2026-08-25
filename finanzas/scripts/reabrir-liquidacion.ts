@@ -3,18 +3,19 @@
  *
  *   npx tsx scripts/reabrir-liquidacion.ts --doctora Virginia --periodo 2026-07 [--apply]
  *
- * Confirmar una liquidación hace dos cosas: la congela y crea la deuda en "Por
- * pagar". Reabrirla tiene que deshacer LAS DOS. Si sólo se cambiara el estado,
- * quedaría una deuda viva por un importe que ya no existe, y al reconfirmar
- * chocaría contra el unique (company_id, source, source_id) de payables — una
- * liquidación, UNA deuda.
+ * La cuenta la hace reopen_settlement() en la base, la MISMA función que usa el
+ * botón "Reabrir" del panel: si fueran dos implementaciones, el día que difieran
+ * nadie se entera hasta que una doctora reclame. Este script queda para
+ * reabrir sin abrir el navegador.
  *
- * Por eso la deuda se BORRA en vez de anularse: anulada seguiría ocupando ese
- * unique y la liquidación no se podría volver a confirmar nunca.
+ * La función anula la deuda (no la borra: "las deudas se anulan con status,
+ * nunca se borran") y confirm_settlement sabe revivirla, así una liquidación se
+ * puede reabrir y volver a confirmar sin chocar contra el unique de una deuda
+ * por liquidación.
  *
- * Dos frenos duros:
- *  - Una liquidación PAGADA no se reabre acá. Esa plata ya salió; deshacerla es
- *    una decisión con contrapartida contable que no puede tomar un script.
+ * Dos frenos duros, que también viven en la función:
+ *  - Una liquidación PAGADA no se reabre. Esa plata ya salió; deshacerla es una
+ *    decisión con contrapartida contable que no puede tomar un script.
  *  - Una deuda con pagos aplicados tampoco: primero hay que desaplicar el pago.
  */
 import { serviceClient, argFlags } from "./lib/service-client";
@@ -58,12 +59,6 @@ async function main() {
     console.log("\nYa está en borrador: no hay nada que reabrir.");
     return;
   }
-  if (liq.status !== "confirmed") {
-    throw new Error(
-      `está ${liq.status}: este script sólo reabre CONFIRMADAS. Una liquidación ` +
-      `pagada implica plata que ya salió — eso se deshace a mano y con criterio contable.`
-    );
-  }
 
   if (liq.payable_id) {
     const { data: pay } = await db.from("payables")
@@ -74,30 +69,16 @@ async function main() {
       `  deuda en Por pagar: $${Number(pay?.amount ?? 0).toLocaleString("es-AR")} ` +
       `(${pay?.status}) · pagos aplicados: ${pagos?.length ?? 0}`
     );
-    if (pagos?.length) {
-      throw new Error(
-        `esa deuda ya tiene ${pagos.length} pago(s) aplicado(s): desaplicalos primero ` +
-        `desde Por pagar, si no se borraría el respaldo de plata que salió.`
-      );
-    }
   }
 
   if (!apply) {
-    console.log("\n(dry-run: pasaría a borrador y se borraría su deuda — repetir con --apply)");
+    console.log("\n(dry-run: pasaría a borrador y su deuda quedaría anulada — repetir con --apply)");
     return;
   }
 
-  // Desvincular ANTES de borrar: professional_settlements.payable_id referencia payables.
-  const { error: e1 } = await db.from("professional_settlements")
-    .update({ status: "draft", payable_id: null }).eq("id", liq.id);
-  if (e1) throw new Error(`volver a borrador: ${e1.message}`);
-
-  if (liq.payable_id) {
-    const { error: e2 } = await db.from("payables").delete().eq("id", liq.payable_id);
-    if (e2) throw new Error(`borrar la deuda: ${e2.message}`);
-    console.log("✓ deuda de Por pagar borrada");
-  }
-  console.log(`✓ ${doctora} ${periodo} vuelve a borrador. Ahora corré:\n` +
+  const { error: eReopen } = await db.rpc("reopen_settlement", { p_settlement_id: liq.id });
+  if (eReopen) throw new Error(eReopen.message);
+  console.log(`✓ ${doctora} ${periodo} vuelve a borrador y su deuda quedó anulada. Ahora corré:\n` +
     `    npx tsx scripts/liquidaciones.ts --apply`);
 }
 
