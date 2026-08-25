@@ -5,7 +5,6 @@
 // Los pacientes de la caja Coni quedan afuera (contabilidad separada).
 
 import { PACIENTES_DE_CONI } from "./pacientes-coni";
-import { COSTO_ETAPA_ADICIONAL, ETAPA_ADICIONAL } from "./pactos";
 
 export const COMISION_POR_TRATAMIENTO = 100_000;
 
@@ -35,27 +34,30 @@ const empiezaAMitad = (desc: string | null | undefined) =>
 // (Pancho, 26/8/26, sobre Daira Castellón). Aunque su fila diga "cuota 1 de 3"
 // —y por eso no la agarra empiezaAMitad—, Claudia no vendió nada nuevo ahí.
 //
-// Se detecta por el texto de la caja y, además, por los casos declarados a mano
-// en pactos.ts: la caja no siempre lo aclara, y cuando no lo aclara el sistema
-// le estaría pagando $100.000 de más a Claudia sin que nadie lo note.
-const ETAPAS_DECLARADAS = new Set(
-  [...ETAPA_ADICIONAL, ...Object.keys(COSTO_ETAPA_ADICIONAL)].map(claveNombre)
-);
-const esEtapaAdicional = (p: PagoAlineadores) =>
+// Se detecta por el texto de la caja y, además, por los planes marcados como
+// etapa adicional (treatment_plans): la caja no siempre lo aclara, y cuando no
+// lo aclara el sistema le estaría pagando $100.000 de más a Claudia sin que
+// nadie lo note.
+const esEtapaAdicional = (p: PagoAlineadores, declaradas: Set<string>) =>
   /etapa\s+adicional/i.test(p.descripcion ?? "") ||
-  ETAPAS_DECLARADAS.has(claveNombre(p.paciente ?? ""));
+  declaradas.has(claveNombre(p.paciente ?? ""));
 
 export type TratamientoNuevo = { mes: string; fecha: string; paciente: string };
 
 export function tratamientosNuevos(
-  pagos: PagoAlineadores[], ajenos: string[] = PACIENTES_DE_CONI
+  pagos: PagoAlineadores[],
+  ajenos: string[] = PACIENTES_DE_CONI,
+  /** Pacientes cuyo plan está marcado como etapa adicional (treatment_plans). */
+  etapasDeclaradas: string[] = []
 ): TratamientoNuevo[] {
   const deOtro = new Set(ajenos.map(claveNombre));
+  const declaradas = new Set(etapasDeclaradas.map(claveNombre));
   // Las etapas adicionales se descartan ANTES de buscar la primera aparición:
   // así, si un paciente tiene su tratamiento original y además una etapa, sigue
   // contando por el original y no por la que llegue primero.
   const propios = pagos.filter(
-    (p) => !p.separada && !deOtro.has(claveNombre(p.paciente ?? "")) && !esEtapaAdicional(p)
+    (p) => !p.separada && !deOtro.has(claveNombre(p.paciente ?? "")) &&
+      !esEtapaAdicional(p, declaradas)
   );
   // primera aparición por paciente (nombre normalizado; sin nombre, el id)
   const primeros = new Map<string, PagoAlineadores>();

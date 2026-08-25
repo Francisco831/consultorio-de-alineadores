@@ -102,10 +102,13 @@ describe("etapas adicionales", () => {
   });
 
   it("un caso declarado como etapa adicional no cuenta ni cuando la caja no lo dice", () => {
-    // la caja escribe cualquier cosa; el declarado en pactos.ts manda igual
-    const n = tratamientosNuevos([
-      pago({ counterparty_id: "z", paciente: "Cugat Fernanda", occurred_on: "2026-04-02", descripcion: "abona" }),
-    ]);
+    // la caja escribe cualquier cosa; el plan marcado como etapa adicional en
+    // treatment_plans manda igual, y la grafía no importa
+    const n = tratamientosNuevos(
+      [pago({ counterparty_id: "z", paciente: "Cugat Fernanda", occurred_on: "2026-04-02", descripcion: "abona" })],
+      undefined,
+      ["Fernanda Cugat"]
+    );
     assert.equal(n.length, 0);
   });
 });

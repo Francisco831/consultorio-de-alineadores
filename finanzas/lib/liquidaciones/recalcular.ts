@@ -21,10 +21,7 @@ import {
   costearCuotas, calcularLiquidaciones,
   type CobroAlineador, type MovimientoLiq, type LineaLiquidacion,
 } from "./costeo";
-import {
-  COSTO_ETAPA_ADICIONAL, DESCUENTO_KS_ESPECIAL, ETAPA_ADICIONAL, PLAN_PACIENTE,
-  PRECIO_PACTADO, PRECIO_PACTADO_USD,
-} from "./pactos";
+import { cargarPactos } from "./pactos-db";
 import {
   doctoraDeLiquidacion, estaCongelada, liquidacionesSinRespaldo,
   type Imputaciones,
@@ -277,17 +274,30 @@ export async function calcularTodo(
     if (t.ingreso) ingresoPorPaciente.set(clave, t.ingreso.slice(0, 10));
   }
 
+  // Los pactos de cada paciente (precio, plan, descuento, etapa adicional) salen
+  // de treatment_plans, no de un archivo del repo: así se editan desde la página
+  // y cada cambio queda en el audit de la tabla. Si la tabla está vacía el
+  // costeo no puede poner precio a nada, así que se frena en vez de liquidar
+  // todo al 40% del bruto.
+  const pactos = await cargarPactos(db, companyId);
+  if (!pactos.planes) {
+    throw new Error(
+      "no hay ningún plan de tratamiento cargado (treatment_plans): sin pactos, " +
+      "ningún cobro se puede costear. Correr scripts/migrar-pactos.ts --apply."
+    );
+  }
+
   const { costoArs, etiquetas, sinCostear } = costearCuotas(cobrosAlineadores, {
     precioDefault: {
       list_price: Number(precio.list_price), discount_pct: Number(precio.discount_pct),
     },
     listas, tipoPorPaciente, ingresoPorPaciente,
-    planPorPaciente: PLAN_PACIENTE,
-    precioPactado: PRECIO_PACTADO,
-    precioPactadoUsd: PRECIO_PACTADO_USD,
-    etapaAdicional: ETAPA_ADICIONAL,
-    costoEtapaAdicional: COSTO_ETAPA_ADICIONAL,
-    descuentoKsEspecial: DESCUENTO_KS_ESPECIAL,
+    planPorPaciente: pactos.planPorPaciente,
+    precioPactado: pactos.precioPactado,
+    precioPactadoUsd: pactos.precioPactadoUsd,
+    etapaAdicional: pactos.etapaAdicional,
+    costoEtapaAdicional: pactos.costoEtapaAdicional,
+    descuentoKsEspecial: pactos.descuentoKsEspecial,
     tcPorFecha: tc,
   });
 

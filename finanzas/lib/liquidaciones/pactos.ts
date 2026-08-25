@@ -1,5 +1,14 @@
-// Lo que cada paciente pactó pagar, y las excepciones del costeo.
+// ⚠ ESTE ARCHIVO YA NO ES LA FUENTE. Editarlo no cambia una sola liquidación.
 //
+// Desde el 26/8/26 los pactos viven en la tabla treatment_plans y se editan
+// desde la ficha del paciente (/[empresa]/pacientes). El costeo los lee con
+// lib/liquidaciones/pactos-db.ts.
+//
+// Queda por una sola razón: es la fuente de scripts/migrar-pactos.ts, que fue
+// el que los mudó a la base y sigue sirviendo para rehacer esa mudanza sobre
+// una base vacía. Cuando eso deje de importar, se borra entero.
+//
+// (Histórico) Lo que cada paciente pactó pagar, y las excepciones del costeo.
 // Vivía dentro de scripts/liquidaciones.ts, que sólo corre en la terminal. Al
 // poder recalcular desde el panel, la misma tabla la necesitan los dos: si se
 // duplicara, el día que Pancho agregue un pacto acá y no allá el mismo cobro

@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/money";
 import { formatDateShort } from "@/lib/dates";
 import { Input } from "@/components/ui/input";
+import { PactoDialog, type Pacto } from "@/components/pacientes/pacto-dialog";
 
 type Mov = {
   occurred_on: string; amount: string; currency: string; counterparty_id: string;
@@ -66,6 +67,37 @@ export default async function PacientesPage({
     porPaciente.set(m.counterparty_id, p);
   }
 
+  // El pacto de cada paciente (treatment_plans). Sin pacto, sus cobros de
+  // alineadores entran con costo KS $0 y la doctora cobra el 40% del BRUTO: por
+  // eso los que tienen cobros de alineadores y no tienen pacto se marcan.
+  const { data: planes } = await supabase
+    .from("treatment_plans")
+    .select("patient_id, total_amount, currency, installments_total, ks_discount_pct, is_additional_stage, ks_list_price, match_names")
+    .eq("company_id", ctx.companyId).eq("kind", "alineadores").eq("status", "active")
+    .limit(2000);
+  const pactoPorPaciente = new Map<string, Pacto>();
+  for (const pl of planes ?? []) {
+    pactoPorPaciente.set(pl.patient_id as string, {
+      total: pl.total_amount == null ? null : Number(pl.total_amount),
+      currency: (pl.currency as string) ?? "ARS",
+      cuotas: (pl.installments_total as number | null) ?? null,
+      descuentoPct: pl.ks_discount_pct == null ? null : Number(pl.ks_discount_pct),
+      etapaAdicional: Boolean(pl.is_additional_stage),
+      precioListaEtapa: pl.ks_list_price == null ? null : Number(pl.ks_list_price),
+      alias: (pl.match_names as string[] | null) ?? [],
+    });
+  }
+  // Un pacto declarado con OTRA ficha del mismo paciente (los alias) también
+  // cuenta: si no, la ficha secundaria se vería como "falta el pacto".
+  const claveSimple = (n: string) =>
+    n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+      .split(/\s+/).filter((t) => t.length > 2).sort().join(" ");
+  const cubiertos = new Set<string>();
+  for (const [id, pc] of pactoPorPaciente) {
+    cubiertos.add(claveSimple(porPaciente.get(id)?.nombre ?? ""));
+    for (const a of pc.alias) cubiertos.add(claveSimple(a));
+  }
+
   let pacientes = [...porPaciente.values()].sort((a, b) => b.ultimo.localeCompare(a.ultimo));
   if (q) {
     const nq = q.trim().toLowerCase();
@@ -94,6 +126,7 @@ export default async function PacientesPage({
               <th className="px-4 py-2 font-medium">Paciente</th>
               <th className="hidden px-2 py-2 font-medium md:table-cell">Doctora</th>
               <th className="hidden px-2 py-2 font-medium lg:table-cell">Tratamiento</th>
+              <th className="px-2 py-2 font-medium">Pacto</th>
               <th className="px-2 py-2 text-center font-medium">Pagos</th>
               <th className="px-2 py-2 text-right font-medium">Total pagado</th>
               <th className="px-4 py-2 text-right font-medium">Último pago</th>
@@ -101,7 +134,7 @@ export default async function PacientesPage({
           </thead>
           <tbody>
             {visibles.length === 0 ? (
-              <tr><td colSpan={6} className="py-12 text-center text-sm text-muted-foreground">
+              <tr><td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
                 {q ? "Ningún paciente con esa búsqueda." : "Todavía no hay pagos de pacientes en la caja."}
               </td></tr>
             ) : visibles.map((p) => (
@@ -114,6 +147,25 @@ export default async function PacientesPage({
                   {[...p.categorias].map((c) => (
                     <span key={c} className="mr-1 rounded-full bg-secondary px-2 py-0.5 text-[11px]">{c}</span>
                   ))}
+                </td>
+                <td className="px-2 py-2">
+                  {(() => {
+                    const pc = pactoPorPaciente.get(p.id) ?? null;
+                    const esAlineadores = p.categorias.has("Alineadores");
+                    const falta = esAlineadores && !pc && !cubiertos.has(claveSimple(p.nombre));
+                    if (!esAlineadores && !pc) return <span className="text-muted-foreground">—</span>;
+                    return (
+                      <span className="flex items-center gap-1.5">
+                        {pc?.total ? (
+                          <span className="fig text-muted-foreground">
+                            {formatMoney(pc.total, pc.currency, locale)}
+                          </span>
+                        ) : null}
+                        <PactoDialog empresa={ctx.config.slug} patientId={p.id}
+                          paciente={p.nombre} pacto={pc} faltante={falta} />
+                      </span>
+                    );
+                  })()}
                 </td>
                 <td className="fig px-2 py-2 text-center text-muted-foreground">{p.pagos}</td>
                 <td className="fig px-2 py-2 text-right font-medium text-emerald-700 dark:text-emerald-400">
