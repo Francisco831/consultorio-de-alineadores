@@ -58,6 +58,8 @@ export interface Profile {
   activo: boolean;
   avatar_url: string | null;
   whatsapp_phone: string | null;
+  /** Línea de la organización desde la que atiende en Periskope (0041). Solo dígitos, sin @c.us. */
+  periskope_org_phone: string | null;
 }
 
 export interface PriorityReason {
@@ -112,6 +114,13 @@ export interface Doctor {
   why_interesting: string | null;
   // handle sin arroba; la URL es instagram.com/<handle> (migración 0036)
   instagram: string | null;
+  // ---- resto de las redes y el cumpleaños (migración 0040) ----
+  facebook: string | null;
+  tiktok: string | null;
+  linkedin: string | null;
+  website: string | null;
+  /** Cumpleaños. Si no se sabe el año, va 1900 y la edad queda en null. */
+  birth_date: string | null;
   tags: string[];
   competitor_brands: string[];
   custom: Record<string, unknown>;
@@ -178,6 +187,13 @@ export interface Opportunity {
   closed_at: string | null;
   is_demo: boolean;
   created_at: string;
+  // ---- ciclo de viabilidad (migración 0022) ----
+  viability_status: ViabilityStatus | null;
+  viability_result: string | null;
+  viability_requested_at: string | null;
+  viability_submitted_at: string | null;
+  viability_completed_at: string | null;
+  viability_follow_up_date: string | null;
 }
 
 export interface Activity {
@@ -342,3 +358,47 @@ export const METRICAS_OBJETIVO = {
 } as const;
 
 export type MetricaObjetivo = keyof typeof METRICAS_OBJETIVO;
+
+// ---------------------------------------------------------------------------
+// Viabilidad: el ciclo de "pedí una viabilidad al equipo clínico" (0022).
+// `solicitada` = el doctor la pidió; `enviada` = se mandaron los registros;
+// `respondida` = el equipo clínico contestó; `sin_respuesta` = se dio por perdida.
+// ---------------------------------------------------------------------------
+export type ViabilityStatus = "solicitada" | "enviada" | "respondida" | "sin_respuesta";
+
+export const VIABILITY_STATUS_LABELS: Record<ViabilityStatus, string> = {
+  solicitada: "Solicitada",
+  enviada: "Enviada",
+  respondida: "Respondida",
+  sin_respuesta: "Sin respuesta",
+};
+
+/** Un renglón de la libreta personal (migración 0039). No es una tarea del CRM. */
+export interface Pendiente {
+  id: string;
+  user_id: string;
+  texto: string;
+  hecho: boolean;
+  hecho_at: string | null;
+  orden: number;
+  created_at: string;
+}
+
+/** Cumpleaños o aniversario de acreditación (función doctores_efemerides, 0040). */
+export interface Efemeride {
+  doctor_id: string;
+  nombre: string;
+  tipo: "cumple" | "aniversario";
+  /** La fecha de este año (o la del que viene si ya pasó). */
+  fecha: string;
+  /** 0 = hoy, -1 = ayer, positivo = faltan. */
+  dias: number;
+  /** Años que cumple. null cuando no se sabe el año de origen. */
+  anios: number | null;
+  categoria: DoctorCategoria;
+  city: string | null;
+  whatsapp: string | null;
+  phone: string | null;
+  instagram: string | null;
+  owner_id: string | null;
+}

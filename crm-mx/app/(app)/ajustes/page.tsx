@@ -31,6 +31,7 @@ import {
   AllowlistManager,
   type InvitacionRow,
 } from "@/components/ajustes/allowlist-manager";
+import { LineasManager } from "@/components/ajustes/lineas-manager";
 
 const REC_STATUSES: RecommendationStatus[] = [
   "propuesta",
@@ -119,6 +120,7 @@ export default async function AjustesPage() {
     nombre: string;
     rol: string;
     activo: boolean;
+    periskope_org_phone: string | null;
   }[];
 
   // ---------- capa AI: stats de recomendaciones + últimas corridas ----------
@@ -342,14 +344,26 @@ export default async function AjustesPage() {
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Equipo
         </h2>
-        <ul className="divide-y rounded-lg border">
-          {team.map((p) => (
-            <li key={p.id} className="flex items-center justify-between px-4 py-2 text-sm">
-              <span>{p.nombre}</span>
-              <span className="text-muted-foreground">{p.rol}</span>
-            </li>
-          ))}
-        </ul>
+        <LineasManager equipo={team} />
+        <p className="text-xs text-muted-foreground">
+          Con qué línea atiende cada uno, el CRM te avisa si un chat pasa por la
+          tuya. Lo que NO puede hacer es abrir Periskope directamente en tu
+          línea: la consola la elige con el selector de abajo a la derecha y se
+          la guarda en el navegador, no acepta la línea por URL. Para que salga
+          siempre la tuya, en Periskope hay que dejar a cada uno como miembro
+          no-admin con su línea asignada.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          <span className="font-medium text-amber-700 dark:text-amber-400">
+            WhatsApp en tiempo real: trabado del lado de Periskope.
+          </span>{" "}
+          El webhook del CRM está armado y dado de alta en su consola desde el
+          22/8, y no llegó ni un evento: la organización figura Enterprise
+          Activa pero la tratan como plan free (API 401, Automation Rules &ldquo;Pro
+          only&rdquo;, Total events en 0). Hasta que su soporte lo corrija, la lista
+          &ldquo;WhatsApp esperando respuesta&rdquo; es la foto del 7/8. El reclamo a
+          support@periskope.app sigue sin mandarse.
+        </p>
         <p className="text-xs text-muted-foreground">
           Los usuarios se crean con scripts/create-users.ts (invite-only), y el mail
           tiene que estar invitado abajo antes de crear la cuenta.

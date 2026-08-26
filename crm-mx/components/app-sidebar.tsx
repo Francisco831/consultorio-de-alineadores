@@ -18,6 +18,7 @@ import {
   ListChecks,
   CalendarDays,
   BookOpen,
+  Radar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +60,14 @@ const NAV: { href: string; label: string; icon: typeof Sun; grupo?: string }[] =
       grupo: "Acreditados",
     },
     { href: "/casos", label: "Casos", icon: FolderOpen, grupo: "Acreditados" },
+    // lo que está esperando algo de afuera: renders sin aprobar y viabilidades
+    // sin respuesta. Pedido de Pancho en la reunión del 26/8.
+    {
+      href: "/seguimiento",
+      label: "Seguimiento",
+      icon: Radar,
+      grupo: "Acreditados",
+    },
 
     { href: "/tareas", label: "Tareas", icon: CheckSquare },
     { href: "/eventos", label: "Eventos", icon: CalendarDays },

@@ -11,6 +11,7 @@ import {
   FileSearch,
   MoveRight,
   BadgeCheck,
+  AtSign,
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -28,7 +29,7 @@ import { logActivity } from "@/lib/actions/activities";
 import { createTask } from "@/lib/actions/tasks";
 import { createOpportunity } from "@/lib/actions/opportunities";
 import { moveAcquisitionStage, acreditarDoctor } from "@/lib/actions/journey";
-import { updateDoctorContact } from "@/lib/actions/doctors";
+import { updateDoctorContact, updateDoctorRedes } from "@/lib/actions/doctors";
 import { waLink, telLink, periskopeLink } from "@/lib/phone";
 import {
   ACTIVITY_TYPE_LABELS,
@@ -47,6 +48,7 @@ type DialogKind =
   | "oportunidad"
   | "viabilidad"
   | "contacto"
+  | "redes"
   | "etapa"
   | "acreditar"
   | null;
@@ -179,6 +181,10 @@ export function QuickActions({
       <Button variant="outline" size="sm" onClick={() => setOpen("viabilidad")}>
         <FileSearch data-icon="inline-start" />
         Viabilidad
+      </Button>
+      <Button variant="outline" size="sm" onClick={() => setOpen("redes")}>
+        <AtSign data-icon="inline-start" />
+        Redes
       </Button>
       <Button variant="ghost" size="sm" onClick={() => setOpen("contacto")}>
         <Pencil data-icon="inline-start" />
@@ -486,6 +492,96 @@ export function QuickActions({
                 name="clinic_name"
                 defaultValue={doctor.clinic_name ?? ""}
               />
+            </div>
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <DialogFooter>
+              <Button type="submit" disabled={pending}>
+                {pending ? "Guardando…" : "Guardar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ---------- redes y cumpleaños ----------
+          Hasta ahora `instagram` era de solo lectura: la cargaba el censo de
+          seguidores (0036) y ningún formulario la escribía. Este diálogo es la
+          primera vez que el equipo puede cargar redes a mano, y el cumpleaños
+          es lo que alimenta el bloque "Fechas para saludar" de /hoy. */}
+      <Dialog open={open === "redes"} onOpenChange={(o) => !o && setOpen(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Redes y cumpleaños</DialogTitle>
+            <DialogDescription>{doctor.nombre}</DialogDescription>
+          </DialogHeader>
+          <form action={submit(updateDoctorRedes)} className="space-y-3">
+            <input type="hidden" name="id" value={doctor.id} />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="qa-r-ig">Instagram</Label>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm text-muted-foreground">@</span>
+                  <Input
+                    id="qa-r-ig"
+                    name="instagram"
+                    defaultValue={doctor.instagram ?? ""}
+                    placeholder="gabyortho"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="qa-r-tiktok">TikTok</Label>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm text-muted-foreground">@</span>
+                  <Input
+                    id="qa-r-tiktok"
+                    name="tiktok"
+                    defaultValue={doctor.tiktok ?? ""}
+                    placeholder="gabyortho"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="qa-r-fb">Facebook</Label>
+                <Input
+                  id="qa-r-fb"
+                  name="facebook"
+                  defaultValue={doctor.facebook ?? ""}
+                  placeholder="usuario o link"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="qa-r-in">LinkedIn</Label>
+                <Input
+                  id="qa-r-in"
+                  name="linkedin"
+                  defaultValue={doctor.linkedin ?? ""}
+                  placeholder="usuario o link"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="qa-r-web">Sitio web</Label>
+              <Input
+                id="qa-r-web"
+                name="website"
+                defaultValue={doctor.website ?? ""}
+                placeholder="https://… (sirve un linktree)"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="qa-r-cumple">Cumpleaños</Label>
+              <Input
+                id="qa-r-cumple"
+                name="birth_date"
+                type="date"
+                defaultValue={doctor.birth_date ?? ""}
+              />
+              <p className="text-xs text-muted-foreground">
+                Si no sabés el año, poné 1900: el aviso usa el día y el mes.
+              </p>
             </div>
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <DialogFooter>

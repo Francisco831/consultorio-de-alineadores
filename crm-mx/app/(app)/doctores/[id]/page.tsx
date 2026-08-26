@@ -42,6 +42,46 @@ import {
   type Task,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { todayMX } from "@/lib/dates";
+import { Cake, PartyPopper } from "lucide-react";
+
+/**
+ * Años cumplidos entre dos fechas YYYY-MM-DD, contados por calendario (no por
+ * milisegundos: los bisiestos hacen que 365 días no siempre sean un año).
+ */
+function aniosCumplidos(desde: string, hasta: string): number {
+  const [dy, dm, dd] = desde.slice(0, 10).split("-").map(Number);
+  const [hy, hm, hd] = hasta.slice(0, 10).split("-").map(Number);
+  if (!dy || !hy) return 0;
+  const n = hy - dy;
+  return hm < dm || (hm === dm && hd < dd) ? n - 1 : n;
+}
+
+/**
+ * Link de una red. Si quien cargó pegó la URL entera la respetamos; si escribió
+ * solo el usuario, le ponemos la base delante. Es a propósito laxo: el valor lo
+ * escribe una persona apurada, no un validador.
+ */
+function linkRed(base: string, valor: string): string {
+  return /^https?:\/\//i.test(valor) ? valor : base + valor.replace(/^@/, "");
+}
+
+/**
+ * El cumpleaños en es-MX. birth_date es un date pelado (YYYY-MM-DD): parsearlo
+ * con new Date() lo lee como UTC y en México se corre un día para atrás, así
+ * que se arma en UTC y se formatea en UTC. El año 1900 es el convenido para
+ * "no sabemos el año" (migración 0040): se muestra solo el día y el mes.
+ */
+function formatCumple(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("es-MX", {
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+    ...(y <= 1900 ? {} : { year: "numeric" }),
+  });
+}
 
 export default async function DoctorPage({
   params,
@@ -206,6 +246,20 @@ export default async function DoctorPage({
     ? profileName.get(doctor.clinical_owner_id)
     : null;
   const potential = doctor.potential_override ?? doctor.potential_computed;
+
+  const tieneRedes = Boolean(
+    doctor.instagram ||
+      doctor.facebook ||
+      doctor.tiktok ||
+      doctor.linkedin ||
+      doctor.website
+  );
+  // años cumplidos como acreditado; solo se muestra a partir del primero, que
+  // festejar "hace 0 años" no le sirve a nadie. El "hoy" es el de México, como
+  // en todo el CRM (lib/dates.ts).
+  const aniosAcreditado = doctor.accredited_at
+    ? aniosCumplidos(doctor.accredited_at, todayMX())
+    : 0;
 
   return (
     <div className="space-y-6 p-6">
@@ -380,44 +434,107 @@ export default async function DoctorPage({
           )}
         </div>
 
-        {/* ---------- canal Instagram (censo de seguidores 20/8) ----------
-            Va al lado del de WhatsApp porque para varios doctores es el ÚNICO
-            canal que tenemos: los que entraron por el censo de seguidores no
-            traen teléfono. El tag "sigue-instagram" dice que sigue la cuenta;
-            sin el tag, el handle está pero la relación todavía no. */}
-        {doctor.instagram ? (
+        {/* ---------- redes y fechas ----------
+            Va al lado del bloque de WhatsApp porque para varios doctores las
+            redes son el ÚNICO canal que tenemos: los que entraron por el censo
+            de seguidores (20/8) no traen teléfono. El tag "sigue-instagram"
+            dice que sigue la cuenta; sin el tag, el handle está pero la
+            relación todavía no. Las otras cuatro redes y el cumpleaños son de
+            la migración 0040 y se cargan desde el botón Redes de arriba. */}
+        {tieneRedes || doctor.birth_date || aniosAcreditado ? (
           <div className="rounded-lg border p-4">
             <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Instagram
+              Redes y fechas
             </div>
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-              <a
-                href={`https://www.instagram.com/${doctor.instagram}/`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-primary hover:underline"
-              >
-                @{doctor.instagram}
-              </a>
-              {(doctor.tags ?? []).includes("sigue-instagram") ? (
-                <Badge className="border-pink-200 bg-pink-50 text-pink-700 dark:border-pink-900 dark:bg-pink-950 dark:text-pink-400">
-                  te sigue
-                </Badge>
-              ) : null}
-              {(doctor.tags ?? [])
-                .filter((t) => t.startsWith("ig-alt:"))
-                .map((t) => (
+            {tieneRedes ? (
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                {doctor.instagram ? (
                   <a
-                    key={t}
-                    href={`https://www.instagram.com/${t.slice(7)}/`}
+                    href={`https://www.instagram.com/${doctor.instagram}/`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-muted-foreground hover:underline"
+                    className="font-medium text-primary hover:underline"
                   >
-                    @{t.slice(7)}
+                    @{doctor.instagram}
                   </a>
-                ))}
-            </div>
+                ) : null}
+                {(doctor.tags ?? []).includes("sigue-instagram") ? (
+                  <Badge className="border-pink-200 bg-pink-50 text-pink-700 dark:border-pink-900 dark:bg-pink-950 dark:text-pink-400">
+                    te sigue
+                  </Badge>
+                ) : null}
+                {(doctor.tags ?? [])
+                  .filter((t) => t.startsWith("ig-alt:"))
+                  .map((t) => (
+                    <a
+                      key={t}
+                      href={`https://www.instagram.com/${t.slice(7)}/`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-muted-foreground hover:underline"
+                    >
+                      @{t.slice(7)}
+                    </a>
+                  ))}
+                {doctor.facebook ? (
+                  <a
+                    href={linkRed("https://www.facebook.com/", doctor.facebook)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Facebook
+                  </a>
+                ) : null}
+                {doctor.tiktok ? (
+                  <a
+                    href={linkRed("https://www.tiktok.com/@", doctor.tiktok)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-primary hover:underline"
+                  >
+                    TikTok
+                  </a>
+                ) : null}
+                {doctor.linkedin ? (
+                  <a
+                    href={linkRed("https://www.linkedin.com/in/", doctor.linkedin)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-primary hover:underline"
+                  >
+                    LinkedIn
+                  </a>
+                ) : null}
+                {doctor.website ? (
+                  <a
+                    href={linkRed("https://", doctor.website)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Sitio web
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
+            {doctor.birth_date || aniosAcreditado ? (
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                {doctor.birth_date ? (
+                  <span className="flex items-center gap-1.5">
+                    <Cake className="h-3.5 w-3.5" />
+                    Cumple el {formatCumple(doctor.birth_date)}
+                  </span>
+                ) : null}
+                {aniosAcreditado ? (
+                  <span className="flex items-center gap-1.5">
+                    <PartyPopper className="h-3.5 w-3.5" />
+                    Acreditado hace {aniosAcreditado}{" "}
+                    {aniosAcreditado === 1 ? "año" : "años"}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
 

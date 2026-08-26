@@ -2,6 +2,24 @@
 // real y mantiene wa_conversations al día, SIN depender de la API REST (que
 // sigue plan-gated) ni del navegador de nadie.
 //
+// ESTADO AL 26/8/2026 — LEER ANTES DE TOCAR NADA ACÁ:
+// Este endpoint está vivo y con su secreto puesto en Vercel Production desde el
+// 22/8 (un POST sin token devuelve 401; si faltara la env devolvería 503), se
+// probó de punta a punta con un evento sintético, y el webhook YA está dado de
+// alta en la consola de Periskope desde ese mismo día. Y sin embargo las 1.490
+// filas de wa_conversations tienen last_message_at en NULL, y la ÚNICA línea del
+// repo que escribe esa columna es la de acá abajo: en 4 días no entró un evento.
+//
+// NO ES UN BUG DE ESTE CÓDIGO. La organización de Periskope figura Enterprise
+// Activa pero el sistema la trata como free: la API REST devuelve 401 "available
+// only for active pro and enterprise plans", Automation Rules dice "Pro only" y
+// el contador Total events marca 0 pese al tráfico real. Está pendiente el mail
+// a support@periskope.app desde el 22/8. Cuando lo corrijan, esto fluye solo.
+//
+// Antes de "arreglar" nada acá, leer docs/WHATSAPP_PERISKOPE.md. Mientras tanto,
+// todo lo que /hoy y /panel muestran como "esperando respuesta" es la foto del
+// export del 7/8.
+//
 // Periskope hace POST con { event_type, data, org_id, timestamp }. `data` es el
 // objeto del evento; para eventos de mensaje trae chat_id, org_phone (la línea),
 // from_me, timestamp, body.
@@ -62,6 +80,9 @@ interface MsgData {
   body?: string;
 }
 
+/** El preview del último mensaje: alcanza para decidir y para mostrar una línea. */
+const BODY_MAX = 2000;
+
 export async function POST(req: Request) {
   const secret = process.env.PERISKOPE_WEBHOOK_SECRET;
   if (!secret) {
@@ -95,7 +116,13 @@ export async function POST(req: Request) {
 
   // Solo procesamos eventos que traen un chat de una línea. Cualquier otra cosa
   // (acks, reacciones sin chat, etc.) se acusa con 200 y se ignora.
+  // OJO: si Periskope nombra distinto estos dos campos, TODOS los eventos caen
+  // acá y el resultado es idéntico a "no está configurado". Cómo distinguirlo
+  // mirando los logs de Vercel: docs/WHATSAPP_PERISKOPE.md.
   if (!msg.chat_id || !msg.org_phone) {
+    console.log(
+      `[webhook periskope] ${evt.event_type ?? "?"} ignorado — sin chat_id/org_phone. Campos recibidos: ${Object.keys(msg).join(",") || "(ninguno)"}`
+    );
     return NextResponse.json({ ok: true, ignored: evt.event_type ?? "sin_chat" });
   }
 
@@ -109,6 +136,7 @@ export async function POST(req: Request) {
   const esGrupo = chatId.includes("@g.us");
   const tel = esGrupo ? null : chatId.replace(/@.*/, "");
   const fromMe = msg.from_me === true || msg.from_me === "true";
+  const body = typeof msg.body === "string" ? msg.body.slice(0, BODY_MAX) : null;
 
   // fila existente: para no pisar chat_name/doctor_id y para mergear líneas
   const { data: prev } = await db
@@ -119,9 +147,15 @@ export async function POST(req: Request) {
 
   const lineas = Array.from(new Set([...(prev?.lineas ?? []), linea]));
 
-  // match de doctor solo si la fila aún no tiene uno (por los últimos 10 dígitos)
-  let doctorId = prev?.doctor_id ?? null;
-  if (!doctorId && tel) {
+  // Match de doctor por teléfono: SOLO cuando el chat es nuevo para el CRM.
+  // Antes se reintentaba en cada mensaje de cualquier fila sin doctor, y eso son
+  // 1.306 chats (de 1.490) donde la query ya falló y va a seguir fallando: el
+  // teléfono del doctor no cambia porque nos escriba otra vez. Una consulta a
+  // doctors por mensaje entrante, siempre en vano. El barrido masivo —el que sí
+  // puede encontrar vínculos nuevos, porque corre contra el padrón entero— es
+  // scripts/import-whatsapp.ts; el webhook solo engancha lo que nace nuevo.
+  let doctorId: string | null = null;
+  if (!prev && tel) {
     const last10 = tel.slice(-10);
     const { data: docs } = await db
       .from("doctors")
@@ -134,7 +168,15 @@ export async function POST(req: Request) {
   const row: Record<string, unknown> = {
     periskope_chat_id: chatId,
     phone: tel,
-    unanswered: !fromMe, // último mensaje del cliente = espera respuesta
+    // OJO: acá ya NO va `unanswered`. Hasta el 26/8 esta fila decía
+    // `unanswered: !fromMe`, o sea "habló el doctor último = pendiente", y un
+    // "de nada" contaba como pendiente. Desde la migración 0041 lo calcula el
+    // trigger wa_conv_unanswered a partir del body, con wa_requiere_respuesta().
+    // La regla vive UNA sola vez, en la base, y la comparten el webhook y
+    // cualquier backfill. Si el webhook la escribiera igual, el trigger la
+    // pisaría: no la pongas de nuevo.
+    last_message_body: body,
+    last_message_from_me: fromMe,
     activity_bucket: "7d", // acaba de llegar un evento → actividad reciente
     lineas,
     last_message_at: isoDe(msg.timestamp) ?? new Date().toISOString(),
@@ -155,7 +197,7 @@ export async function POST(req: Request) {
   }
 
   console.log(
-    `[webhook periskope] ${evt.event_type ?? "?"} chat=${chatId} linea=${linea} unanswered=${!fromMe}`
+    `[webhook periskope] ${evt.event_type ?? "?"} chat=${chatId} linea=${linea} from_me=${fromMe} body=${body ? body.length : 0}ch`
   );
   return NextResponse.json({ ok: true });
 }

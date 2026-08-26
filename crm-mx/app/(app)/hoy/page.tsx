@@ -3,23 +3,28 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { resolveAlert, dismissAlert } from "@/lib/actions/alerts";
-import { waLink, telLink, periskopeLink } from "@/lib/phone";
+import { waLink, telLink } from "@/lib/phone";
 import {
   LIFECYCLE_LABELS,
   type Alert,
   type Doctor,
-  type DoctorCategoria,
+  type Efemeride,
+  type Pendiente,
   type PriorityBucket,
   type PriorityReason,
   type Task,
 } from "@/lib/types";
-import {
-  ACREDITACION_STYLES,
-  CATEGORIA_LABELS,
-  LIFECYCLE_STYLES,
-} from "@/lib/format";
+import { ACREDITACION_STYLES, LIFECYCLE_STYLES } from "@/lib/format";
 import { TaskList } from "@/components/tasks/task-list";
 import { MorningBrief } from "@/components/ai/morning-brief";
+import { PendientesCard } from "@/components/pendientes/pendientes-card";
+import { EfemeridesCard } from "@/components/hoy/efemerides-card";
+import {
+  WaEsperandoLista,
+  type WaEsperando,
+} from "@/components/whatsapp/wa-esperando";
+import { AgendaHoy, type EventoAgenda } from "@/components/calendar/agenda-hoy";
+import { briefDoctor } from "@/lib/brief-doctor";
 import { CONTACTO_TYPES } from "@/lib/actividad-equipo";
 import { getForecastMes } from "@/lib/forecast";
 import { todayMX, monthStartMX, hourMX } from "@/lib/dates";
@@ -80,7 +85,7 @@ export default async function HoyPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, nombre, rol")
+    .select("id, nombre, rol, periskope_org_phone")
     .eq("id", user!.id)
     .single();
   // decisión de Pancho (8/8): todos ven todo — "Míos" queda como filtro opcional
@@ -132,6 +137,9 @@ export default async function HoyPage({
     { data: profilesRaw },
     { data: waWaitingRaw },
     { count: monthContacts },
+    { data: pendientesRaw },
+    { data: efemeridesRaw },
+    { data: agendaRaw },
   ] = await Promise.all([
     // is_demo=false en todo lo que se cuenta o se pondera: las filas sintéticas del
     // seed cuelgan de doctores REALES y están asignadas a personas reales, así que
@@ -176,7 +184,7 @@ export default async function HoyPage({
     supabase
       .from("wa_conversations")
       .select(
-        "id, periskope_chat_id, chat_name, phone, activity_bucket, doctor:doctors!inner(id, nombre, categoria, new_case_count, whatsapp)"
+        "id, periskope_chat_id, chat_name, phone, activity_bucket, lineas, last_message_body, last_message_at, doctor:doctors!inner(id, nombre, categoria, new_case_count, whatsapp)"
       )
       .eq("unanswered", true)
       .in("activity_bucket", ["7d", "30d"])
@@ -189,6 +197,29 @@ export default async function HoyPage({
       .eq("is_demo", false)
       .in("type", [...CONTACTO_TYPES])
       .gte("occurred_at", `${monthStartISO}T00:00:00-06:00`),
+    // la libreta personal (0039): siempre la del logueado, el filtro Todos/Míos
+    // no aplica — es de uno, no del equipo
+    supabase
+      .from("pendientes")
+      .select("*")
+      .eq("user_id", user!.id)
+      .order("orden", { ascending: true })
+      .order("created_at", { ascending: true })
+      .limit(50),
+    // cumpleaños y aniversarios de acreditación de acá a una semana (0040)
+    supabase.rpc("doctores_efemerides", { dias_adelante: 7 }),
+    // la agenda del día que bajó el sync de Google Calendar. Si nadie configuró
+    // su Apps Script todavía, esto viene vacío y el bloque no se dibuja.
+    supabase
+      .from("calendar_events")
+      .select(
+        "id, titulo, inicio, fin, todo_el_dia, doctor:doctors(id, nombre, categoria, city, state, zona, case_count, new_case_count, last_contact_at, avg_interval_days, instagram, specialty, uses_aligners, estimated_cases_month, why_interesting, competitor_brands, lifecycle_stage, phone, whatsapp)"
+      )
+      .eq("profile_id", user!.id)
+      .gte("inicio", `${todayISO}T00:00:00-06:00`)
+      .lt("inicio", `${todayISO}T23:59:59-06:00`)
+      .order("inicio", { ascending: true })
+      .limit(20),
   ]);
 
   const doctors = motores.flatMap((m) => m.doctors);
@@ -231,6 +262,62 @@ export default async function HoyPage({
     )
     .slice(0, 8);
 
+  const pendientes = (pendientesRaw ?? []) as Pendiente[];
+  const efemerides = (efemeridesRaw ?? []) as Efemeride[];
+
+  // el brief de la llamada se arma acá, determinista y gratis: son datos que ya
+  // están en la fila del doctor (ver lib/brief-doctor.ts, no usa IA)
+  type AgendaRow = {
+    id: string;
+    titulo: string;
+    inicio: string;
+    fin: string | null;
+    todo_el_dia: boolean;
+    doctor: Record<string, unknown> | null;
+  };
+  const agenda: EventoAgenda[] = ((agendaRaw ?? []) as unknown as AgendaRow[]).map(
+    (e) => {
+      const d = e.doctor as (Doctor & { phone: string | null }) | null;
+      return {
+        id: e.id,
+        titulo: e.titulo,
+        inicio: e.inicio,
+        fin: e.fin,
+        todo_el_dia: e.todo_el_dia,
+        doctor: d
+          ? {
+              id: d.id,
+              nombre: d.nombre,
+              phone: d.phone,
+              whatsapp: d.whatsapp,
+            }
+          : null,
+        brief: d
+          ? briefDoctor({
+              nombre: d.nombre,
+              categoria: d.categoria,
+              city: d.city,
+              state: d.state,
+              zona: d.zona,
+              case_count: d.case_count,
+              new_case_count: d.new_case_count,
+              last_contact_at: d.last_contact_at,
+              avg_interval_days: d.avg_interval_days,
+              instagram: d.instagram,
+              specialty: d.specialty,
+              uses_aligners: d.uses_aligners,
+              estimated_cases_month: d.estimated_cases_month,
+              why_interesting: d.why_interesting,
+              competitor_brands: d.competitor_brands,
+              tiposTratamiento: null,
+              eventos: null,
+              lifecycle_stage: d.lifecycle_stage,
+            })
+          : null,
+      };
+    }
+  );
+
   const hour = hourMX();
   const saludo = hour < 12 ? "Buen día" : hour < 19 ? "Buenas tardes" : "Buenas noches";
 
@@ -268,6 +355,10 @@ export default async function HoyPage({
 
       {/* ---------- AI Morning Brief ---------- */}
       <MorningBrief />
+
+      {/* la agenda del día, con el brief de cada doctor ya armado. Si nadie
+          conectó su Google Calendar todavía, el componente devuelve null */}
+      <AgendaHoy eventos={agenda} />
 
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-4">
         {[
@@ -430,6 +521,20 @@ export default async function HoyPage({
 
         {/* ---------- columna derecha: tareas de hoy + alertas ---------- */}
         <div className="space-y-6">
+          {/* la libreta va PRIMERA: lo que uno anota a mano manda sobre lo que
+              propone el sistema (pedido de Pancho, 26/8) */}
+          <div className="space-y-2">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Mis pendientes
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Tu libreta. Es tuya y no toca las tareas del CRM.
+              </p>
+            </div>
+            <PendientesCard pendientes={pendientes} editable />
+          </div>
+
           <div className="space-y-2">
             <div className="flex items-baseline justify-between gap-2">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -451,62 +556,13 @@ export default async function HoyPage({
             />
           </div>
 
-          {waWaiting.length > 0 ? (
-            <div className="space-y-2">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                WhatsApp esperando respuesta
-              </h2>
-              <ul className="divide-y rounded-lg border">
-                {waWaiting.map((w) => {
-                  // el equipo responde desde Periskope, no desde WhatsApp personal
-                  const wa =
-                    periskopeLink(w.periskope_chat_id) ??
-                    waLink(w.phone ?? w.doctor.whatsapp);
-                  return (
-                    <li
-                      key={w.id}
-                      className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
-                    >
-                      <div className="min-w-0">
-                        <Link
-                          href={`/doctores/${w.doctor.id}`}
-                          className="block truncate font-medium hover:underline"
-                        >
-                          {w.doctor.nombre}
-                        </Link>
-                        <span className="text-xs text-muted-foreground">
-                          {CATEGORIA_LABELS[w.doctor.categoria as DoctorCategoria]}{" "}
-                          · {w.doctor.new_case_count} casos ·{" "}
-                          {w.activity_bucket === "7d" ? (
-                            <span className="font-medium text-orange-600 dark:text-orange-400">
-                              activo esta semana
-                            </span>
-                          ) : (
-                            "últimos 30 días"
-                          )}
-                        </span>
-                      </div>
-                      {wa ? (
-                        <a
-                          href={wa}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={cn(
-                            buttonVariants({ variant: "outline", size: "sm" })
-                          )}
-                        >
-                          Responder
-                        </a>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-              <p className="text-xs text-muted-foreground">
-                El doctor habló último y nadie le respondió — se actualiza solo con cada mensaje que entra por Periskope.
-              </p>
-            </div>
-          ) : null}
+          <WaEsperandoLista
+            chats={waWaiting as unknown as WaEsperando[]}
+            miLinea={profile?.periskope_org_phone ?? null}
+          />
+
+          {/* cumpleaños y aniversarios de acreditación de acá a una semana */}
+          <EfemeridesCard efemerides={efemerides} />
 
           <div className="space-y-2">
             <div>

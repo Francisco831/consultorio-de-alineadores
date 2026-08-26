@@ -19,6 +19,14 @@
     {
       "path": "/api/sync/asistencia",
       "schedule": "30 23 * * 1-5"
+    },
+    {
+      "path": "/api/sync/render",
+      "schedule": "30 */2 * * *"
+    },
+    {
+      "path": "/api/sync/calendar",
+      "schedule": "45 12 * * 1-5"
     }
   ]
 }

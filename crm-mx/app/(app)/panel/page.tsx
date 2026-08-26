@@ -3,6 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { QuickLog } from "@/components/panel/quick-log";
+import { PendientesCard } from "@/components/pendientes/pendientes-card";
+import {
+  WaEsperandoLista,
+  type WaEsperando,
+} from "@/components/whatsapp/wa-esperando";
+import { AgendaHoy, type EventoAgenda } from "@/components/calendar/agenda-hoy";
+import { briefDoctor } from "@/lib/brief-doctor";
 import { waLink, telLink, periskopeLink } from "@/lib/phone";
 import { todayMX, monthStartMX } from "@/lib/dates";
 import { MX_TZ, CONTACTO_TYPES } from "@/lib/actividad-equipo";
@@ -11,7 +18,9 @@ import {
   ACTIVITY_TYPE_LABELS,
   TASK_TYPE_LABELS,
   type ActivityType,
+  type Doctor,
   type DoctorCategoria,
+  type Pendiente,
   type TaskType,
 } from "@/lib/types";
 import { CATEGORIA_LABELS } from "@/lib/format";
@@ -26,8 +35,13 @@ import { MessageCircle, Phone, ArrowRight } from "lucide-react";
 // doctor → Agenda (tareas + mini-ficha con casos, tipos y eventos académicos);
 // reuniones realizadas + registrar lo conversado → bloque Reuniones + carga
 // rápida; contabilizar → tiles del mes; "por país" → tabla de SU mes en Noloco
-// (lib/noloco-pais.ts, por persona). Pendientes conocidos: edad del doctor
-// (campo no existe) y Google Calendar (sin integración).
+// (lib/noloco-pais.ts, por persona).
+//
+// 26/8: se cerraron los dos pendientes que quedaban. Google Calendar entra por
+// Apps Script (docs/CALENDAR.md) y trae la agenda del día con un brief de tres
+// oraciones por doctor, armado sin IA (lib/brief-doctor.ts). El cumpleaños del
+// doctor ahora existe como campo (doctors.birth_date, migración 0040) y se
+// carga desde la ficha; la edad sigue sin estar y no la inventamos.
 
 type DocMini = {
   id: string;
@@ -88,7 +102,10 @@ export default async function PanelPage({
   // vive en la función — a un rol sin gestión le devuelve error y el bloque
   // "Ingresos al CRM" directamente no aparece
   const [{ data: profilesRaw }, { data: signinsRaw }] = await Promise.all([
-    supabase.from("profiles").select("id, nombre, rol, activo").order("nombre"),
+    supabase
+      .from("profiles")
+      .select("id, nombre, rol, activo, periskope_org_phone")
+      .order("nombre"),
     supabase.rpc("team_signins"),
   ]);
   const profiles = profilesRaw ?? [];
@@ -194,8 +211,15 @@ export default async function PanelPage({
   const docIds = [
     ...new Set(agenda.map((t) => t.doctor?.id).filter(Boolean)),
   ].slice(0, 60) as string[];
-  const [{ data: tiposRaw }, { data: asistenciasRaw }, { data: chatsAgendaRaw }, waEsp, paises] =
-    await Promise.all([
+  const [
+    { data: tiposRaw },
+    { data: asistenciasRaw },
+    { data: chatsAgendaRaw },
+    waEsp,
+    paises,
+    { data: pendientesRaw },
+    { data: agendaCalRaw },
+  ] = await Promise.all([
       docIds.length
         ? supabase
             .from("cases")
@@ -224,7 +248,7 @@ export default async function PanelPage({
       supabase
         .from("wa_conversations")
         .select(
-          "id, periskope_chat_id, phone, activity_bucket, doctor:doctors!inner(id, nombre, owner_id, whatsapp)",
+          "id, periskope_chat_id, phone, chat_name, activity_bucket, lineas, last_message_body, last_message_at, doctor:doctors!inner(id, nombre, owner_id, whatsapp)",
           { count: "exact" }
         )
         .eq("unanswered", true)
@@ -236,6 +260,27 @@ export default async function PanelPage({
         const v2id = v2UserIdDe(persona?.nombre ?? "");
         return v2id != null ? resumenPorPaisDe(v2id) : Promise.resolve(null);
       })(),
+      // la libreta de ESTA persona (0039). Se ve siempre; se edita solo si es
+      // la propia — lo garantiza la RLS, el `editable` es solo la UI.
+      supabase
+        .from("pendientes")
+        .select("*")
+        .eq("user_id", u)
+        .order("orden", { ascending: true })
+        .order("created_at", { ascending: true })
+        .limit(50),
+      // su agenda de hoy bajada de Google Calendar (vacía hasta que configure
+      // su Apps Script: ver docs/CALENDAR.md)
+      supabase
+        .from("calendar_events")
+        .select(
+          "id, titulo, inicio, fin, todo_el_dia, doctor:doctors(id, nombre, categoria, city, state, zona, case_count, new_case_count, last_contact_at, avg_interval_days, instagram, specialty, uses_aligners, estimated_cases_month, why_interesting, competitor_brands, lifecycle_stage, phone, whatsapp)"
+        )
+        .eq("profile_id", u)
+        .gte("inicio", `${todayISO}T00:00:00-06:00`)
+        .lt("inicio", `${todayISO}T23:59:59-06:00`)
+        .order("inicio", { ascending: true })
+        .limit(20),
     ]);
 
   const chatDe = new Map<string, string>();
@@ -245,6 +290,58 @@ export default async function PanelPage({
   }[])
     if (c.doctor_id && !chatDe.has(c.doctor_id))
       chatDe.set(c.doctor_id, c.periskope_chat_id);
+
+  const pendientes = (pendientesRaw ?? []) as Pendiente[];
+  const miLinea =
+    (profiles.find((p) => p.id === user!.id) as { periskope_org_phone?: string | null } | undefined)
+      ?.periskope_org_phone ?? null;
+
+  // el brief de cada llamada se arma determinista, sin IA (lib/brief-doctor.ts)
+  type AgendaCalRow = {
+    id: string;
+    titulo: string;
+    inicio: string;
+    fin: string | null;
+    todo_el_dia: boolean;
+    doctor: Record<string, unknown> | null;
+  };
+  const agendaCal: EventoAgenda[] = (
+    (agendaCalRaw ?? []) as unknown as AgendaCalRow[]
+  ).map((e) => {
+    const d = e.doctor as (Doctor & { phone: string | null }) | null;
+    return {
+      id: e.id,
+      titulo: e.titulo,
+      inicio: e.inicio,
+      fin: e.fin,
+      todo_el_dia: e.todo_el_dia,
+      doctor: d
+        ? { id: d.id, nombre: d.nombre, phone: d.phone, whatsapp: d.whatsapp }
+        : null,
+      brief: d
+        ? briefDoctor({
+            nombre: d.nombre,
+            categoria: d.categoria,
+            city: d.city,
+            state: d.state,
+            zona: d.zona,
+            case_count: d.case_count,
+            new_case_count: d.new_case_count,
+            last_contact_at: d.last_contact_at,
+            avg_interval_days: d.avg_interval_days,
+            instagram: d.instagram,
+            specialty: d.specialty,
+            uses_aligners: d.uses_aligners,
+            estimated_cases_month: d.estimated_cases_month,
+            why_interesting: d.why_interesting,
+            competitor_brands: d.competitor_brands,
+            tiposTratamiento: null,
+            eventos: null,
+            lifecycle_stage: d.lifecycle_stage,
+          })
+        : null,
+    };
+  });
 
   type WaEspRow = {
     id: string;
@@ -513,6 +610,11 @@ export default async function PanelPage({
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
+          {/* la agenda de Google Calendar, con el brief de cada doctor ya
+              armado. Devuelve null mientras esa persona no conectó su
+              calendario (docs/CALENDAR.md) */}
+          <AgendaHoy eventos={agendaCal} />
+
           {/* ---------- agenda ---------- */}
           <div className="space-y-3">
             <div>
@@ -658,6 +760,20 @@ export default async function PanelPage({
           <div className="space-y-2">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                {esPropio ? "Mis pendientes" : `Pendientes de ${nombre}`}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {esPropio
+                  ? "Tu libreta. Es tuya y no toca las tareas del CRM."
+                  : `Lo que ${nombre} se anotó. Solo ${nombre} puede tacharlo.`}
+              </p>
+            </div>
+            <PendientesCard pendientes={pendientes} editable={esPropio} />
+          </div>
+
+          <div className="space-y-2">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Registrar actividad
               </h2>
               <p className="text-xs text-muted-foreground">
@@ -670,69 +786,11 @@ export default async function PanelPage({
             </div>
           </div>
 
-          {waEsperando.length > 0 ? (
-            <div className="space-y-2">
-              <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  WhatsApp esperando respuesta
-                  {waTotal > waEsperando.length ? (
-                    <span className="ml-1.5 font-normal normal-case tracking-normal">
-                      · {waEsperando.length} de {waTotal}
-                    </span>
-                  ) : null}
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Chats de {esPropio ? "tus" : "sus"} doctores donde el doctor
-                  habló último. El botón abre Periskope.
-                </p>
-              </div>
-              <ul className="divide-y rounded-lg border bg-card">
-                {waEsperando.map((w) => {
-                  const link =
-                    periskopeLink(w.periskope_chat_id) ??
-                    waLink(w.phone ?? w.doctor.whatsapp);
-                  return (
-                    <li
-                      key={w.id}
-                      className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
-                    >
-                      <div className="min-w-0">
-                        <Link
-                          href={`/doctores/${w.doctor.id}`}
-                          className="block truncate font-medium hover:underline"
-                        >
-                          {w.doctor.nombre}
-                        </Link>
-                        <span className="text-xs text-muted-foreground">
-                          {w.activity_bucket === "7d" ? (
-                            <span className="font-medium text-orange-600 dark:text-orange-400">
-                              activo esta semana
-                            </span>
-                          ) : w.activity_bucket === "30d" ? (
-                            "últimos 30 días"
-                          ) : (
-                            "hace más de 30 días"
-                          )}
-                        </span>
-                      </div>
-                      {link ? (
-                        <a
-                          href={link}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={cn(
-                            buttonVariants({ variant: "outline", size: "sm" })
-                          )}
-                        >
-                          Responder
-                        </a>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ) : null}
+          <WaEsperandoLista
+            chats={waEsperando as unknown as WaEsperando[]}
+            miLinea={miLinea}
+            total={waTotal}
+          />
 
           <div className="space-y-2">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
