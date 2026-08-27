@@ -25,10 +25,23 @@ export type DatosBrief = {
   estimated_cases_month: number | null;
   why_interesting: string | null;
   competitor_brands: string[] | null;
-  /** Tipos de tratamiento que más manda (Full, Fast, Kids…), del más al menos */
+  /** Tratamientos que más manda (Estandar, Superposicion…), del más al menos */
   tiposTratamiento: string[] | null;
+  /**
+   * Cuántos casos de cada tipo comercial: Kids, Teens, Full, Medium, Fast
+   * (cases.tipo_caso, migración 0013). Kids y Teens son SEGMENTOS DE PACIENTE;
+   * Full/Medium/Fast son duraciones de tratamiento. Por eso el brief solo afirma
+   * lo de niños y adolescentes: decir "el resto son adultos" sería una deducción,
+   * y encima el campo viene de la ficha de entregas, no del sync — está en 792
+   * de 1.050 casos MX. Los números son un PISO, nunca el total.
+   */
+  tiposCaso: Record<string, number> | null;
   /** Eventos de KeepSmiling a los que asistió (tabla events, vía event_attendees) */
   eventos: { titulo: string; fecha: string }[] | null;
+  /** Cumpleaños (doctors.birth_date). Año 1900 = no se sabe, solo día y mes. */
+  birth_date: string | null;
+  /** Notas libres escritas a mano por el equipo (doctors.observaciones, 0048) */
+  observaciones: string | null;
   lifecycle_stage: LifecycleStage | null;
 };
 
@@ -86,6 +99,34 @@ function capitalizar(s: string): string {
 /** Los casos estimados por mes vienen con decimales (1.1, 0.5): coma y sin cola */
 const NUMERO_MX = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 1 });
 
+/**
+ * Edad a partir del cumpleaños. null si no se sabe el año (cargado como 1900,
+ * que es la convención de la migración 0040) o si la fecha no parsea.
+ */
+function edadDe(birth: string | null): number | null {
+  if (!birth || !/^\d{4}-\d{2}-\d{2}/.test(birth)) return null;
+  const anio = +birth.slice(0, 4);
+  if (anio <= 1900) return null;
+  const hoy = todayMX();
+  let edad = +hoy.slice(0, 4) - anio;
+  if (hoy.slice(5) < birth.slice(5, 10)) edad -= 1;
+  return edad > 0 && edad < 110 ? edad : null;
+}
+
+/** Días hasta el próximo cumpleaños. null si no hay fecha. */
+function diasAlCumple(birth: string | null): number | null {
+  if (!birth || !/^\d{4}-\d{2}-\d{2}/.test(birth)) return null;
+  const hoy = todayMX();
+  const anioHoy = +hoy.slice(0, 4);
+  // 29/2 en año no bisiesto: se compara contra el 28
+  const md = birth.slice(5, 10) === "02-29" ? "02-28" : birth.slice(5, 10);
+  const aUTC = (ymd: string) =>
+    Date.UTC(+ymd.slice(0, 4), +ymd.slice(5, 7) - 1, +ymd.slice(8, 10));
+  let prox = aUTC(`${anioHoy}-${md}`);
+  if (prox < aUTC(hoy)) prox = aUTC(`${anioHoy + 1}-${md}`);
+  return Math.round((prox - aUTC(hoy)) / 86_400_000);
+}
+
 /** Recorta un texto libre de la ficha para que no coma media pantalla */
 function recortar(s: string, max = 140): string {
   const t = s.replace(/\s+/g, " ").trim().replace(/\.$/, "");
@@ -128,8 +169,10 @@ function quienEs(d: DatosBrief): string {
   // alineadores, que es lo único que se sabe de un prospecto
   const casos = d.case_count ?? 0;
   if (casos > 0) {
-    trozos.push(`${casos} casos`);
-    if (d.new_case_count) trozos.push(`${d.new_case_count} nuevos`);
+    trozos.push(`${casos} caso${casos === 1 ? "" : "s"}`);
+    if (d.new_case_count) {
+      trozos.push(`${d.new_case_count} nuevo${d.new_case_count === 1 ? "" : "s"}`);
+    }
   } else {
     // sin casos, lo que define al doctor es en qué etapa del journey está
     if (d.lifecycle_stage) trozos.push(LIFECYCLE_LABELS[d.lifecycle_stage].toLowerCase());
@@ -142,7 +185,17 @@ function quienEs(d: DatosBrief): string {
     else if (d.case_count === 0) trozos.push("sin casos todavía");
   }
 
+  // segmento de paciente: solo se afirma lo que el dato dice (Kids/Teens). El
+  // resto NO se llama "adultos" — sería deducción, y el campo está incompleto.
+  const tc = d.tiposCaso ?? {};
+  const segmentos: string[] = [];
+  if (tc.Kids) segmentos.push(`${tc.Kids} de niños`);
+  if (tc.Teens) segmentos.push(`${tc.Teens} de adolescentes`);
+  if (segmentos.length) trozos.push(`entre ellos ${segmentos.join(" y ")}`);
+
   if (d.specialty) trozos.push(d.specialty.toLowerCase());
+  const edad = edadDe(d.birth_date);
+  if (edad) trozos.push(`${edad} años`);
   if (d.instagram) trozos.push(`@${d.instagram.replace(/^@/, "")}`);
 
   // solo el nombre = la ficha está vacía, y hay que decirlo
@@ -189,6 +242,29 @@ function ultimoEvento(d: DatosBrief): { titulo: string; fecha: string } | null {
 
 // ---------- 3. CON QUÉ ABRIR ----------
 function conQueAbrir(d: DatosBrief): string {
+  return oracion([conQueAbrirBase(d), colaCumple(d)].filter(Boolean).map((t) => t.replace(/\.$/, "")));
+}
+
+/**
+ * El cumpleaños no es la razón para llamar, pero es EL dato de color: si cae en
+ * los próximos días, quien atiende tiene que saberlo antes de cortar. Va como
+ * cola de la tercera oración, no como reemplazo.
+ */
+function colaCumple(d: DatosBrief): string {
+  const dias = diasAlCumple(d.birth_date);
+  if (dias === null || dias > 7) return "";
+  if (dias === 0) return "OJO: cumple años HOY";
+  if (dias === 1) return "OJO: cumple años mañana";
+  return `OJO: cumple años en ${dias} días`;
+}
+
+function conQueAbrirBase(d: DatosBrief): string {
+  // 0. lo que una PERSONA se tomó el trabajo de anotar gana sobre cualquier
+  //    regla que deduzca el sistema (doctors.observaciones, migración 0048)
+  if (d.observaciones?.trim()) {
+    return `De tus notas: ${recortar(d.observaciones)}.`;
+  }
+
   // 1. atrasado contra SU PROPIO ritmo. Se compara el último contacto contra
   //    avg_interval_days porque son las dos únicas señales de cadencia que
   //    entran al brief; el margen del 50% evita gritar "atrasado" por dos días.
@@ -226,7 +302,9 @@ function conQueAbrir(d: DatosBrief): string {
     dias !== null ||
     ritmo !== null ||
     (d.case_count ?? 0) > 0 ||
-    (d.tiposTratamiento?.length ?? 0) > 0;
+    (d.tiposTratamiento?.length ?? 0) > 0 ||
+    Object.keys(d.tiposCaso ?? {}).length > 0 ||
+    (d.eventos?.length ?? 0) > 0;
   if (hayFicha) return "Sin nada puntual anotado: preguntale cómo viene el mes.";
 
   // 6. no hay nada. Decirlo, no inventarlo.

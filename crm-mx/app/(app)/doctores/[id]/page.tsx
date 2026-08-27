@@ -19,6 +19,7 @@ import {
 import { periskopeLink } from "@/lib/phone";
 import { Timeline, type TimelineEvent } from "@/components/doctor/timeline";
 import { ProspectProfileCard } from "@/components/doctor/prospect-profile-card";
+import { ObservacionesCard } from "@/components/doctor/observaciones-card";
 import { TaskList } from "@/components/tasks/task-list";
 import {
   ACREDITACION_STYLES,
@@ -545,6 +546,25 @@ export default async function DoctorPage({
             que el doctor pasaba a importar. Del lado acreditado se muestra
             plegado y de solo lectura. */}
         <ProspectProfileCard doctor={doctor} />
+
+        {/* ---------- notas libres ----------
+            Lo único de la ficha que no deduce ningún sistema: lo que el equipo
+            sabe de la relación. Es lo PRIMERO que usa el brief previo a la
+            llamada (lib/brief-doctor.ts), por encima de cualquier regla. */}
+        <div className="space-y-2">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Observaciones
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Lo que anotes acá es lo primero que vas a leer antes de llamarlo.
+            </p>
+          </div>
+          <ObservacionesCard
+            doctorId={doctor.id}
+            observaciones={doctor.observaciones}
+          />
+        </div>
 
         {/* ---------- inteligencia comercial (AI + motor de reglas) ---------- */}
         <DoctorAIPanel doctorId={doctor.id} />

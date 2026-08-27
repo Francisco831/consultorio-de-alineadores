@@ -112,6 +112,8 @@ export interface Doctor {
   interest_level: number | null;
   accreditation_interest: number | null;
   why_interesting: string | null;
+  /** Notas libres del equipo sobre el doctor (migración 0048). Las usa el brief. */
+  observaciones: string | null;
   // handle sin arroba; la URL es instagram.com/<handle> (migración 0036)
   instagram: string | null;
   // ---- resto de las redes y el cumpleaños (migración 0040) ----

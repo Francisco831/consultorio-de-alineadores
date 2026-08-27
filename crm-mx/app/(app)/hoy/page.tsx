@@ -23,8 +23,8 @@ import {
   WaEsperandoLista,
   type WaEsperando,
 } from "@/components/whatsapp/wa-esperando";
-import { AgendaHoy, type EventoAgenda } from "@/components/calendar/agenda-hoy";
-import { briefDoctor } from "@/lib/brief-doctor";
+import { AgendaHoy } from "@/components/calendar/agenda-hoy";
+import { armarAgendaConBrief, SELECT_DOCTOR_BRIEF, type FilaAgenda } from "@/lib/agenda-brief";
 import { CONTACTO_TYPES } from "@/lib/actividad-equipo";
 import { getForecastMes } from "@/lib/forecast";
 import { todayMX, monthStartMX, hourMX } from "@/lib/dates";
@@ -213,7 +213,7 @@ export default async function HoyPage({
     supabase
       .from("calendar_events")
       .select(
-        "id, titulo, inicio, fin, todo_el_dia, doctor:doctors(id, nombre, categoria, city, state, zona, case_count, new_case_count, last_contact_at, avg_interval_days, instagram, specialty, uses_aligners, estimated_cases_month, why_interesting, competitor_brands, lifecycle_stage, phone, whatsapp)"
+        `id, titulo, inicio, fin, todo_el_dia, doctor:doctors(${SELECT_DOCTOR_BRIEF})`
       )
       .eq("profile_id", user!.id)
       .gte("inicio", `${todayISO}T00:00:00-06:00`)
@@ -265,57 +265,11 @@ export default async function HoyPage({
   const pendientes = (pendientesRaw ?? []) as Pendiente[];
   const efemerides = (efemeridesRaw ?? []) as Efemeride[];
 
-  // el brief de la llamada se arma acá, determinista y gratis: son datos que ya
-  // están en la fila del doctor (ver lib/brief-doctor.ts, no usa IA)
-  type AgendaRow = {
-    id: string;
-    titulo: string;
-    inicio: string;
-    fin: string | null;
-    todo_el_dia: boolean;
-    doctor: Record<string, unknown> | null;
-  };
-  const agenda: EventoAgenda[] = ((agendaRaw ?? []) as unknown as AgendaRow[]).map(
-    (e) => {
-      const d = e.doctor as (Doctor & { phone: string | null }) | null;
-      return {
-        id: e.id,
-        titulo: e.titulo,
-        inicio: e.inicio,
-        fin: e.fin,
-        todo_el_dia: e.todo_el_dia,
-        doctor: d
-          ? {
-              id: d.id,
-              nombre: d.nombre,
-              phone: d.phone,
-              whatsapp: d.whatsapp,
-            }
-          : null,
-        brief: d
-          ? briefDoctor({
-              nombre: d.nombre,
-              categoria: d.categoria,
-              city: d.city,
-              state: d.state,
-              zona: d.zona,
-              case_count: d.case_count,
-              new_case_count: d.new_case_count,
-              last_contact_at: d.last_contact_at,
-              avg_interval_days: d.avg_interval_days,
-              instagram: d.instagram,
-              specialty: d.specialty,
-              uses_aligners: d.uses_aligners,
-              estimated_cases_month: d.estimated_cases_month,
-              why_interesting: d.why_interesting,
-              competitor_brands: d.competitor_brands,
-              tiposTratamiento: null,
-              eventos: null,
-              lifecycle_stage: d.lifecycle_stage,
-            })
-          : null,
-      };
-    }
+  // el brief de cada llamada se arma determinista y gratis (lib/brief-doctor.ts,
+  // no usa IA); lib/agenda-brief.ts es el que va a buscar tipos de caso y eventos
+  const agenda = await armarAgendaConBrief(
+    supabase,
+    (agendaRaw ?? []) as unknown as FilaAgenda[]
   );
 
   const hour = hourMX();

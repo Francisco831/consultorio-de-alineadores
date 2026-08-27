@@ -99,3 +99,33 @@ export async function updateDoctorRedes(formData: FormData) {
   revalidatePath("/doctores");
   return { ok: true };
 }
+
+/**
+ * Las notas libres del doctor (doctors.observaciones, migración 0048): lo que
+ * Rocío o Juan quieran anotar de esa relación. Va aparte de updateDoctorRedes a
+ * propósito — se guarda desde su propio recuadro en la ficha, sin abrir un
+ * diálogo, porque la idea es que anotar cueste dos segundos.
+ *
+ * Lo que se escriba acá es lo PRIMERO que usa el brief previo a la llamada
+ * (lib/brief-doctor.ts): le gana a cualquier regla que deduzca el sistema.
+ */
+export async function updateDoctorObservaciones(formData: FormData) {
+  const id = String(formData.get("id"));
+  const texto = String(formData.get("observaciones") ?? "").trim();
+  if (texto.length > 2000) {
+    return { error: "Son notas, no un informe: máximo 2.000 caracteres" };
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("doctors")
+    .update({ observaciones: texto || null })
+    .eq("id", id)
+    .select("id");
+  if (error) return { error: error.message };
+  if (!data?.length)
+    return { error: "No se pudo guardar: tu rol no tiene permisos de edición" };
+  revalidatePath(`/doctores/${id}`);
+  revalidatePath("/hoy");
+  revalidatePath("/panel");
+  return { ok: true };
+}

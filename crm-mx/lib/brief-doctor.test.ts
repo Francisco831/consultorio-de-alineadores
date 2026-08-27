@@ -37,9 +37,19 @@ const VACIO: DatosBrief = {
   why_interesting: null,
   competitor_brands: null,
   tiposTratamiento: null,
+  tiposCaso: null,
   eventos: null,
+  birth_date: null,
+  observaciones: null,
   lifecycle_stage: null,
 };
+
+/** YYYY-MM-DD del cumpleaños que cae dentro de n días (año real, para la edad) */
+function cumpleEnDias(n: number, anioNacimiento = 1985): string {
+  const [y, m, d] = todayMX().split("-").map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d + n));
+  return `${anioNacimiento}-${String(t.getUTCMonth() + 1).padStart(2, "0")}-${String(t.getUTCDate()).padStart(2, "0")}`;
+}
 
 describe("briefDoctor", () => {
   it("doctor completo: quién es, qué pasó y con qué abrir", () => {
@@ -144,5 +154,67 @@ describe("briefDoctor", () => {
     assert.match(brief[0], /prospecto/);
     assert.match(brief[0], /estima 8 casos por mes/);
     assert.match(brief[2], /Smile Direct/);
+  });
+
+  // ---- lo que Pancho pidió el 26/8 y faltaba (cerrado el 27/8) ----
+
+  it("dice cuántos casos son de niños y de adolescentes, sin llamar adultos al resto", () => {
+    const [quien] = briefDoctor({
+      ...VACIO,
+      case_count: 40,
+      tiposCaso: { Full: 30, Teens: 6, Kids: 4 },
+    });
+    assert.match(quien, /4 de niños y 6 de adolescentes/);
+    // Full NO se traduce a "adultos": es duración de tratamiento, no segmento
+    assert.doesNotMatch(quien, /adultos/i);
+  });
+
+  it("no menciona segmentos cuando no hay ningún caso de niños ni adolescentes", () => {
+    const [quien] = briefDoctor({ ...VACIO, case_count: 40, tiposCaso: { Full: 40 } });
+    assert.doesNotMatch(quien, /niños|adolescentes/);
+  });
+
+  it("dice la edad cuando se sabe el año, y no cuando se cargó 1900", () => {
+    const conAnio = briefDoctor({ ...VACIO, case_count: 3, birth_date: cumpleEnDias(200, 1985) });
+    assert.match(conAnio[0], /\d{2} años/);
+    const sinAnio = briefDoctor({ ...VACIO, case_count: 3, birth_date: cumpleEnDias(200, 1900) });
+    assert.doesNotMatch(sinAnio[0], /años/);
+  });
+
+  it("avisa del cumpleaños si cae dentro de la semana, sin tapar la razón de la llamada", () => {
+    const hoy = briefDoctor({ ...VACIO, case_count: 5, birth_date: cumpleEnDias(0) });
+    assert.match(hoy[2], /cumple años HOY/);
+    const enTres = briefDoctor({ ...VACIO, case_count: 5, birth_date: cumpleEnDias(3) });
+    assert.match(enTres[2], /cumple años en 3 días/);
+    const lejos = briefDoctor({ ...VACIO, case_count: 5, birth_date: cumpleEnDias(40) });
+    assert.doesNotMatch(lejos[2], /cumple/);
+  });
+
+  it("las observaciones escritas a mano le ganan a cualquier regla deducida", () => {
+    const [, , abrir] = briefDoctor({
+      ...VACIO,
+      // este doctor está atrasadísimo: sin la nota, el brief diría "qué lo frenó"
+      last_contact_at: haceDias(90),
+      avg_interval_days: 10,
+      observaciones: "Se queja del tiempo de entrega desde el caso BW200",
+    });
+    assert.match(abrir, /De tus notas: Se queja del tiempo de entrega/);
+    assert.doesNotMatch(abrir, /qué lo frenó/);
+  });
+
+  it("usa el evento al que asistió, ahora que la agenda sí se lo pasa", () => {
+    const [, paso, abrir] = briefDoctor({
+      ...VACIO,
+      case_count: 12,
+      eventos: [{ titulo: "KeepDay Monterrey", fecha: fechaHaceDias(20) }],
+    });
+    assert.match(paso, /estuvo en KeepDay Monterrey/);
+    assert.match(abrir, /cómo le fue en KeepDay Monterrey/);
+  });
+
+  it("concuerda el singular: un caso es 'caso', no 'casos'", () => {
+    const [quien] = briefDoctor({ ...VACIO, case_count: 1, new_case_count: 1 });
+    assert.match(quien, /1 caso, 1 nuevo\b/);
+    assert.doesNotMatch(quien, /1 casos|1 nuevos/);
   });
 });
