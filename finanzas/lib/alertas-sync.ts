@@ -2,9 +2,10 @@
 //
 // Vive fuera de lib/alertas.ts —que importa "server-only" y por eso no se puede
 // ejecutar en un test— porque es la única alerta que avisa por lo que NO pasó:
-// el sync no corre en un servidor sino en la Mac de Pancho, dentro de una
-// sesión de Claude. Si esa sesión no corre, la app sigue mostrando los datos de
-// la última vez como si fueran de hoy, y nadie se entera.
+// una sincronización que no corre no deja rastro. Desde el 27/8/26 la caja y
+// Mercado Pago corren en Vercel (app/api/cron/sync), pero el resto de la cadena
+// sigue viviendo en la Mac de Pancho: si eso no corre, la app sigue mostrando
+// los datos de la última vez como si fueran de hoy, y nadie se entera.
 
 export type EstadoSync = { source: string; started_at: string; status: string };
 
@@ -21,6 +22,8 @@ export const NOMBRE_SYNC: Record<string, string> = {
   pagos_mx: "Pagos de México",
   blue_ambito: "Dólar blue",
   mercadopago: "Mercado Pago",
+  mp_api_ar: "Mercado Pago del consultorio",
+  mp_api_mx: "Mercado Pago de México",
 };
 
 /** Días entre dos fechas ISO, sin horas: sólo importa el día de calendario. */

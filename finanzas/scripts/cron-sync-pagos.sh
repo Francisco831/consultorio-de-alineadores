@@ -47,14 +47,17 @@ npx tsx scripts/sugerir-matches.ts --empresa ar --yes --apply >> "$LOG" 2>&1
 echo "-- matcher: listo" >> "$LOG"
 
 # caja del consultorio AR via Apps Script (si no esta instalado: exit 2, se saltea)
+# DESDE EL 27/8/26 esto lo hace solo el cron de Vercel, cada hora, sin depender
+# de que la Mac este despierta (docs/sync-automatico.md). Queda aca porque es
+# idempotente y sirve de red si Vercel esta caido.
 npx tsx scripts/sync-caja-ar.ts --apply >> "$LOG" 2>&1
 CAJA_RC=$?
 echo "-- caja AR: exit $CAJA_RC" >> "$LOG"
 if [ $CAJA_RC -eq 0 ]; then
   npx tsx scripts/import-movimientos-ar.ts --apply --yes >> "$LOG" 2>&1
   echo "-- caja AR import: exit $?" >> "$LOG"
-  # el import regenera meta y PISA meta.seq; sin esto, liquidaciones.ts se
-  # frena con "cobros sin meta.seq" (el costeo depende del orden de la caja)
+  # el import ya escribe meta.seq de una (lib/sync/caja-ar.ts); esto queda como
+  # reparacion de filas viejas, no como paso obligatorio de la cadena
   npx tsx scripts/backfill-seq.ts --apply --yes >> "$LOG" 2>&1
   echo "-- caja AR seq: exit $?" >> "$LOG"
   npx tsx scripts/control-solicitud.ts --yes >> "$LOG" 2>&1

@@ -12,7 +12,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatMoney } from "@/lib/money";
 import { currentPeriodIn, todayIn } from "@/lib/dates";
-import { avisosDeSync, type EstadoSync } from "@/lib/alertas-sync";
+import { avisosDeSync, NOMBRE_SYNC, type EstadoSync } from "@/lib/alertas-sync";
 import type { EmpresaConfig } from "@/lib/empresas";
 
 export type Alerta = {
@@ -193,12 +193,27 @@ export async function calcularAlertas(
   // ---- sincronizaciones que dejaron de correr ----
   // La regla vive en lib/alertas-sync.ts, que no importa "server-only" y por eso
   // se puede testear. Acá sólo se consulta y se traduce a Alerta.
-  const { data: corridas } = await supabase
-    .from("sync_runs")
-    .select("source, started_at, status")
-    .order("started_at", { ascending: false })
-    .limit(200);
-  for (const av of avisosDeSync((corridas ?? []) as EstadoSync[], todayIn(timezone))) {
+  // La última corrida DE CADA FUENTE, una consulta por fuente. Antes se leían
+  // las 200 más nuevas de toda la tabla, que alcanzaba cuando cada sync corría
+  // una vez por día desde la Mac; con la caja andando cada hora en Vercel son
+  // ~24 filas diarias de una sola fuente, y a los pocos días las demás se caen
+  // de la ventana — la alerta de "sin sincronizar hace N días" se apagaría
+  // sola, justo la que avisa por lo que NO pasó.
+  const corridas = (
+    await Promise.all(
+      Object.keys(NOMBRE_SYNC).map(async (source) => {
+        const { data } = await supabase
+          .from("sync_runs")
+          .select("source, started_at, status")
+          .eq("source", source)
+          .order("started_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        return data as EstadoSync | null;
+      })
+    )
+  ).filter(Boolean) as EstadoSync[];
+  for (const av of avisosDeSync(corridas, todayIn(timezone))) {
     alertas.push({
       id: `sync-${av.source}`,
       severidad: av.severidad,

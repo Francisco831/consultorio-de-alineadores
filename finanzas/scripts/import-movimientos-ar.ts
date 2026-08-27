@@ -1,308 +1,55 @@
-// Siembra los 877 movimientos reales Ene–Jul 2026 del consultorio
-// (seed-data/movimientos_ar_2026.json, parseados del Sheet vivo de la caja).
+// Siembra los movimientos de la caja del consultorio (seed-data/movimientos_ar_2026.json,
+// que deja sync-caja-ar.ts) en el ledger.
+//
+// La lógica —claves, cuentas, gates— vive en lib/sync/caja-ar.ts: es la MISMA
+// que corre el cron de Vercel (app/api/cron/sync). Este script es el camino de
+// terminal, con dry-run y confirmación de destino; nada más.
 //
 // GATE DE CONTROL: después de escribir, los totales de cobros por mes y moneda
 // en la BASE deben ser IDÉNTICOS a los del archivo fuente. Si difieren en un
-// centavo, el script termina con error y lo dice fuerte.
+// centavo, termina con error y lo dice fuerte.
 //
 // Uso:  npx tsx scripts/import-movimientos-ar.ts            (dry-run)
 //       npx tsx scripts/import-movimientos-ar.ts --apply
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { serviceClient, upsertBatched, fetchAllRows, argFlags } from "./lib/service-client";
+import { serviceClient, argFlags } from "./lib/service-client";
 import { registrarSync } from "./lib/sync-run";
-import { medioCanonico } from "../lib/import/medios";
-import { KeyBuilder } from "../lib/import/keys";
-import { pareceCuota } from "../lib/liquidaciones/planes-pacientes";
-
-type MovAR = {
-  fecha: string; mes: number; doctora: string | null; atribucion_clara: boolean;
-  tab: string; paciente: string | null; ars: number; usd: number;
-  medio: string | null; motivo: string | null; obs: string | null;
-  tipo: "cobro" | "retiro_liquidacion" | "gasto_consultorio" | "gasto_tratamiento";
-  categoria: string | null;
-};
-
-const CATEGORIA_INGRESO: Record<string, string> = {
-  Alineadores: "Alineadores",
-  Mensualidad: "Mensualidad",
-  "Contención": "Contención",
-  Consulta: "Consulta",
-  Otros: "Otros ingresos",
-};
-
-// La pata ya es mono-moneda: la cuenta se decide por medio canónico + moneda.
-function cuentaPara(m: MovAR & { currency: "ARS" | "USD"; amount: number }): { name: string; pendiente: boolean } {
-  const usd = m.currency === "USD";
-  const canon = medioCanonico(m.medio);
-  if (canon === "ks") return { name: usd ? "Cuenta KS USD" : "Cuenta KS", pendiente: false };
-  if (canon === "coni") return usd
-    ? { name: "Sin medio USD (a revisar)", pendiente: true }
-    : { name: "Coni – cuenta propia", pendiente: false };
-  if (canon === "mp") return usd
-    ? { name: "Sin medio USD (a revisar)", pendiente: true }
-    : { name: "Mercado Pago", pendiente: false };
-  if (canon === "efectivo") return { name: usd ? "Efectivo USD" : "Efectivo", pendiente: false };
-  // Sin medio: si es GASTO o RETIRO, sale de la caja física — es efectivo
-  // (decisión Pancho 21/8, "bloque 1"). Dos excepciones: lo de la pestaña de
-  // Coni va a su cuenta propia (contabilidad separada; su pata USD no existe),
-  // y un gasto USD grande sin medio huele a monto en pesos en la columna de
-  // dólares (casos reales 21/4 y 29/4) — queda en revisión, no se inventa.
-  if (m.tipo !== "cobro") {
-    if (m.tab === "CONI 2020") {
-      return usd
-        ? { name: "Sin medio USD (a revisar)", pendiente: true }
-        : { name: "Coni – cuenta propia", pendiente: false };
-    }
-    if (usd && m.amount >= 5000) return { name: "Sin medio USD (a revisar)", pendiente: true };
-    return { name: usd ? "Efectivo USD" : "Efectivo", pendiente: false };
-  }
-  return { name: usd ? "Sin medio USD (a revisar)" : "Sin medio (a revisar)", pendiente: true };
-}
+import { importarCajaAr, ErrorGate } from "../lib/sync/caja-ar";
+import type { MovCaja } from "../lib/import/caja-ar";
 
 async function main() {
   const flags = argFlags();
-  const filas: MovAR[] = JSON.parse(
+  const filas: MovCaja[] = JSON.parse(
     readFileSync(resolve(__dirname, "../seed-data/movimientos_ar_2026.json"), "utf8")
   );
 
-  // Una fila puede traer ARS y USD A LA VEZ (caso real: retiro 29/4 con
-  // ars=-50000 y usd=66965). Cada moneda es una pata independiente del ledger:
-  // partirla acá evita perder plata en silencio.
-  type Pata = MovAR & { currency: "ARS" | "USD"; amount: number; key: string; cuentaOverride?: string };
-  const movs: Pata[] = [];
-  {
-    // La clave se computa ACÁ (mismo orden de recorrido = mismos ordinales) y
-    // se congela ANTES de aplicar overrides: la identidad es el contenido de
-    // la caja, la corrección es solo interpretación (moneda/cuenta).
-    const keys = new KeyBuilder();
-    // correcciones por fila verificadas contra el extracto (pesos en la
-    // columna de dólares, medios confirmados a mano): seed-data/medios_overrides.json
-    let overrides: Record<string, { cuenta?: string; moneda?: "ARS" | "USD"; monto?: number; ignorar?: boolean; nota?: string }> = {};
-    try {
-      overrides = JSON.parse(readFileSync(resolve(__dirname, "../seed-data/medios_overrides.json"), "utf8"));
-    } catch { /* sin overrides */ }
-    let aplicados = 0;
-    for (const m of filas) {
-      for (const currency of ["ARS", "USD"] as const) {
-        const monto = currency === "ARS" ? m.ars : m.usd;
-        if ((monto ?? 0) === 0) continue;
-        const key = keys.build("caja", m.tab, m.fecha, m.paciente, m.ars, m.usd, m.motivo, currency);
-        const o = overrides[key];
-        if (o) aplicados++;
-        // pata espuria (monto fantasma en la columna equivocada de la caja):
-        // no entra a la fuente → el paso de "desaparecidos" la anula en la base
-        if (o?.ignorar) continue;
-        movs.push({
-          ...m,
-          currency: o?.moneda ?? currency,
-          // el monto corregido entra TAMBIÉN en el total esperado del gate: el
-          // override es verdad declarada, no un parche sobre la base
-          amount: o?.monto ?? Math.abs(monto),
-          key,
-          cuentaOverride: o?.cuenta,
-        });
-      }
-    }
-    if (aplicados) console.log(`✓ ${aplicados} overrides de medio/moneda aplicados`);
-  }
-
-  // Totales esperados desde la FUENTE (el gate compara contra esto).
-  const esperado = new Map<string, number>(); // "2026-01|ARS|income" → total
-  for (const m of movs) {
-    const kind = m.tipo === "cobro" ? "income" : "expense";
-    const k = `${m.fecha.slice(0, 7)}|${m.currency}|${kind}`;
-    esperado.set(k, Math.round(((esperado.get(k) ?? 0) + m.amount) * 100) / 100);
-  }
-
-  console.log(`Fuente: ${filas.length} filas → ${movs.length} patas mono-moneda.`);
-
-  // CONTROL ANTI-ETCHEGOYEN: un cobro con texto de cuota que NO quedó en
-  // Alineadores es invisible para "Por cobrar" → el paciente figura falso
-  // moroso (o su plan no avanza). Pasa cuando la caja corre las columnas o
-  // classify() no conoce una redacción nueva. No aborta, pero lo canta en
-  // cada corrida de la mañana. Se busca en TODAS las columnas de texto.
-  const filaVista = new Set<string>();
-  const invisibles = movs.filter((m) =>
-    m.tipo === "cobro" &&
-    m.categoria !== "Alineadores" && m.categoria !== "Contención" &&
-    pareceCuota([m.paciente, m.motivo, m.obs, m.medio].filter(Boolean).join(" "))
-  ).filter((m) => {
-    // una fila con ARS y USD genera dos patas: avisar una sola vez
-    const k = `${m.tab}|${m.fecha}|${m.paciente}|${m.motivo}|${m.obs}`;
-    if (filaVista.has(k)) return false;
-    filaVista.add(k);
-    return true;
-  });
-  if (invisibles.length) {
-    console.log(`\n⚠ ${invisibles.length} cobro(s) con texto de cuota FUERA de Alineadores — el plan del paciente no los ve:`);
-    for (const m of invisibles) {
-      console.log(`  · ${m.fecha} ${m.paciente ?? "—"} ${m.currency} ${m.amount.toLocaleString("es-AR")} [${m.categoria ?? "sin categoría"}] — ${[m.motivo, m.obs, m.medio].filter(Boolean).join(" · ")}`);
-    }
-    console.log("  → corregir classify() en scripts/parse_caja.py o la fila en la caja.");
-  }
-  if (flags.dryRun) {
-    console.log("DRY-RUN (sin --apply no escribe). Totales de la fuente:");
-    for (const [k, v] of [...esperado].sort()) console.log(`  ${k}: ${v.toLocaleString("es-AR")}`);
-    return;
-  }
-
   const db = await serviceClient({
-    accion: `sembrar ${movs.length} movimientos AR (caja consultorio Ene–Jul 2026)`,
-    auto: flags.yes,
+    accion: `sembrar la caja del consultorio (${filas.length} filas) en el ledger AR`,
+    auto: flags.yes || flags.dryRun,
   });
 
-  const { data: cia } = await db.from("companies").select("id").eq("slug", "ar").single();
-  if (!cia) throw new Error("empresa 'ar' inexistente: correr seed-base primero");
-  const companyId = cia.id;
-
-  const { data: accounts } = await db.from("accounts").select("id, name, currency").eq("company_id", companyId);
-  const accByName = Object.fromEntries((accounts ?? []).map((a) => [a.name, a]));
-  const { data: cats } = await db.from("categories").select("id, name, flow").eq("company_id", companyId);
-  const catByName = Object.fromEntries((cats ?? []).map((c) => [c.name, c.id]));
-  const liquidacionesCat = catByName["Liquidaciones profesionales"];
-  if (!liquidacionesCat) throw new Error("falta la categoría 'Liquidaciones profesionales': correr seed-base");
-
-  // Contrapartes: profesionales existentes + pacientes get-or-create en bloque.
-  const existing = await fetchAllRows<{ id: string; display_name: string; kind: string }>(
-    db, "counterparties", "id, display_name, kind", (q) => q.eq("company_id", companyId)
-  );
-  const cpByName = new Map(existing.map((c) => [`${c.kind}|${c.display_name.trim().toLowerCase()}`, c.id]));
-
-  const pacientesNuevos = new Map<string, string>(); // nombre → nombre original
-  for (const m of movs) {
-    const p = (m.paciente ?? "").trim();
-    if (m.tipo === "cobro" && p && !cpByName.has(`patient|${p.toLowerCase()}`)) {
-      pacientesNuevos.set(p.toLowerCase(), p);
+  const { data: cia } = await db.from("companies").select("id").eq("slug", "ar").maybeSingle();
+  const corrida = flags.dryRun ? null : await registrarSync(db, "caja_ar", cia?.id);
+  try {
+    const r = await importarCajaAr(db, filas, { dryRun: flags.dryRun, log: (m) => console.log(m) });
+    if (flags.dryRun) {
+      console.log("DRY-RUN (sin --apply no escribe). Totales de la fuente:");
+      for (const t of r.totales) console.log(`  ${t.clave}: ${t.fuente.toLocaleString("es-AR")}`);
+      return;
     }
-  }
-  if (pacientesNuevos.size) {
-    const rows = [...pacientesNuevos.values()].map((name) => ({
-      company_id: companyId, kind: "patient", display_name: name,
-    }));
-    for (let i = 0; i < rows.length; i += 500) {
-      const { error } = await db.from("counterparties").insert(rows.slice(i, i + 500));
-      if (error) throw new Error(`alta de pacientes: ${error.message}`);
+    for (const t of r.totales) {
+      console.log(`  ✓ ${t.clave}: fuente ${t.fuente.toLocaleString("es-AR")} · base ${t.base.toLocaleString("es-AR")}`);
     }
-    const refreshed = await fetchAllRows<{ id: string; display_name: string; kind: string }>(
-      db, "counterparties", "id, display_name, kind", (q) => q.eq("company_id", companyId)
-    );
-    cpByName.clear();
-    for (const c of refreshed) cpByName.set(`${c.kind}|${c.display_name.trim().toLowerCase()}`, c.id);
-    console.log(`✓ ${pacientesNuevos.size} pacientes creados`);
-  }
-
-  const rows = movs.map((m) => {
-    const { currency, amount } = m;
-    const kind = m.tipo === "cobro" ? "income" : "expense";
-    const cuenta = m.cuentaOverride ? { name: m.cuentaOverride, pendiente: false } : cuentaPara(m);
-    const account = accByName[cuenta.name];
-    if (!account) throw new Error(`cuenta inexistente: ${cuenta.name}`);
-    if (account.currency !== currency) throw new Error(`moneda incoherente ${cuenta.name} ${currency}`);
-
-    let categoryId: string | null = null;
-    let counterpartyId: string | null = null;
-    if (m.tipo === "cobro") {
-      categoryId = m.categoria ? (catByName[CATEGORIA_INGRESO[m.categoria] ?? ""] ?? null) : null;
-      const p = (m.paciente ?? "").trim();
-      counterpartyId = p ? (cpByName.get(`patient|${p.toLowerCase()}`) ?? null) : null;
-    } else if (m.tipo === "retiro_liquidacion") {
-      categoryId = liquidacionesCat;
-      const d = (m.doctora ?? "").trim();
-      counterpartyId = d ? (cpByName.get(`professional|${d.toLowerCase()}`) ?? null) : null;
-    }
-    // gasto_consultorio / gasto_tratamiento quedan sin categoría: se
-    // reclasifican en la app, no se inventa la clasificación en el seed.
-
-    return {
-      company_id: companyId,
-      account_id: account.id,
-      currency,
-      kind,
-      status: cuenta.pendiente ? "pending" : "confirmed",
-      occurred_on: m.fecha,
-      amount,
-      category_id: categoryId,
-      counterparty_id: counterpartyId,
-      description: m.motivo?.trim() || (m.tipo === "retiro_liquidacion"
-        ? `Retiro liquidación ${m.doctora ?? ""}`.trim()
-        : m.tipo.replace("_", " ")),
-      source: "seed",
-      external_key: m.key,
-      meta: {
-        tab: m.tab, doctora: m.doctora, atribucion_clara: m.atribucion_clara,
-        medio_raw: m.medio, motivo: m.motivo, obs: m.obs, tipo_origen: m.tipo,
-        categoria_origen: m.categoria,
-      },
-    };
-  });
-
-  // Filas que YA NO están en la caja: Claudia editó el monto/el texto (la clave
-  // es de contenido: editar = clave nueva) o borró la fila. Sin esto la vieja
-  // queda viva y el conteo del gate falla todos los días. Se anulan, no se
-  // borran (regla del ledger: status='void' + audit).
-  const clavesEntrantes = new Set(rows.map((r) => r.external_key));
-  const enBaseAntes = await fetchAllRows<{ id: string; external_key: string | null; occurred_on: string; amount: string; currency: string; description: string | null }>(
-    db, "movements", "id, external_key, occurred_on, amount, currency, description",
-    (q) => q.eq("company_id", companyId).eq("source", "seed").neq("status", "void")
-  );
-  const desaparecidos = enBaseAntes.filter((m) => m.external_key && !clavesEntrantes.has(m.external_key));
-  const LIMITE_DESAPARECIDOS = 15;
-  if (desaparecidos.length) {
-    console.log(`\nFilas que ya no están en la caja (editadas o borradas): ${desaparecidos.length}`);
-    for (const m of desaparecidos.slice(0, 20)) {
-      console.log(`  · ${m.occurred_on} ${m.currency} ${Number(m.amount).toLocaleString("es-AR")} — ${m.description ?? "—"}`);
-    }
-    if (desaparecidos.length > LIMITE_DESAPARECIDOS) {
-      console.error(`\n✗ GATE: desaparecieron ${desaparecidos.length} filas (límite ${LIMITE_DESAPARECIDOS}).`);
-      console.error("  Eso no parece una edición puntual sino un problema de la fuente: NO se escribe nada.");
-      process.exit(1);
-    }
-  }
-
-  const written = await upsertBatched(db, "movements", rows, "company_id,external_key");
-  console.log(`✓ ${written} movimientos upserteados`);
-
-  if (desaparecidos.length) {
-    const { error } = await db.from("movements").update({ status: "void" })
-      .in("id", desaparecidos.map((m) => m.id));
-    if (error) throw new Error(`anular desaparecidos: ${error.message}`);
-    console.log(`✓ ${desaparecidos.length} anuladas (status void)`);
-  }
-
-  // Queda constancia de la corrida (sync_runs) para que la app pueda mostrar
-  // cuándo se sincronizó la caja por última vez, y si falló.
-  const corrida = await registrarSync(db, "caja_ar", companyId);
-
-  // ---------- GATE ----------
-  const enBase = await fetchAllRows<{ occurred_on: string; currency: string; kind: string; amount: string }>(
-    db, "movements", "occurred_on, currency, kind, amount",
-    (q) => q.eq("company_id", companyId).eq("source", "seed").neq("status", "void")
-  );
-  const real = new Map<string, number>();
-  for (const r of enBase) {
-    const k = `${r.occurred_on.slice(0, 7)}|${r.currency}|${r.kind}`;
-    real.set(k, Math.round(((real.get(k) ?? 0) + Number(r.amount)) * 100) / 100);
-  }
-  let falla = false;
-  for (const [k, v] of [...esperado].sort()) {
-    const got = real.get(k) ?? 0;
-    const ok = Math.abs(got - v) < 0.01;
-    if (!ok) falla = true;
-    console.log(`  ${ok ? "✓" : "✗ GATE"} ${k}: fuente ${v.toLocaleString("es-AR")} · base ${got.toLocaleString("es-AR")}`);
-  }
-  if (enBase.length !== movs.length) {
-    console.log(`  ✗ GATE conteo: fuente ${movs.length} · base ${enBase.length}`);
-    falla = true;
-  }
-  if (falla) {
-    await corrida.fallo("el gate de totales no coincide con la fuente");
-    console.error("\n✗ EL GATE FALLÓ: los totales de la base NO coinciden con la fuente.");
+    await corrida?.ok({ leidas: r.patas, escritas: r.escritas, log: { anuladas: r.anuladas } });
+    console.log(`\n✓ GATE OK: ${r.patas} movimientos, totales idénticos a la fuente mes a mes.`);
+  } catch (e) {
+    const motivo = e instanceof Error ? e.message : String(e);
+    await corrida?.fallo(motivo);
+    console.error(e instanceof ErrorGate ? `\n✗ GATE: ${motivo}` : motivo);
     process.exit(1);
   }
-  await corrida.ok({ leidas: movs.length, escritas: written });
-  console.log(`\n✓ GATE OK: ${movs.length} movimientos, totales idénticos a la fuente mes a mes.`);
 }
 
 main().catch((e) => {
