@@ -13,7 +13,7 @@
 import { NextResponse } from "next/server";
 import { clienteServicio } from "@/lib/sync/db";
 import { sincronizarCajaAr, ErrorGate } from "@/lib/sync/caja-ar";
-import { sincronizarMp, RangoVacio } from "@/lib/sync/mp";
+import { sincronizarMp, listarReportesMp, muestraReporteMp, RangoVacio } from "@/lib/sync/mp";
 import { registrarSync } from "@/lib/sync/sync-run";
 
 export const dynamic = "force-dynamic";
@@ -30,8 +30,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "no autorizado" }, { status: 401 });
   }
 
-  // ?paso=caja | mp | todo (default). La caja corre cada hora; MP cada 3, que
-  // es lo que aguanta sin quejarse la generación de reportes de su API.
+  // ?paso=caja | mp | todo (default). La caja corre cada hora; MP cada 30
+  // minutos entre las 9 y las 18 (decisión de Pancho, 27/8/26). Ojo: una vez
+  // que la corrida del día sale bien, la marca de agua queda en hoy y las
+  // siguientes se saltean solas — el reporte de MP es de granularidad diaria.
   const paso = new URL(req.url).searchParams.get("paso") ?? "todo";
   const hacer = (p: string) => paso === "todo" || paso === p;
 
@@ -70,11 +72,26 @@ export async function GET(req: Request) {
       pasos.push({ paso: `mp_${empresa}`, estado: "salteado", detalle: `falta MP_ACCESS_TOKEN_${empresa.toUpperCase()}` });
       continue;
     }
+    // ?crudo=1 : la lista de reportes. ?crudo=2 : una muestra del archivo.
+    // Los dos son de sólo lectura: no generan reportes ni escriben en la base.
+    const crudo = new URL(req.url).searchParams.get("crudo");
+    if (crudo) {
+      try {
+        const detalle = crudo === "2" ? await muestraReporteMp(token) : await listarReportesMp(token);
+        pasos.push({ paso: `mp_${empresa}`, estado: "ok", detalle });
+      } catch (e) {
+        pasos.push({ paso: `mp_${empresa}`, estado: "error", detalle: e instanceof Error ? e.message : String(e) });
+      }
+      continue;
+    }
+
     const inicioMp = new Date().toISOString();
     try {
-      // 12 vueltas de 5s: si MP no procesó el reporte en un minuto, lo agarra
-      // la corrida de la hora que viene (el rango arranca del watermark).
-      const r = await sincronizarMp(db, { empresa, token, intentos: 12, log });
+      // 20 vueltas de 5s. Medido el 27/8/26: MP tarda entre 45 y 90 segundos en
+      // dejar el reporte listo, así que con un minuto la primera corrida del día
+      // fallaba SIEMPRE y entraba recién en el reintento. Con dos empresas son
+      // 200s de techo, holgado dentro de los 300 de maxDuration.
+      const r = await sincronizarMp(db, { empresa, token, intentos: 20, log });
       pasos.push({ paso: `mp_${empresa}`, estado: "ok", detalle: r });
     } catch (e) {
       if (e instanceof RangoVacio) {

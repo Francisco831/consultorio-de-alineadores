@@ -29,6 +29,46 @@ export type ResultadoMp = {
 /** Rango vacío: no hay nada que traer (ya se sincronizó hasta hoy). */
 export class RangoVacio extends Error {}
 
+/**
+ * Qué fecha mandarle a MP para que el reporte caiga en el día que queremos.
+ *
+ * MP es rígido de las dos puntas, verificado el 27/8/26 contra la API real:
+ *   · la hora tiene que ser EXACTAMENTE T00:00:00Z — "…T03:00:00Z" y
+ *     "…T00:00:00-03:00" los rechaza igual, con `invalid_begin_date`;
+ *   · pero el instante lo interpreta en la zona de la CUENTA y lo redondea al
+ *     día, así que medianoche UTC cae a las 21:00 del día ANTERIOR en Argentina.
+ *
+ * O sea que no hay forma de escribir "medianoche local": hay que elegir el día
+ * en Z cuya medianoche cae dentro del día local buscado. Con eso, pedir el 22
+ * trae el 22 — y no el 21, que es el que ya está cargado a mano.
+ *
+ * Se resuelve probando, no con la cuenta del offset: así vale igual para una
+ * zona al este de Greenwich, donde el corrimiento va para el otro lado.
+ */
+export function diaZParaDiaLocal(objetivo: string, tz: string): string {
+  const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: tz });
+  for (const delta of [0, 1, -1]) {
+    const candidato = sumarDias(objetivo, delta);
+    if (fmt.format(new Date(`${candidato}T00:00:00Z`)) === objetivo) return candidato;
+  }
+  return objetivo;
+}
+
+/** El offset de la cuenta ese día ("-03:00"), respetando horario de verano. */
+export function offsetDe(tz: string, dia: string): string {
+  const partes = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "longOffset" })
+    .formatToParts(new Date(`${dia}T12:00:00Z`));
+  const nombre = partes.find((p) => p.type === "timeZoneName")?.value ?? "";
+  return nombre.replace("GMT", "") || "+00:00";   // "GMT-03:00" → "-03:00", "GMT" → "+00:00"
+}
+
+/** Suma (o resta) días a una fecha YYYY-MM-DD, sin sorpresas de zona horaria. */
+export function sumarDias(dia: string, n: number): string {
+  const d = new Date(`${dia}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
 async function mp<T>(token: string, url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
@@ -44,6 +84,37 @@ async function mp<T>(token: string, url: string, init?: RequestInit): Promise<T>
 }
 
 type Reporte = { id: number; file_name: string; status: string; begin_date: string; end_date: string };
+
+/**
+ * Lo que MP tiene hoy en la lista de reportes, crudo y sin tocar nada.
+ * Sólo lectura: no genera reportes ni escribe en la base. Existe porque los
+ * campos de esta API no son los que dice la documentación —el estado vino como
+ * 'enabled' y la fecha de inicio corrida un día— y sin verlo de verdad, "no
+ * apareció el reporte" tapa por igual tres causas distintas.
+ */
+export async function listarReportesMp(token: string): Promise<unknown> {
+  return mp<unknown>(token, `${API}/list`);
+}
+
+/**
+ * Las primeras líneas del reporte más nuevo, sin escribir nada en la base.
+ * El CSV de Argentina no trae las mismas columnas que el de México, y sin ver
+ * el encabezado real el parser se escribe a ciegas.
+ */
+export async function muestraReporteMp(token: string, lineas = 4): Promise<unknown> {
+  const lista = await mp<Reporte[]>(token, `${API}/list`);
+  const r = lista.find((x) => x.file_name);
+  if (!r) return { sinReportes: true };
+  const csv = await mp<string>(token, `${API}/${r.file_name}`);
+  const todas = csv.split(/\r?\n/).filter((l) => l.trim());
+  return {
+    reporte: r.file_name,
+    rango: `${r.begin_date} → ${r.end_date}`,
+    totalLineas: todas.length,
+    primeras: todas.slice(0, lineas),
+    ultimas: todas.slice(-lineas),   // el cierre importa: de ahí sale el saldo final
+  };
+}
 
 export async function sincronizarMp(
   db: SupabaseClient,
@@ -100,23 +171,57 @@ export async function sincronizarMp(
   log(`Cuenta ${cuenta.name} (${cuenta.currency}) · rango [${desde}, ${hasta})`);
 
   // 1. generar el reporte (asincrónico del lado de MP)
-  await mp(token, API, {
+  //
+  // Las fechas pasan por diaZParaDiaLocal: MP las interpreta en la zona de la
+  // cuenta, así que el día que se manda no es el día que se pide. El fin va en
+  // `hasta` menos uno porque MP lo extiende al final de ese día en la cuenta,
+  // que es exactamente el borde exclusivo que queremos.
+  const finInclusivo = sumarDias(hasta, -1);
+  // La respuesta del POST se USA: si trae el reporte que acaba de crear, lo
+  // buscamos por id y nos olvidamos de adivinar por fechas (que es donde esto
+  // venía fallando). Antes se descartaba, y con ella la única pista de por qué
+  // MP a veces acepta el pedido y no genera nada.
+  const creado = await mp<Partial<Reporte> | null>(token, API, {
     method: "POST",
-    body: JSON.stringify({ begin_date: `${desde}T00:00:00Z`, end_date: `${hasta}T00:00:00Z` }),
+    body: JSON.stringify({
+      begin_date: `${diaZParaDiaLocal(desde, cia.timezone)}T00:00:00Z`,
+      end_date: `${diaZParaDiaLocal(finInclusivo, cia.timezone)}T00:00:00Z`,
+    }),
   });
+  const idCreado = creado?.id;
+  log(`MP respondió al pedido: ${JSON.stringify(creado ?? null).slice(0, 200)}`);
 
   // 2. esperar a que aparezca procesado en la lista
   const intentos = opts.intentos ?? 24;
   let reporte: Reporte | undefined;
+  let ultimaLista: Reporte[] = [];
+  const diaLocal = (iso: string) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: cia.timezone }).format(new Date(iso));
   for (let i = 0; i < intentos && !reporte; i++) {
     await new Promise((r) => setTimeout(r, 5000));
-    const lista = await mp<Reporte[]>(token, `${API}/list`);
-    reporte = lista.find((r) =>
-      r.begin_date.slice(0, 10) === desde && r.end_date.slice(0, 10) === hasta &&
-      ["processed", "available", "done"].includes(r.status));
+    ultimaLista = await mp<Reporte[]>(token, `${API}/list`);
+    // Las fechas de la lista se comparan como DÍAS de la cuenta, no como texto
+    // ISO: MP las devuelve como instantes UTC del día local (03:00Z / 02:59Z).
+    // Y 'enabled' es el estado en que MP deja un reporte listo para bajar —
+    // no está en ninguna de las listas de estados que decía el código viejo.
+    // De los que empatan vale el más nuevo: cada reintento generó el suyo.
+    const listo = (r: Reporte) =>
+      r.file_name && ["processed", "available", "done", "enabled"].includes(r.status);
+    reporte =
+      (idCreado ? ultimaLista.find((r) => r.id === idCreado && listo(r)) : undefined) ??
+      [...ultimaLista].reverse().find((r) =>
+        listo(r) && diaLocal(r.begin_date) === desde && diaLocal(r.end_date) === finInclusivo);
   }
   if (!reporte) {
-    throw new Error(`el reporte no apareció procesado tras ${Math.round(intentos * 5 / 60)} minuto(s) — reintentar en un rato`);
+    // Qué SÍ devolvió MP. Sin esto, "no apareció" tapa por igual tres causas
+    // distintas: que todavía esté procesando, que las fechas no coincidan como
+    // esperamos, o que el estado venga con un nombre que no conocemos.
+    const vistos = ultimaLista.slice(0, 6).map((r) =>
+      `${r.begin_date?.slice(0, 10)}→${r.end_date?.slice(0, 10)} [${r.status}]`).join(" · ");
+    throw new Error(
+      `el reporte [${desde}, ${hasta}) no apareció procesado tras ` +
+      `${Math.round(intentos * 5 / 60)} minuto(s). MP listó ${ultimaLista.length}: ${vistos || "(ninguno)"}`
+    );
   }
 
   // 3. bajar y parsear
