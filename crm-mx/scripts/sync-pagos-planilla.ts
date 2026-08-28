@@ -5,10 +5,23 @@
  *   npx tsx scripts/sync-pagos-planilla.ts                  # baja del Apps Script (PLANILLA_MX_URL/SECRET)
  *   npx tsx scripts/sync-pagos-planilla.ts --xlsx ~/Downloads/"Administración México.xlsx"
  *   … ambos aceptan --apply (sin él, dry-run) y --yes.
- *   --cron: corrida programada (launchd). Omite la confirmación interactiva de
- *   destino — la aprobó Pancho el 21/8/26 al programarla — pero los gates de
- *   deriva y mes cerrado siguen activos, y el resultado (ok o error) queda en
- *   sync_runs (source planilla_pagos) para que el silencio no esconda fallas.
+ *   --cron: corrida desatendida. Omite la confirmación interactiva de destino
+ *   pero los gates de deriva y mes cerrado siguen activos, y el resultado (ok o
+ *   error) queda en sync_runs (source planilla_pagos).
+ *
+ * DE ACÁ YA NO DEPENDE EL CRM (28/8/26). La parte "planilla → tabla payments"
+ * la hace sola /api/sync/pagos, cron de Vercel lun-vie 23:10 UTC, con el parser
+ * portado a lib/pagos-planilla.ts (en Vercel no hay python3). El docstring de
+ * antes decía que este script quedaba programado en launchd el 21/8: nunca hubo
+ * plist instalado, así que en los hechos corría solo cuando Pancho lo corría.
+ *
+ * Este script sigue siendo el único camino para las dos cosas que Vercel no
+ * puede hacer:
+ *   · --xlsx, el export manual de la hoja (necesita openpyxl);
+ *   · data/casos_planilla.json y las copias a finanzas/seed-data/, que son
+ *     archivos del disco local.
+ * Si se toca el parser de acá, correr `npm test`: lib/pagos-planilla.test.ts
+ * cuida que los dos no se separen.
  *
  * Claves adminmx:{fila}:{slot} idénticas al import original: correrlo dos veces
  * es no-op. Gates antes de escribir:
