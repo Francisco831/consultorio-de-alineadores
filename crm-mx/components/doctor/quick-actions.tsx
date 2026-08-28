@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import {
   MessageCircle,
   Phone,
@@ -31,7 +31,7 @@ import { createOpportunity } from "@/lib/actions/opportunities";
 import { moveAcquisitionStage, acreditarDoctor } from "@/lib/actions/journey";
 import { updateDoctorContact, updateDoctorRedes } from "@/lib/actions/doctors";
 import { waLink, telLink, periskopeLink } from "@/lib/phone";
-import { ESTADOS_MX, ZONAS_MX } from "@/lib/geo-mx";
+import { ESTADOS_MX, ZONA_POR_ESTADO, ZONAS_MX } from "@/lib/geo-mx";
 import {
   ACTIVITY_TYPE_LABELS,
   TASK_TYPE_LABELS,
@@ -70,6 +70,11 @@ export function QuickActions({
   periskopeChatId?: string | null;
 }) {
   const [open, setOpenRaw] = useState<DialogKind>(null);
+  // La zona es función del estado, así que elegir el estado la completa sola.
+  // Va por ref y no por useState para que el <select> siga siendo no controlado
+  // como el resto del formulario: al cerrar y reabrir el diálogo vuelve al valor
+  // del doctor, igual que los demás campos.
+  const zonaRef = useRef<HTMLSelectElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -468,6 +473,12 @@ export function QuickActions({
                   name="state"
                   className={selectClass}
                   defaultValue={doctor.state ?? ""}
+                  onChange={(e) => {
+                    const z = ZONA_POR_ESTADO[e.target.value];
+                    // "Sin estado" no borra la zona: sacar un dato no es lo
+                    // mismo que corregirlo.
+                    if (z && zonaRef.current) zonaRef.current.value = z;
+                  }}
                 >
                   <option value="">Sin estado</option>
                   {ESTADOS_MX.map((e) => (
@@ -493,6 +504,7 @@ export function QuickActions({
                 <select
                   id="qa-c-zona"
                   name="zona"
+                  ref={zonaRef}
                   className={selectClass}
                   defaultValue={doctor.zona ?? ""}
                 >
@@ -503,6 +515,9 @@ export function QuickActions({
                     </option>
                   ))}
                 </select>
+                <p className="text-xs text-muted-foreground">
+                  Se completa sola con el estado. Se puede cambiar.
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="qa-c-clinic">Clínica</Label>
