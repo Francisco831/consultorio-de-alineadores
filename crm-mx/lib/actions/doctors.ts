@@ -9,6 +9,9 @@ export async function updateDoctorContact(formData: FormData) {
     phone: (String(formData.get("phone") ?? "").trim() || null) as string | null,
     whatsapp: (String(formData.get("whatsapp") ?? "").trim() || null) as string | null,
     email: (String(formData.get("email") ?? "").trim() || null) as string | null,
+    // `state` es la celda "Estado" que pidió Juan (27/8): un <select> con las 32
+    // entidades, así que lo que llega es siempre uno de esos nombres o vacío.
+    state: (String(formData.get("state") ?? "").trim() || null) as string | null,
     city: (String(formData.get("city") ?? "").trim() || null) as string | null,
     zona: (String(formData.get("zona") ?? "").trim() || null) as string | null,
     clinic_name: (String(formData.get("clinic_name") ?? "").trim() || null) as

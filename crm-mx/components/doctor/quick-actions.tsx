@@ -31,6 +31,7 @@ import { createOpportunity } from "@/lib/actions/opportunities";
 import { moveAcquisitionStage, acreditarDoctor } from "@/lib/actions/journey";
 import { updateDoctorContact, updateDoctorRedes } from "@/lib/actions/doctors";
 import { waLink, telLink, periskopeLink } from "@/lib/phone";
+import { ESTADOS_MX, ZONAS_MX } from "@/lib/geo-mx";
 import {
   ACTIVITY_TYPE_LABELS,
   TASK_TYPE_LABELS,
@@ -461,14 +462,32 @@ export function QuickActions({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
+                <Label htmlFor="qa-c-state">Estado</Label>
+                <select
+                  id="qa-c-state"
+                  name="state"
+                  className={selectClass}
+                  defaultValue={doctor.state ?? ""}
+                >
+                  <option value="">Sin estado</option>
+                  {ESTADOS_MX.map((e) => (
+                    <option key={e} value={e}>
+                      {e}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
                 <Label htmlFor="qa-c-city">Ciudad</Label>
                 <Input
                   id="qa-c-city"
                   name="city"
                   defaultValue={doctor.city ?? ""}
-                  placeholder="CDMX, Monterrey…"
+                  placeholder="Monterrey, Guadalajara…"
                 />
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="qa-c-zona">Zona</Label>
                 <select
@@ -478,20 +497,21 @@ export function QuickActions({
                   defaultValue={doctor.zona ?? ""}
                 >
                   <option value="">Sin zona</option>
-                  <option value="CDMX">CDMX</option>
-                  <option value="Norte">Norte</option>
-                  <option value="Sur">Sur</option>
-                  <option value="Foráneos">Foráneos</option>
+                  {ZONAS_MX.map((z) => (
+                    <option key={z} value={z}>
+                      {z}
+                    </option>
+                  ))}
                 </select>
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="qa-c-clinic">Clínica</Label>
-              <Input
-                id="qa-c-clinic"
-                name="clinic_name"
-                defaultValue={doctor.clinic_name ?? ""}
-              />
+              <div className="space-y-1.5">
+                <Label htmlFor="qa-c-clinic">Clínica</Label>
+                <Input
+                  id="qa-c-clinic"
+                  name="clinic_name"
+                  defaultValue={doctor.clinic_name ?? ""}
+                />
+              </div>
             </div>
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <DialogFooter>

@@ -115,7 +115,7 @@ Toda comunicación a doctores mexicanos se adapta culturalmente a México. **Pro
 
 **CADENCIA DINÁMICA: no existe la regla "contactar cada 30 días".** La frecuencia se adapta al comportamiento individual: frecuencia histórica de casos, potencial, situación actual, casos abiertos, nivel de relación, categoría, eventos recientes, riesgo, crecimiento y necesidades clínicas. Un doctor que manda 4 casos por mes necesita una relación distinta que uno que manda 1 cada tres meses — y a este último, 45 días de silencio NO son una caída. Objetivo: **muy cerca sin volverse molesto.**
 
-**Operación MX:** zonas CDMX / Norte / Sur / Foráneos. La actividad se concentra en las 2 primeras semanas del mes; el sábado es el día de mayor actividad clínica. Calibración de tamaño: un doctor "grande" en México son 2-3 casos/mes sostenidos (el país cerró 2025 con ~284 casos).
+**Operación MX:** seis zonas — Norte, Bajío, CDMX, Centro, Occidente y Sur (una por estado: Nuevo León es Norte, Jalisco es Occidente). La actividad se concentra en las 2 primeras semanas del mes; el sábado es el día de mayor actividad clínica. Calibración de tamaño: un doctor "grande" en México son 2-3 casos/mes sostenidos (el país cerró 2025 con ~284 casos).
 
 **Semántica del KPI (ground truth del CRM):** caso nuevo = etapa Noloco **I_1 SOLAMENTE** (sumar las 3 etapas es doble conteo e infla ~70%); **casos pagados = ledger de payments** (la verdad del KPI). Lo que no está registrado, no existió.`;
 

@@ -311,7 +311,11 @@ export default async function DoctorPage({
             </div>
             <div className="text-sm text-muted-foreground">
               {[
-                doctor.city ?? doctor.state,
+                // ciudad y estado juntos: "Monterrey, Nuevo León". Antes era
+                // `city ?? state` —el estado solo se veía si no había ciudad—,
+                // que con la celda Estado nueva (Juan, 27/8) dejaba el dato
+                // cargado fuera de la vista.
+                [doctor.city, doctor.state].filter(Boolean).join(", ") || null,
                 doctor.zona,
                 doctor.clinic_name,
                 owner ? `Owner: ${owner}` : "Sin owner",

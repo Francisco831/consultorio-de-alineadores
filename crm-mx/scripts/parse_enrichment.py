@@ -147,15 +147,24 @@ CITY_TO_STATE = {
     "campeche": "Campeche", "tlaxcala": "Tlaxcala", "colima": "Colima", "tepic": "Nayarit",
     "zacatecas": "Zacatecas", "cdmx": "CDMX", "coyoacan": "CDMX", "texcoco": "Estado de México",
 }
-ZONA_CDMX = {"cdmx", "ciudad de mexico", "estado de mexico", "edo mex", "edomex", "estado mexico",
-             "mexico", "toluca", "metepec", "texcoco", "coyoacan"}
-ZONA_NORTE = {"baja california", "baja california sur", "chihuahua", "cd juarez", "ciudad juarez",
-              "juarez", "nuevo leon", "monterrey", "sonora", "sinaloa", "coahuila", "tamaulipas",
-              "mexicali", "tijuana", "ensenada", "durango", "saltillo", "torreon", "hermosillo",
-              "culiacan", "mazatlan", "tampico", "la paz"}
-ZONA_SUR = {"puebla", "oaxaca", "guerrero", "chiapas", "veracruz", "yucatan", "merida",
-            "quintana roo", "tabasco", "campeche", "cancun", "acapulco", "villahermosa",
-            "xalapa", "tuxtla gutierrez"}
+# Las 6 zonas comerciales (pedido de Juan, 27/8/26; migración 0049). Espejo de
+# ZONA_POR_ESTADO en lib/geo-mx.ts: si cambia una, cambia la otra. Antes eran
+# cuatro —CDMX/Norte/Sur/Foráneos— y "Foráneos" no era una zona sino el cajón de
+# lo que no entraba en las otras tres.
+ZONA_POR_ESTADO = {
+    "aguascalientes": "Bajío", "baja california": "Norte", "baja california sur": "Norte",
+    "campeche": "Sur", "chiapas": "Sur", "chihuahua": "Norte", "coahuila": "Norte",
+    "colima": "Occidente", "durango": "Norte", "guanajuato": "Bajío", "guerrero": "Sur",
+    "hidalgo": "Centro", "jalisco": "Occidente", "michoacan": "Occidente", "morelos": "Centro",
+    "nayarit": "Occidente", "nuevo leon": "Norte", "oaxaca": "Sur", "puebla": "Centro",
+    "queretaro": "Bajío", "quintana roo": "Sur", "san luis potosi": "Bajío", "sinaloa": "Norte",
+    "sonora": "Norte", "tabasco": "Sur", "tamaulipas": "Norte", "tlaxcala": "Centro",
+    "veracruz": "Sur", "yucatan": "Sur", "zacatecas": "Bajío",
+    # la capital y su estado vecino, con los alias que trae la planilla
+    "cdmx": "CDMX", "ciudad de mexico": "CDMX", "mexico": "CDMX",
+    "estado de mexico": "Centro", "edo mex": "Centro", "edomex": "Centro",
+    "estado mexico": "Centro",
+}
 
 def norm_geo(s):
     return re.sub(r"\s+", " ", strip_accents(str(s)).lower().replace(".", " ").replace(",", " ")).strip()
@@ -172,18 +181,22 @@ def split_city_state(raw):
     return v.strip(), st
 
 def derive_zona(city, state):
+    """Zona = función del estado. Si solo hay ciudad, primero se resuelve su estado.
+
+    Sin estado resoluble devuelve None y no inventa: antes existía "Foráneos"
+    como cajón de sastre y ahí terminaron Jalisco, Querétaro y Los Cabos juntos.
+    Un campo vacío se ve y se completa; un cajón equivocado no.
+    """
     for cand in (state, city):
         if not cand:
             continue
         n = norm_geo(cand)
-        if n in ZONA_CDMX:
-            return "CDMX"
-        if n in ZONA_NORTE:
-            return "Norte"
-        if n in ZONA_SUR:
-            return "Sur"
-    if city or state:
-        return "Foráneos"
+        z = ZONA_POR_ESTADO.get(n)
+        if z:
+            return z
+        st = CITY_TO_STATE.get(n)
+        if st:
+            return ZONA_POR_ESTADO.get(norm_geo(st))
     return None
 
 # ---------------------------------------------------------------- competitor brands
