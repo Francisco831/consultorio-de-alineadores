@@ -24,7 +24,7 @@ import {
 } from "@/lib/types";
 import { CATEGORIA_LABELS } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { MessageCircle, Phone, ArrowRight } from "lucide-react";
+import { MessageCircle, Phone, ArrowRight, CalendarDays } from "lucide-react";
 
 // Panel personal ("la pestaña que diga Rocío", 22/8): registro, agenda y
 // números del mes de UNA persona. Por decisión de Pancho (8/8) todos ven el
@@ -534,16 +534,19 @@ export default async function PanelPage({
           </h1>
           <p className="text-sm text-muted-foreground">
             <span className="capitalize">{mesLabel}</span> — registro, agenda y
-            números del mes ·{" "}
-            <Link
-              href={`/equipo/actividad?u=${u}`}
-              className="underline underline-offset-2"
-            >
-              ver registro día por día
-            </Link>
+            números del mes
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* botón y no link en el subtítulo: en letra chica nadie lo
+              encontraba (Pancho, 31/8) */}
+          <Link
+            href={`/equipo/actividad?u=${u}`}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            <CalendarDays />
+            Registro día por día
+          </Link>
           {equipo.map((p) => (
             <Link key={p.id} href={`/panel?u=${p.id}`}>
               <Badge variant={p.id === u ? "default" : "outline"}>
