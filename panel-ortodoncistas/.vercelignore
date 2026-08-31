@@ -1,0 +1,8 @@
+*.py
+*.log
+*.plist
+alerta_config.json
+alerta_estado.json
+.password-panel
+README.md
+fetch.log

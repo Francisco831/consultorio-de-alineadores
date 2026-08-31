@@ -1,0 +1,1160 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel Ortodoncistas — KeepSmiling</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb; --page: #f9f9f7;
+    --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --baseline: #c3c2b7; --border: rgba(11,11,11,.10);
+    --s1: #2a78d6; --s1-track: #cde2fb; --s2: #eb6834; --s3: #1baf7a;
+    --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+    --up-good: #006300;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface-1: #1a1a19; --page: #0d0d0d;
+      --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+      --grid: #2c2c2a; --baseline: #383835; --border: rgba(255,255,255,.10);
+      --s1: #3987e5; --s1-track: #184f95; --s2: #d95926; --s3: #199e70;
+      --up-good: #0ca30c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header { padding: 18px 24px 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; }
+  header h1 { font-size: 18px; margin: 0; font-weight: 650; }
+  header .sub { color: var(--muted); font-size: 12.5px; }
+  nav.tabs { display: flex; gap: 4px; padding: 12px 24px 0; flex-wrap: wrap; align-items: center; }
+  nav.tabs button {
+    border: 1px solid transparent; background: none; color: var(--ink-2);
+    font: inherit; padding: 7px 14px; border-radius: 8px; cursor: pointer;
+  }
+  nav.tabs button:hover { background: var(--surface-1); }
+  nav.tabs button.on { background: var(--surface-1); color: var(--ink); font-weight: 600; border-color: var(--border); }
+  nav.tabs select {
+    font: inherit; padding: 6px 10px; border-radius: 8px; margin-left: 4px;
+    border: 1px solid var(--border); background: var(--surface-1); color: var(--ink);
+  }
+  .filtros {
+    display: flex; gap: 14px; padding: 12px 24px 0; flex-wrap: wrap; align-items: center;
+    font-size: 12.5px; color: var(--ink-2);
+  }
+  .filtros label { display: inline-flex; gap: 6px; align-items: center; }
+  .filtros select, .filtros input {
+    font: inherit; padding: 5px 9px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface-1); color: var(--ink);
+  }
+  .filtros input { width: 180px; }
+  .filtros input[type="date"] { width: auto; }
+  .filtros button {
+    font: inherit; padding: 5px 11px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--border); background: none; color: var(--ink-2);
+  }
+  .filtros button:hover { background: var(--surface-1); }
+  main { padding: 16px 24px 48px; max-width: 1240px; }
+  .cards { display: grid; gap: 12px; }
+  .kpis { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+  .card h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .card h3 .n { color: var(--muted); font-weight: 500; }
+  .card h4 { margin: 12px 0 4px; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+  .tile .label { font-size: 12.5px; color: var(--ink-2); }
+  .tile .value { font-size: 30px; font-weight: 650; margin-top: 2px; }
+  .tile .hint { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .row3 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-top: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; position: sticky; top: 0; background: var(--surface-1); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover td { background: color-mix(in srgb, var(--s1) 6%, transparent); }
+  tr.hoverable:hover td { background: color-mix(in srgb, var(--s1) 6%, transparent); }
+  .scroll { overflow: auto; max-height: 440px; }
+  .meter { display: inline-flex; align-items: center; gap: 7px; }
+  .meter .track { width: 70px; height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--s1-track) 55%, transparent); overflow: hidden; flex: none; }
+  .meter .fill { height: 100%; background: var(--s1); border-radius: 4px; }
+  .meter .txt { font-variant-numeric: tabular-nums; }
+  .meter .ok { color: var(--up-good); font-weight: 650; }
+  .bar-cell { display: flex; align-items: center; gap: 8px; }
+  .bar-cell .track { flex: 0 0 90px; height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--s1-track) 55%, transparent); overflow: hidden; }
+  .bar-cell .fill { height: 100%; background: var(--s1); border-radius: 4px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .wabtn { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px;
+    border-radius: 50%; background: #25d366; margin-left: 7px; vertical-align: middle; flex: none; }
+  .wabtn:hover { filter: brightness(1.1); }
+  .wabtn svg { width: 12px; height: 12px; fill: #fff; }
+  .adbadge { display: inline-block; margin-left: 7px; padding: 1px 7px; border-radius: 9px;
+    font-size: 10.5px; font-weight: 600; color: var(--s3); vertical-align: middle;
+    border: 1px solid color-mix(in srgb, var(--s3) 45%, transparent);
+    background: color-mix(in srgb, var(--s3) 9%, transparent); white-space: nowrap; }
+  .empty { color: var(--muted); font-size: 13px; padding: 10px 0; }
+  #tooltip {
+    position: fixed; pointer-events: none; z-index: 30; display: none;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 10px; font-size: 12.5px; box-shadow: 0 4px 14px rgba(0,0,0,.12); max-width: 360px;
+  }
+  #tooltip .v { font-weight: 650; font-size: 14px; }
+  #tooltip .l { color: var(--ink-2); }
+  #tooltip .fila { display: flex; justify-content: space-between; gap: 14px; }
+  #tooltip .fila b { font-variant-numeric: tabular-nums; font-weight: 600; }
+  svg text { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: var(--muted); }
+  svg .val { fill: var(--ink-2); font-weight: 600; }
+  .note { color: var(--muted); font-size: 12px; margin-top: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Panel Ortodoncistas</h1>
+  <span class="sub" id="meta">cargando…</span>
+</header>
+<nav class="tabs" id="tabs">
+  <button data-view="equipo" class="on">Equipo</button>
+  <button data-view="orto">Ortodoncista</button>
+  <select id="selOrto" hidden></select>
+  <button data-view="doctoras">Doctoras</button>
+</nav>
+<div class="filtros">
+  <label>Mes <select id="fMes"><option value="">Todos</option></select></label>
+  <label>Desde <input type="date" id="fDesde"></label>
+  <label>Hasta <input type="date" id="fHasta"></label>
+  <label>Ortodoncista <select id="fOrto"><option value="">Todas</option></select></label>
+  <label>Dra clienta <input id="fDra" list="drasList" placeholder="Todas"><datalist id="drasList"></datalist></label>
+  <button id="fLimpiar">Limpiar</button>
+</div>
+<main id="main"><p class="empty">Cargando datos…</p></main>
+<div id="tooltip"></div>
+
+<script>
+"use strict";
+const $ = (s, el=document) => el.querySelector(s);
+const fmt = n => n.toLocaleString("es-AR");
+const MS_D = 864e5;
+const state = { view: "equipo", orto: null, filtros: { mes: "", orto: "", doctora: "", desde: "", hasta: "" }, alerta: { dias: 30, min: 1, soloRep: false, soloAbiertos: true } };
+let D = null, M = null, OB = null, DATA_TAG = null, ultimaVerif = 0;
+
+// al volver a la pestaña: si hay deploy/datos nuevos, recargar (máx. 1 chequeo cada 5 min)
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState !== "visible") return;
+  if (Date.now() - ultimaVerif < 5 * 60e3) return;
+  ultimaVerif = Date.now();
+  try {
+    const r = await fetch("data.json", { method: "HEAD", cache: "no-store" });
+    const tag = r.headers.get("etag");
+    if (DATA_TAG && tag && tag !== DATA_TAG) location.reload();
+  } catch (e) { /* sin red: probar de nuevo en la próxima vuelta */ }
+});
+
+// ---------- utilidades ----------
+const parse = s => s ? new Date(s) : null;
+function isoWeekKey(d) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day);
+  const y = t.getUTCFullYear();
+  return y + "-W" + String(Math.ceil(((t - Date.UTC(y,0,1)) / MS_D + 1) / 7)).padStart(2,"0");
+}
+function mondayOf(d) {
+  const t = new Date(d); const day = (t.getDay() || 7) - 1;
+  t.setDate(t.getDate() - day); t.setHours(0,0,0,0); return t;
+}
+const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const fShort = d => d.getDate() + " " + MESES[d.getMonth()];
+const objetivoDe = nombre => OB ? (OB.porOrto?.[nombre] ?? OB.default ?? null) : null;
+function etiquetaPeriodo() {
+  const F = state.filtros;
+  if (F.mes) { const [y, m] = F.mes.split("-"); return MESES[+m] + " " + y; }
+  const f = s => fShort(new Date(s + "T00:00:00"));
+  if (F.desde && F.hasta) return f(F.desde) + " – " + f(F.hasta);
+  return F.desde ? "desde el " + f(F.desde) : "hasta el " + f(F.hasta);
+}
+
+// ---------- derivación ----------
+function derivar(D) {
+  const hoy = new Date();
+  const semanaKey = isoWeekKey(hoy);
+  const mesKey = hoy.getFullYear() + "-" + hoy.getMonth();
+
+  const lunes = mondayOf(hoy);
+  const semanas = [];
+  for (let i = 12; i >= 0; i--) {
+    const d = new Date(lunes.getTime() - i*7*MS_D);
+    semanas.push({ key: isoWeekKey(d), lunes: d });
+  }
+  const semIdx = Object.fromEntries(semanas.map((s,i)=>[s.key,i]));
+
+  // últimos 6 meses calendario (el actual, parcial)
+  const meses = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth()-i, 1);
+    meses.push({ key: d.getFullYear()+"-"+d.getMonth(), label: MESES[d.getMonth()],
+      casos: 0, modif: 0, parcial: i === 0 });
+  }
+  const mesIdx = Object.fromEntries(meses.map((m,i)=>[m.key,i]));
+
+  const diasEnCola = c => {
+    const ref = parse(c.fechaAsignacionMovimientos) || parse(c.fechaEdicion) || parse(c.fechaIngreso);
+    return ref ? Math.floor((hoy - ref)/MS_D) : null;
+  };
+
+  const ortos = new Map();
+  const orto = u => {
+    if (!u) return null;
+    if (!ortos.has(u.id)) ortos.set(u.id, {
+      id: u.id, nombre: u.fullName || u.email || ("#"+u.id),
+      cola: [], aMover: [], comunicacion: [], revision: [], pausado: [],
+      movSemana: 0, movMes: 0, mov28: 0, movPeriodo: 0, conModif: 0, modificados: [],
+      semanal: new Array(13).fill(0), movidosSemana: []
+    });
+    return ortos.get(u.id);
+  };
+
+  const F = state.filtros;
+  const dDesde = F.desde ? new Date(F.desde + "T00:00:00") : null;
+  const dHasta = F.hasta ? new Date(F.hasta + "T23:59:59") : null;
+  const rango = !!(dDesde || dHasta);
+  const enPeriodo = (fecha, mk) => rango
+    ? (!dDesde || fecha >= dDesde) && (!dHasta || fecha <= dHasta)
+    : (!F.mes || mk === F.mes);
+  let casosFilt = 0, modifFilt = 0, pedidosFilt = 0;
+  const sinAsignar = { aMover: [], comunicacion: [], revision: [], pausado: [], cola: [] };
+  for (const c of D.cola) {
+    if (F.orto && c.userMovimientos?.id !== F.orto) continue;
+    if (F.doctora && c.doctorFullName !== F.doctora) continue;
+    c._dias = diasEnCola(c);
+    c._viejo = c._dias != null && c._dias > 90;
+    const fv = parse(c.fechaProcesoMovimientos);
+    c._vence = fv ? Math.ceil((fv - hoy)/MS_D) : null;   // <0 vencido, 0 hoy, >0 en N días
+    const o = orto(c.userMovimientos);
+    const bucket =
+      (c.subStage === "REVISION" || c.videoEstado === "REVISION") ? "revision" :
+      c.subStage === "PENDIENTE_COMUNICACION" ? "comunicacion" :
+      c.subStage === "PAUSADO" ? "pausado" : "aMover";
+    (o ? o : sinAsignar)[bucket].push(c);
+    (o ? o.cola : sinAsignar.cola).push(c);
+  }
+
+  const casoInfo = new Map();
+  for (const src of [D.historico, D.cola, D.rechazados]) for (const h of (src || [])) {
+    if (!h.idExterno || casoInfo.has(h.idExterno)) continue;
+    casoInfo.set(h.idExterno, {
+      doctora: h.doctorFullName || "—",
+      docId: h.doctores?.id ?? null,
+      orto: h.userMovimientos?.fullName || "s/d",
+      ortoId: h.userMovimientos?.id || null,
+      paciente: h.paciente || null,
+      stage: h.stage || null,
+      aprobVideo: parse(h.fechaAprobacionVideo) });
+  }
+  const nombrePorDocId = new Map();
+  for (const src of [D.historico, D.cola, D.rechazados]) for (const h of (src || []))
+    if (h.doctores?.id && h.doctorFullName && !nombrePorDocId.has(h.doctores.id))
+      nombrePorDocId.set(h.doctores.id, h.doctorFullName);
+
+  const doctoras = new Map();
+  const docDe = h => {
+    const dId = h.doctores ? h.doctores.id : "s/d:" + (h.doctorFullName||"?");
+    if (!doctoras.has(dId)) doctoras.set(dId, { id: dId, nombre: h.doctorFullName || "(sin nombre)",
+      casos: 0, modif: 0, porOrto: new Map(), detalle: new Map(), casoOrto: new Map(),
+      modsPedidas: 0, modsMes: new Array(meses.length).fill(0) });
+    return doctoras.get(dId);
+  };
+  for (const h of D.historico) {
+    const f = parse(h.fechaMovimientos); if (!f) continue;
+    if (F.orto && h.userMovimientos?.id !== F.orto) continue;
+    if (F.doctora && h.doctorFullName !== F.doctora) continue;
+    const mkF = f.getFullYear()+"-"+f.getMonth();
+    if (mkF in mesIdx) {   // el evolutivo siempre muestra los 6 meses (el filtro de mes lo resalta)
+      meses[mesIdx[mkF]].casos++;
+      if (h.fechaMovimientosAct) meses[mesIdx[mkF]].modif++;
+    }
+    if (!enPeriodo(f, mkF)) continue;
+    casosFilt++; if (h.fechaMovimientosAct) modifFilt++;
+    const o = orto(h.userMovimientos);
+    const modif = !!h.fechaMovimientosAct;
+    if (o) {
+      o.movPeriodo++;
+      if (modif) { o.conModif++; o.modificados.push(h); }
+      const wk = isoWeekKey(f);
+      if (wk === semanaKey) { o.movSemana++; o.movidosSemana.push(h); }
+      if (f.getFullYear()+"-"+f.getMonth() === mesKey) o.movMes++;
+      if ((hoy - f)/MS_D <= 28) o.mov28++;
+      if (wk in semIdx) o.semanal[semIdx[wk]]++;
+    }
+    const dd = docDe(h);
+    dd.casos++;
+    if (o) {
+      dd.porOrto.set(o.nombre, (dd.porOrto.get(o.nombre)||0)+1);
+      if (h.idExterno) dd.casoOrto.set(h.idExterno, o.nombre);
+    }
+    if (modif) {
+      dd.modif++;
+      if (h.idExterno && !dd.detalle.has(h.idExterno)) dd.detalle.set(h.idExterno, 1);
+    }
+  }
+
+  // comunicaciones de modificación → cantidad de veces por caso
+  const doctorasPorId = new Map([...doctoras.values()].map(d => [d.id, d]));
+  for (const cm of (D.modifComs || [])) {
+    const caso = cm.casos?.idExterno, dId = cm.doctores?.id;
+    if (!caso || !dId) continue;
+    if (F.mes || rango) {
+      const fc0 = parse(cm.createdAt);
+      if (!fc0 || !enPeriodo(fc0, fc0.getFullYear()+"-"+fc0.getMonth())) continue;
+    }
+    const dd = doctorasPorId.get(dId);
+    if (!dd) continue;
+    pedidosFilt++;
+    dd.detalle.set(caso, Math.max(dd.detalle.get(caso) || 0, 0) + 1);
+    dd.modsPedidas++;
+    const fc = parse(cm.createdAt);
+    if (fc) {
+      const mk = fc.getFullYear()+"-"+fc.getMonth();
+      if (mk in mesIdx) dd.modsMes[mesIdx[mk]]++;
+    }
+  }
+
+  // casos con 2+ rechazos (comunicaciones de modificación) — alerta para revisión
+  const porCaso = new Map();
+  for (const cm of (D.modifComs || [])) {
+    const caso = cm.casos?.idExterno;
+    if (!caso) continue;
+    if (!porCaso.has(caso)) porCaso.set(caso, []);
+    porCaso.get(caso).push(cm);
+  }
+  const piezasDe = t => [...new Set((t||"").match(/\b[1-4][1-8]\b/g) || [])];
+  const alertas = [];
+  for (const [caso, coms] of porCaso) {
+    coms.sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const reales = coms.filter(c => (c.mensajeCliente||"").trim().length > 3);
+    const info = casoInfo.get(caso) ||
+      { doctora: nombrePorDocId.get(coms[0].doctores?.id) || "—",
+        docId: coms[0].doctores?.id ?? null, orto: "s/d", ortoId: null };
+    if (F.orto && info.ortoId !== F.orto) continue;
+    if (F.doctora && info.doctora !== F.doctora) continue;
+    const repetidas = [];
+    for (let i = 1; i < reales.length; i++) {
+      const prev = piezasDe(reales[i-1].mensajeCliente);
+      const cur = piezasDe(reales[i].mensajeCliente);
+      for (const pz of cur) if (prev.includes(pz) && !repetidas.includes(pz)) repetidas.push(pz);
+    }
+    const ultima = new Date(coms[coms.length-1].createdAt);
+    const abierta = coms.some(c => c.estado !== "RESUELTO");
+    const resuelto = (info.aprobVideo && info.aprobVideo > ultima) ||
+      ["FINALIZADO", "LABORATORIO", "IMPRESION", "IMPRESION_DIGITAL"].includes(info.stage);
+    alertas.push({ caso, ...info, resuelto, n: coms.length, sinTexto: coms.length - reales.length,
+      ultima, abierta, repetidas,
+      diasUltima: Math.floor((hoy - ultima)/MS_D),
+      secuencia: reales.map(c => ({ fecha: parse(c.createdAt), piezas: piezasDe(c.mensajeCliente),
+        msg: (c.mensajeCliente||"").replace(/\s+/g, " ").trim() })) });
+  }
+  alertas.sort((a,b) => (b.abierta - a.abierta) || (a.diasUltima - b.diasUltima) || (b.n - a.n));
+
+  const lista = [...ortos.values()].filter(o => o.movPeriodo > 0 || o.cola.length > 0)
+    .sort((a,b) => b.mov28 - a.mov28 || b.cola.length - a.cola.length);
+
+  const equipoSemanal = semanas.map((s,i) => ({
+    label: fShort(s.lunes),
+    value: lista.reduce((acc,o) => acc + o.semanal[i], 0),
+    parcial: i === 12
+  }));
+
+  const hayFiltro = !!(F.mes || F.desde || F.hasta || F.orto || F.doctora);
+  const hayPeriodo = !!(F.mes || F.desde || F.hasta);
+  const K_PONDERADO = 10;
+  const mediaGlobal = casosFilt ? modifFilt / casosFilt : 0;
+  const ranking = [...doctoras.values()].filter(d => d.casos >= (hayFiltro ? 1 : 5))
+    .map(d => ({ ...d, tasa: d.modif/d.casos,
+      tasaP: (d.modif + K_PONDERADO*mediaGlobal) / (d.casos + K_PONDERADO),
+      ortoPrincipal: [...d.porOrto.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0] || "—",
+      casosModif: [...d.detalle.entries()].sort((a,b)=>b[1]-a[1]) }))
+    .sort((a,b) => b.tasaP - a.tasaP || b.casos - a.casos);
+
+  const ortoDeModifs = d => {
+    const cnt = new Map();
+    for (const [caso, n] of d.detalle) {
+      const o = d.casoOrto.get(caso) || casoInfo.get(caso)?.orto;
+      if (o && o !== "s/d") cnt.set(o, (cnt.get(o) || 0) + n);
+    }
+    return [...cnt.entries()].sort((a,b) => b[1]-a[1])[0]?.[0] || null;
+  };
+  const rankingPedidos = [...doctoras.values()].filter(d => d.modsPedidas >= (hayFiltro ? 1 : 3))
+    .map(d => ({ ...d,
+      casosModif: [...d.detalle.entries()].sort((a,b)=>b[1]-a[1]),
+      pctPedidos: d.casos ? d.modsPedidas/d.casos : null,
+      ortoPrincipal: ortoDeModifs(d) || [...d.porOrto.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0] || "—" }))
+    .sort((a,b) => b.modsPedidas - a.modsPedidas || (b.pctPedidos??0) - (a.pctPedidos??0));
+
+  // candidatas a aprobación directa: volumen alto, re-trabajo bajo, sin rechazos registrados
+  const rechPorDoc = new Map();
+  for (const a of alertas) if (a.docId != null)
+    rechPorDoc.set(String(a.docId), (rechPorDoc.get(String(a.docId)) || 0) + a.n);
+  const adActual = D.aprobacionDirecta || {};
+  const candidatasAD = [...doctoras.values()]
+    .filter(d => !String(d.id).startsWith("s/d:") && !adActual[String(d.id)]
+      && d.casos >= 8 && d.modif / d.casos <= mediaGlobal * 0.5
+      && !rechPorDoc.get(String(d.id)))
+    .map(d => ({ ...d, tasa: d.modif / d.casos,
+      ortoPrincipal: [...d.porOrto.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0] || "—" }))
+    .sort((a,b) => b.casos - a.casos).slice(0, 12);
+
+  return { hoy, semanas, meses, lista, sinAsignar, equipoSemanal, ranking, rankingPedidos, alertas, candidatasAD, casoInfo,
+    hayFiltro, hayPeriodo, minCasosRanking: hayFiltro ? 1 : 5,
+    totalPedidos: pedidosFilt,
+    casosFiltrados: casosFilt,
+    tasaGlobal: casosFilt ? modifFilt / casosFilt : 0,
+    colaActiva: D.cola.filter(c => !c._viejo).length,
+    colaVieja: D.cola.filter(c => c._viejo).length,
+    pendCom: D.cola.filter(c => c.subStage === "PENDIENTE_COMUNICACION" && !c._viejo).length,
+    pendComVieja: D.cola.filter(c => c.subStage === "PENDIENTE_COMUNICACION" && c._viejo).length,
+    enRevision: D.cola.filter(c => (c.subStage === "REVISION" || c.videoEstado === "REVISION") && !c._viejo).length,
+    movSemanaEquipo: lista.reduce((a,o) => a + o.movSemana, 0) };
+}
+
+// ---------- tooltip ----------
+const tip = $("#tooltip");
+function tipAt(ev) {
+  tip.style.display = "block";
+  const x = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 10);
+  tip.style.left = x + "px";
+  tip.style.top = Math.max(8, ev.clientY - tip.offsetHeight - 12) + "px";
+}
+function showTip(ev, valueTxt, labelTxt) {
+  tip.replaceChildren();
+  const v = document.createElement("div"); v.className = "v"; v.textContent = valueTxt;
+  const l = document.createElement("div"); l.className = "l"; l.textContent = labelTxt;
+  tip.append(v, l); tipAt(ev);
+}
+function showTipLista(ev, titulo, filas, pie) {
+  tip.replaceChildren();
+  const t = document.createElement("div"); t.className = "v"; t.textContent = titulo; tip.append(t);
+  for (const [izq, der] of filas) {
+    const f = document.createElement("div"); f.className = "fila";
+    const a = document.createElement("span"); a.textContent = izq;
+    const b = document.createElement("b"); b.textContent = der;
+    f.append(a, b); tip.append(f);
+  }
+  if (pie) { const p = document.createElement("div"); p.className = "l"; p.textContent = pie; tip.append(p); }
+  tipAt(ev);
+}
+const hideTip = () => tip.style.display = "none";
+
+// ---------- gráficos SVG ----------
+function svgBase(W, H) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.style.width = "100%"; svg.style.display = "block";
+  const add = (tag, attrs, parent=svg) => {
+    const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    parent.appendChild(el); return el;
+  };
+  return [svg, add];
+}
+
+function columnas(serie, { height=190, unidad="casos" } = {}) {
+  const W = 760, H = height, padL = 34, padB = 22, padT = 16;
+  const plotW = W - padL - 8, plotH = H - padT - padB;
+  const max = Math.max(1, ...serie.map(s => s.value));
+  const step = max > 400 ? 200 : max > 200 ? 100 : max > 80 ? 50 : max > 30 ? 20 : 10;
+  const top = Math.ceil(max/step)*step;
+  const slot = plotW / serie.length;
+  const bw = Math.min(24, slot * 0.62);
+  const y = v => padT + plotH * (1 - v/top);
+  const [svg, add] = svgBase(W, H);
+  for (let v = step; v <= top; v += step) {
+    add("line", { x1: padL, x2: W-8, y1: y(v), y2: y(v), stroke: "var(--grid)", "stroke-width": 1 });
+    const t = add("text", { x: padL-6, y: y(v)+3, "text-anchor": "end" }); t.textContent = fmt(v);
+  }
+  add("line", { x1: padL, x2: W-8, y1: y(0), y2: y(0), stroke: "var(--baseline)", "stroke-width": 1 });
+  const iMax = serie.reduce((im,s,i) => s.value > serie[im].value ? i : im, 0);
+  serie.forEach((s, i) => {
+    const cx = padL + slot*i + slot/2, h = plotH * (s.value/top);
+    const x0 = cx - bw/2, y0 = y(s.value), r = Math.min(4, h);
+    if (s.value > 0) add("path", { d:
+      `M${x0},${y(0)} L${x0},${y0+r} Q${x0},${y0} ${x0+r},${y0} L${x0+bw-r},${y0} Q${x0+bw},${y0} ${x0+bw},${y0+r} L${x0+bw},${y(0)} Z`,
+      fill: "var(--s1)", "fill-opacity": s.parcial ? .45 : .9 });
+    const hit = add("rect", { x: padL + slot*i, y: padT, width: slot, height: plotH + padB, fill: "transparent" });
+    hit.addEventListener("pointermove", ev => showTip(ev, fmt(s.value) + " " + unidad,
+      "semana del " + s.label + (s.parcial ? " (en curso)" : "")));
+    hit.addEventListener("pointerleave", hideTip);
+    if (i % 2 === 0 || serie.length <= 8) {
+      const t = add("text", { x: cx, y: H-6, "text-anchor": "middle" }); t.textContent = s.label;
+    }
+    if ((i === iMax || i === serie.length-1) && s.value > 0) {
+      const t = add("text", { x: cx, y: y(s.value)-5, "text-anchor": "middle", class: "val" });
+      t.textContent = fmt(s.value);
+    }
+  });
+  return svg;
+}
+
+function lineaTasa(meses, mesSel) {
+  const W = 760, H = 180, padL = 40, padB = 22, padT = 18;
+  const plotW = W - padL - 20, plotH = H - padT - padB;
+  const tasas = meses.map(m => m.casos ? m.modif/m.casos : 0);
+  const top = Math.max(.1, Math.ceil(Math.max(...tasas)*10)/10);
+  const y = v => padT + plotH * (1 - v/top);
+  const x = i => padL + (meses.length === 1 ? plotW/2 : plotW * i/(meses.length-1));
+  const [svg, add] = svgBase(W, H);
+  const stepPct = top > .4 ? .2 : .1;
+  for (let v = stepPct; v <= top + 1e-9; v += stepPct) {
+    add("line", { x1: padL, x2: W-20, y1: y(v), y2: y(v), stroke: "var(--grid)", "stroke-width": 1 });
+    const t = add("text", { x: padL-6, y: y(v)+3, "text-anchor": "end" });
+    t.textContent = Math.round(v*100) + "%";
+  }
+  add("line", { x1: padL, x2: W-20, y1: y(0), y2: y(0), stroke: "var(--baseline)", "stroke-width": 1 });
+  const pts = meses.map((m,i) => [x(i), y(tasas[i])]);
+  add("polyline", { points: pts.map(p => p.join(",")).join(" "),
+    fill: "none", stroke: "var(--s1)", "stroke-width": 2,
+    "stroke-linejoin": "round", "stroke-linecap": "round" });
+  meses.forEach((m, i) => {
+    const sel = mesSel && m.key === mesSel;
+    add("circle", { cx: pts[i][0], cy: pts[i][1], r: sel ? 6 : 4.5, fill: "var(--s1)",
+      stroke: "var(--surface-1)", "stroke-width": 2,
+      "fill-opacity": mesSel ? (sel ? 1 : .3) : (m.parcial ? .45 : 1) });
+    const t = add("text", { x: pts[i][0], y: H-6, "text-anchor": "middle" });
+    t.textContent = m.label + (m.parcial ? "*" : "");
+    const hit = add("rect", { x: pts[i][0]-plotW/meses.length/2, y: padT, width: plotW/meses.length,
+      height: plotH + padB, fill: "transparent" });
+    hit.addEventListener("pointermove", ev => showTipLista(ev,
+      Math.round(tasas[i]*100) + "% en " + m.label,
+      [["Casos movidos", fmt(m.casos)], ["Con modificación", fmt(m.modif)]],
+      m.parcial ? "mes en curso — la tasa sube con el tiempo" : null));
+    hit.addEventListener("pointerleave", hideTip);
+    if (i === meses.length-1 || tasas[i] === Math.max(...tasas)) {
+      const first = i === 0;
+      const t2 = add("text", { x: pts[i][0] + (first ? 9 : 0), y: pts[i][1]-9,
+        "text-anchor": first ? "start" : "middle", class: "val" });
+      t2.textContent = Math.round(tasas[i]*100) + "%";
+    }
+  });
+  return svg;
+}
+
+// ---------- piezas ----------
+function tile(label, value, hint) {
+  const d = document.createElement("div"); d.className = "card tile";
+  const l = document.createElement("div"); l.className = "label"; l.textContent = label;
+  const v = document.createElement("div"); v.className = "value"; v.textContent = value;
+  d.append(l, v);
+  if (hint) { const h = document.createElement("div"); h.className = "hint"; h.textContent = hint; d.append(h); }
+  return d;
+}
+function meter(hecho, objetivo) {
+  const m = document.createElement("span"); m.className = "meter";
+  const track = document.createElement("span"); track.className = "track";
+  const fill = document.createElement("span"); fill.className = "fill";
+  fill.style.width = Math.min(100, Math.round(100*hecho/objetivo)) + "%";
+  track.append(fill);
+  const txt = document.createElement("span"); txt.className = "txt";
+  txt.textContent = hecho + "/" + objetivo;
+  m.append(track, txt);
+  if (hecho >= objetivo) { const ok = document.createElement("span"); ok.className = "ok"; ok.textContent = "✓"; m.append(ok); }
+  return m;
+}
+function urgencia(color) {
+  const dot = document.createElement("span"); dot.className = "dot";
+  dot.style.background = color; return dot;
+}
+function tabla(headers, rows, numCols) {
+  const wrap = document.createElement("div"); wrap.className = "scroll";
+  const t = document.createElement("table");
+  const tr = document.createElement("tr");
+  headers.forEach((h,i) => { const th = document.createElement("th");
+    if (numCols.includes(i)) th.className = "num"; th.textContent = h; tr.append(th); });
+  t.append(tr);
+  rows.forEach(r => t.append(r));
+  wrap.append(t); return wrap;
+}
+const td = (content, num) => {
+  const c = document.createElement("td"); if (num) c.className = "num";
+  if (content instanceof Node) c.append(content); else c.textContent = content ?? "—";
+  return c;
+};
+const paisCorto = p => p ? p[0] + p.slice(1,3).toLowerCase() : "—";
+
+const telDe = id => id != null ? ((D && D.telefonos) || {})[String(id)] : null;
+const tieneAD = id => id != null && !!((D && D.aprobacionDirecta) || {})[String(id)];
+const propuestasDe = caso => ((D && D.propuestasPorCaso) || {})[caso] || null;
+function adBadge(docId) {
+  if (!tieneAD(docId)) return null;
+  const b = document.createElement("span"); b.className = "adbadge"; b.textContent = "aprob. directa";
+  b.title = "Doctora con aprobación directa activada en Noloco (no espera aprobación del render)";
+  return b;
+}
+function waBtn(docId, texto) {
+  const tel = telDe(docId);
+  if (!tel) return null;
+  const a = document.createElement("a");
+  a.className = "wabtn"; a.target = "_blank"; a.rel = "noopener";
+  a.href = "https://wa.me/" + tel + (texto ? "?text=" + encodeURIComponent(texto) : "");
+  a.title = "Abrir chat de WhatsApp (se abre con el WhatsApp de esta compu)";
+  a.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>';
+  a.addEventListener("click", ev => ev.stopPropagation());
+  return a;
+}
+
+function filaCaso(c, celdaFinal) {
+  const tr = document.createElement("tr");
+  const dra = td(c.doctorFullName);
+  const wa = waBtn(c.doctores?.id, c.paciente
+    ? "Hola! Te escribo por el paciente " + c.paciente + "."
+    : "Hola! Te escribo por el caso " + (c.idExterno || "") + ".");
+  if (wa) dra.append(wa);
+  tr.append(td(c.idExterno || "?"), dra, td(paisCorto(c.pais)),
+    td(c.sumaAlineadores ?? "—", true), celdaFinal);
+  return tr;
+}
+
+// pila con vencimientos discriminados (casos a mover)
+function cardPilaVencimiento(titulo, casos) {
+  const card = document.createElement("div"); card.className = "card";
+  const activos = casos.filter(c => !c._viejo);
+  const nViejos = casos.length - activos.length;
+  const h = document.createElement("h3"); h.textContent = titulo + " ";
+  const n = document.createElement("span"); n.className = "n"; n.textContent = "· " + activos.length;
+  h.append(n); card.append(h);
+  const vencidos = activos.filter(c => c._vence != null && c._vence < 0).sort((a,b) => a._vence - b._vence);
+  const porVencer = activos.filter(c => !(c._vence != null && c._vence < 0)).sort((a,b) => (a._vence ?? 99) - (b._vence ?? 99));
+  const seccion = (nombre, lista, esVencido) => {
+    if (!lista.length) return;
+    const h4 = document.createElement("h4"); h4.textContent = nombre + " (" + lista.length + ")"; card.append(h4);
+    const rows = lista.map(c => {
+      const cell = document.createElement("td"); cell.className = "num";
+      if (c._vence == null) cell.textContent = "s/fecha";
+      else if (c._vence < 0) cell.append(urgencia("var(--critical)"), document.createTextNode("hace " + (-c._vence) + "d"));
+      else if (c._vence === 0) cell.append(urgencia("var(--serious)"), document.createTextNode("hoy"));
+      else if (c._vence === 1) cell.append(urgencia("var(--warning)"), document.createTextNode("mañana"));
+      else cell.textContent = "en " + c._vence + "d";
+      return filaCaso(c, cell);
+    });
+    card.append(tabla(["Caso","Doctora","País","Alin","Vence"], rows, [3,4]));
+  };
+  if (!activos.length) {
+    const e = document.createElement("p"); e.className = "empty"; e.textContent = "Nada activo ✓"; card.append(e);
+  } else { seccion("Vencidos", vencidos, true); seccion("Por vencer", porVencer, false); }
+  if (nViejos) {
+    const n2 = document.createElement("p"); n2.className = "note";
+    n2.textContent = "+ " + nViejos + " caso" + (nViejos>1?"s":"") + " con más de 90 días — probable dato sin cerrar.";
+    card.append(n2);
+  }
+  return card;
+}
+
+// pila por días de espera (comunicaciones, modificaciones)
+function cardPila(titulo, casos) {
+  const card = document.createElement("div"); card.className = "card";
+  const activos = casos.filter(c => !c._viejo);
+  const nViejos = casos.length - activos.length;
+  const h = document.createElement("h3"); h.textContent = titulo + " ";
+  const n = document.createElement("span"); n.className = "n"; n.textContent = "· " + activos.length;
+  h.append(n); card.append(h);
+  if (!activos.length) {
+    const e = document.createElement("p"); e.className = "empty"; e.textContent = "Nada pendiente ✓"; card.append(e);
+  } else {
+    const rows = activos.sort((a,b) => (b._dias??-1) - (a._dias??-1)).map(c => {
+      const cell = document.createElement("td"); cell.className = "num";
+      const color = c._dias > 14 ? "var(--critical)" : c._dias > 7 ? "var(--serious)" : "var(--baseline)";
+      if (c._dias != null) cell.append(urgencia(color), document.createTextNode(c._dias + "d"));
+      else cell.textContent = "—";
+      return filaCaso(c, cell);
+    });
+    card.append(tabla(["Caso","Doctora","País","Alin","Días"], rows, [3,4]));
+  }
+  if (nViejos) {
+    const n2 = document.createElement("p"); n2.className = "note";
+    n2.textContent = "+ " + nViejos + " caso" + (nViejos>1?"s":"") + " con más de 90 días — probable dato sin cerrar.";
+    card.append(n2);
+  }
+  return card;
+}
+
+// ---------- vistas ----------
+function vistaEquipo(main) {
+  const k = document.createElement("div"); k.className = "cards kpis";
+  k.append(
+    tile("Cola activa (≤90 días)", fmt(M.colaActiva), M.sinAsignar.cola.length + " sin asignar · " + fmt(M.colaVieja) + " viejos aparte"),
+    M.hayPeriodo
+      ? tile("Movidos en la selección", fmt(M.casosFiltrados), etiquetaPeriodo())
+      : tile("Movidos esta semana", fmt(M.movSemanaEquipo), "equipo completo"),
+    tile("Pend. comunicación", fmt(M.pendCom), "+ " + fmt(M.pendComVieja) + " con >90d sin cerrar"),
+    tile("Modificaciones en revisión", fmt(M.enRevision), "pedidos de cambio activos"),
+    tile("Tasa de modificación", Math.round(M.tasaGlobal*100) + "%",
+      "casos con re-trabajo" + (M.hayFiltro ? " · selección" : " · 6 meses")),
+  );
+  main.append(k);
+
+  const c1 = document.createElement("div"); c1.className = "card"; c1.style.marginTop = "12px";
+  const h1 = document.createElement("h3"); h1.textContent = "Casos movidos por semana — equipo";
+  c1.append(h1, columnas(M.equipoSemanal));
+  main.append(c1);
+
+  const c2 = document.createElement("div"); c2.className = "card"; c2.style.marginTop = "12px";
+  const h2 = document.createElement("h3"); h2.textContent = "Por ortodoncista";
+  const act = a => a.filter(c => !c._viejo).length;
+  const viejos = a => a.length - act(a);
+  const vivo = !M.hayPeriodo;   // con filtro de período, la semana/mes actuales no aplican
+  const rows = M.lista.map(o => {
+    const tr = document.createElement("tr"); tr.className = "clickable";
+    tr.addEventListener("click", () => { state.orto = o.id; setView("orto"); });
+    tr.append(td(o.nombre), td(act(o.cola), true), td(act(o.aMover), true),
+      td(act(o.comunicacion), true), td(act(o.revision), true), td(viejos(o.cola) || "—", true));
+    if (vivo) {
+      const obj = objetivoDe(o.nombre);
+      tr.append(td(obj ? meter(o.movSemana, obj) : String(o.movSemana)), td(o.movMes, true));
+    }
+    tr.append(td(o.movPeriodo, true),
+      td(o.movPeriodo ? Math.round(100*o.conModif/o.movPeriodo) + "%" : "—", true));
+    return tr;
+  });
+  if (M.sinAsignar.cola.length) {
+    const tr = document.createElement("tr");
+    const b = document.createElement("em"); b.textContent = "Sin asignar";
+    tr.append(td(b), td(act(M.sinAsignar.cola), true), td(act(M.sinAsignar.aMover), true),
+      td(act(M.sinAsignar.comunicacion), true), td(act(M.sinAsignar.revision), true),
+      td(viejos(M.sinAsignar.cola) || "—", true));
+    if (vivo) tr.append(td("—"), td("—", true));
+    tr.append(td("—", true), td("—", true));
+    rows.push(tr);
+  }
+  c2.append(h2, tabla(
+    vivo
+      ? ["Ortodoncista","Cola","A mover","Pend. com.","Revisión","Viejos","Semana vs objetivo","Mov. mes","Mov. 6m","% modif"]
+      : ["Ortodoncista","Cola","A mover","Pend. com.","Revisión","Viejos","Mov. selección","% modif"],
+    rows, vivo ? [1,2,3,4,5,7,8,9] : [1,2,3,4,5,6,7]));
+  const note = document.createElement("p"); note.className = "note";
+  note.textContent = "Cola/A mover/Pend. com./Revisión = casos activos (≤90 días); Viejos = probable dato sin cerrar. Objetivo semanal: editar objetivos.json. Click en una fila abre el panel individual.";
+  c2.append(note);
+  main.append(c2);
+
+  // rechazos de propuesta — ventana y mínimo elegibles
+  const A = state.alerta;
+  const enVentana = M.alertas.filter(a => a.diasUltima <= A.dias);
+  const base = A.soloAbiertos ? enVentana.filter(a => !a.resuelto) : enVentana;
+  const nResueltos = enVentana.length - enVentana.filter(a => !a.resuelto).length;
+  const t1 = base.filter(a => a.n === 1).length,
+        t2 = base.filter(a => a.n === 2).length,
+        t3 = base.filter(a => a.n >= 3).length;
+  const visibles = base.filter(a => a.n >= A.min && (!A.soloRep || a.repetidas.length));
+  const c3 = document.createElement("div"); c3.className = "card"; c3.style.marginTop = "12px";
+  const h3b = document.createElement("h3");
+  h3b.textContent = "⚠ Rechazos de propuesta — revisar con la ortodoncista ";
+  const n3 = document.createElement("span"); n3.className = "n";
+  n3.textContent = "· en " + A.dias + " días: " + t1 + " casos con 1 rechazo · " + t2 + " con 2 · " + t3 + " con 3+"
+    + (A.soloAbiertos && nResueltos ? " · " + nResueltos + " ya resueltos ocultos" : "");
+  h3b.append(n3); c3.append(h3b);
+  const ctr = document.createElement("div"); ctr.className = "filtros";
+  ctr.style.padding = "0 0 10px";
+  const mkSel = (txt, opts, val, aplicar) => {
+    const lab = document.createElement("label"); lab.append(txt + " ");
+    const s = document.createElement("select");
+    for (const [v, t] of opts) { const o = document.createElement("option"); o.value = v; o.textContent = t; s.append(o); }
+    s.value = String(val);
+    s.addEventListener("change", () => { aplicar(s.value); setView("equipo"); });
+    lab.append(s); return lab;
+  };
+  const labRep = document.createElement("label");
+  const chkRep = document.createElement("input"); chkRep.type = "checkbox";
+  chkRep.checked = A.soloRep; chkRep.style.width = "auto";
+  chkRep.addEventListener("change", () => { A.soloRep = chkRep.checked; setView("equipo"); });
+  labRep.append(chkRep, "solo pedido no cumplido (pieza repetida)");
+  const labAb = document.createElement("label");
+  const chkAb = document.createElement("input"); chkAb.type = "checkbox";
+  chkAb.checked = A.soloAbiertos; chkAb.style.width = "auto";
+  chkAb.addEventListener("change", () => { A.soloAbiertos = chkAb.checked; setView("equipo"); });
+  labAb.append(chkAb, "ocultar ya resueltos (aprobado / en producción)");
+  ctr.append(
+    mkSel("Ventana", [["30","30 días"],["60","60 días"],["90","90 días"],["180","180 días"]], A.dias, v => A.dias = +v),
+    mkSel("Rechazos", [["1","1 o más"],["2","2 o más"],["3","3 o más"]], A.min, v => A.min = +v),
+    labRep, labAb);
+  c3.append(ctr);
+  if (!visibles.length) {
+    const e = document.createElement("p"); e.className = "empty"; e.textContent = "Ninguno con esos criterios ✓"; c3.append(e);
+  } else {
+    const rows3 = visibles.slice(0, 40).map(a => {
+      const tr = document.createElement("tr"); tr.className = "hoverable";
+      const rep2 = document.createElement("span");
+      if (a.repetidas.length) {
+        rep2.append(urgencia("var(--critical)"), document.createTextNode("pieza " + a.repetidas.join(", ")));
+      } else rep2.textContent = "no";
+      const dra3 = td(a.doctora);
+      const wa3 = waBtn(a.docId, a.paciente
+        ? "Hola! Te escribo por la propuesta de tratamiento del paciente " + a.paciente + "."
+        : "Hola! Te escribo por el caso " + a.caso + ", por la propuesta de tratamiento.");
+      if (wa3) dra3.append(wa3);
+      const ad3 = adBadge(a.docId);
+      if (ad3) dra3.append(ad3);
+      const nProp = propuestasDe(a.caso);
+      const est = document.createElement("span");
+      if (a.resuelto) { est.textContent = a.stage === "FINALIZADO" ? "✓ finalizado" : "✓ aprobado"; est.style.color = "var(--good)"; }
+      else est.textContent = "abierto";
+      tr.append(td(a.caso), dra3, td(a.orto),
+        td(a.sinTexto ? a.n + " (" + a.sinTexto + " s/texto)" : String(a.n), true),
+        td(nProp != null ? String(nProp) : "≈" + (a.n+1), true),
+        td(a.diasUltima + "d", true), td(est), td(rep2));
+      tr.addEventListener("pointermove", ev => {
+        const filas = a.secuencia.slice(-4).map(sq => [
+          fShort(sq.fecha) + (sq.piezas.length ? " · pzas " + sq.piezas.join(",") : ""),
+          sq.msg.slice(0, 46) + (sq.msg.length > 46 ? "…" : "")]);
+        const pie = !a.secuencia.length ? "rechazos sin texto de la doctora" :
+          (a.repetidas.length ? "pide de nuevo la pieza " + a.repetidas.join(", ") + " — pedido posiblemente no cumplido" : "cada rechazo pidió cosas distintas")
+          + (a.sinTexto ? " · +" + a.sinTexto + " sin texto" : "");
+        const np = propuestasDe(a.caso);
+        showTipLista(ev, a.caso + " — " + a.n + " rechazo" + (a.n > 1 ? "s" : "") +
+          (np != null ? " · " + np + " propuestas" : " (≈" + (a.n+1) + " propuestas)"), filas, pie);
+      });
+      tr.addEventListener("pointerleave", hideTip);
+      return tr;
+    });
+    c3.append(tabla(["Caso","Doctora","Ortodoncista","Rechazos","Propuestas","Último","Estado","Pieza repetida"], rows3, [3,4,5]));
+    if (visibles.length > 40) {
+      const mas = document.createElement("p"); mas.className = "note";
+      mas.textContent = "Mostrando 40 de " + visibles.length + " — achicá la ventana, subí el mínimo o filtrá por ortodoncista.";
+      c3.append(mas);
+    }
+  }
+  const nota3 = document.createElement("p"); nota3.className = "note";
+  nota3.textContent = 'Fuente: comunicaciones de "modificación de video/render" en Noloco. "Propuestas" = conteo REAL de la colección de propuestas de la intranet (≈ = estimado rechazos+1 cuando el caso no tiene conteo). "s/texto" = rechazos sin mensaje cargado: cuentan, pero sin motivo legible. "Pieza repetida" = la misma pieza en dos rechazos seguidos — señal de pedido no cumplido. "aprob. directa" = la doctora ya aprueba sin revisar render (flag de Noloco). "✓ aprobado" = el video se aprobó DESPUÉS del último rechazo (ej: "apruebo la segunda") o el caso ya está en producción — por defecto se ocultan. Esta sección usa su propia ventana (no el filtro Mes). Pasá el mouse para ver la secuencia.';
+  c3.append(nota3);
+  main.append(c3);
+
+  // patrón por doctora clienta — juntarse con las que más rechazan / aprobar por call
+  const porDra = new Map();
+  for (const a of enVentana) {
+    if (a.doctora === "—") continue;
+    if (!porDra.has(a.doctora)) porDra.set(a.doctora,
+      { nombre: a.doctora, docId: a.docId ?? null, casos: 0, rech: 0, dos: 0, rep: 0, ult: 1e9, lista: [] });
+    const d = porDra.get(a.doctora);
+    if (d.docId == null && a.docId != null) d.docId = a.docId;
+    d.casos++; d.rech += a.n; if (a.n >= 2) d.dos++; if (a.repetidas.length) d.rep++;
+    d.ult = Math.min(d.ult, a.diasUltima); d.lista.push(a);
+  }
+  const drasRech = [...porDra.values()].sort((a,b) => b.rech - a.rech || b.casos - a.casos);
+  if (drasRech.length) {
+    const c4 = document.createElement("div"); c4.className = "card"; c4.style.marginTop = "12px";
+    const h4b = document.createElement("h3");
+    h4b.textContent = "Doctoras que más rechazan — para juntarse o aprobar por call ";
+    const n4 = document.createElement("span"); n4.className = "n";
+    n4.textContent = "· misma ventana (" + A.dias + " días)";
+    h4b.append(n4); c4.append(h4b);
+    const maxR = Math.max(...drasRech.map(d => d.rech), 1);
+    const rows4 = drasRech.slice(0, 15).map(d => {
+      const tr = document.createElement("tr"); tr.className = "hoverable";
+      const bar = document.createElement("div"); bar.className = "bar-cell";
+      const track = document.createElement("div"); track.className = "track";
+      const fill = document.createElement("div"); fill.className = "fill";
+      fill.style.width = Math.round(100*d.rech/maxR) + "%";
+      track.append(fill);
+      const val = document.createElement("span"); val.textContent = fmt(d.rech);
+      bar.append(track, val);
+      const nomTd = td(d.nombre);
+      const wa4 = waBtn(d.docId, "Hola! ¿Tenés un ratito esta semana para repasar un par de casos en curso?");
+      if (wa4) nomTd.append(wa4);
+      const ad4 = adBadge(d.docId);
+      if (ad4) nomTd.append(ad4);
+      tr.append(nomTd, td(bar), td(d.casos, true), td(d.dos || "—", true),
+        td(d.rep || "—", true), td(d.ult + "d", true));
+      tr.addEventListener("pointermove", ev => {
+        const filas = [...d.lista].sort((x,y) => y.n - x.n).slice(0, 10).map(a => [
+          a.caso + (a.repetidas.length ? " · pieza " + a.repetidas.join(", ") : ""), "×" + a.n]);
+        showTipLista(ev, d.nombre + " — " + d.rech + " rechazos en " + d.casos + " caso" + (d.casos > 1 ? "s" : ""), filas,
+          d.dos ? d.dos + " caso" + (d.dos > 1 ? "s" : "") + " con 2+ rechazos — candidata a \"mandá todo junto antes de aprobar\"" : "rechazos aislados (1 por caso)");
+      });
+      tr.addEventListener("pointerleave", hideTip);
+      return tr;
+    });
+    c4.append(tabla(["Doctora","Rechazos","Casos c/rechazo","Casos 2+","No cumplido","Último"], rows4, [2,3,4,5]));
+    const nota4 = document.createElement("p"); nota4.className = "note";
+    nota4.textContent = '"Casos 2+" = doctoras que rechazan varias veces el mismo caso: candidatas a la charla suave — que manden todas las correcciones juntas antes de aprobar — o a resolver por call cuando entra un caso suyo. "No cumplido" = casos donde repitió la misma pieza (el problema fue nuestro, revisarlo con la ortodoncista). Incluye casos ya aprobados: el patrón de la doctora importa igual. La vista por doctora a 6 meses está en la pestaña Doctoras.';
+    c4.append(nota4);
+    main.append(c4);
+  }
+}
+
+function vistaOrto(main) {
+  const o = M.lista.find(x => x.id === state.orto) || M.lista[0];
+  if (!o) { main.textContent = "Sin datos."; return; }
+  state.orto = o.id;
+  $("#selOrto").value = o.id;
+  const obj = objetivoDe(o.nombre);
+
+  const k = document.createElement("div"); k.className = "cards kpis";
+  k.append(
+    tile("Mi cola activa", fmt(o.cola.filter(c => !c._viejo).length),
+      [o.pausado.length ? o.pausado.length + " pausados" : "", o.cola.filter(c => c._viejo).length ? o.cola.filter(c => c._viejo).length + " viejos" : ""].filter(Boolean).join(" · ") || " "));
+  if (M.hayPeriodo) {
+    k.append(tile("Movidos en la selección", fmt(o.movPeriodo), etiquetaPeriodo()));
+  } else {
+    const tileObj = tile("Movidos esta semana", fmt(o.movSemana),
+      obj ? "objetivo " + obj + " · " + Math.round(100*o.movSemana/obj) + "%" : "semana en curso");
+    if (obj) {
+      const m = meter(o.movSemana, obj); m.querySelector(".txt").remove();
+      m.style.display = "flex"; m.style.marginTop = "6px";
+      m.querySelector(".track").style.width = "100%";
+      tileObj.append(m);
+    }
+    k.append(tileObj,
+      tile("Movidos este mes", fmt(o.movMes), MESES[M.hoy.getMonth()] + " " + M.hoy.getFullYear()));
+  }
+  k.append(
+    tile("Tasa de modificación", o.movPeriodo ? Math.round(100*o.conModif/o.movPeriodo) + "%" : "—",
+      "sobre " + o.movPeriodo + " casos · " + (M.hayPeriodo ? "selección" : "6 meses")),
+  );
+  main.append(k);
+
+  const c1 = document.createElement("div"); c1.className = "card"; c1.style.marginTop = "12px";
+  const h1 = document.createElement("h3"); h1.textContent = "Mis movidos por semana";
+  c1.append(h1, columnas(M.semanas.map((s,i) => ({
+    label: fShort(s.lunes), value: o.semanal[i], parcial: i === 12 })), { height: 160 }));
+  main.append(c1);
+
+  const pilas = document.createElement("div"); pilas.className = "row3";
+  pilas.append(
+    cardPilaVencimiento("Casos a mover", o.aMover),
+    cardPila("Comunicaciones pendientes", o.comunicacion),
+    cardPila("Modificaciones por hacer", o.revision),
+  );
+  main.append(pilas);
+
+  const c2 = document.createElement("div"); c2.className = "card"; c2.style.marginTop = "12px";
+  const h2 = document.createElement("h3"); h2.textContent = "Lo movido de esta semana ";
+  const n = document.createElement("span"); n.className = "n"; n.textContent = "· " + o.movidosSemana.length;
+  h2.append(n); c2.append(h2);
+  if (!o.movidosSemana.length) {
+    const e = document.createElement("p"); e.className = "empty"; e.textContent = "Todavía nada esta semana."; c2.append(e);
+  } else {
+    const rows = o.movidosSemana
+      .sort((a,b) => new Date(b.fechaMovimientos) - new Date(a.fechaMovimientos))
+      .map(h => filaCaso(h, td(parse(h.fechaMovimientos) ? fShort(parse(h.fechaMovimientos)) : "—")));
+    c2.append(tabla(["Caso","Doctora","País","Alin","Fecha"], rows, [3]));
+  }
+  main.append(c2);
+
+  const c3 = document.createElement("div"); c3.className = "card"; c3.style.marginTop = "12px";
+  const h3 = document.createElement("h3"); h3.textContent = "Casos con modificación ";
+  const n3 = document.createElement("span"); n3.className = "n";
+  n3.textContent = "· " + o.conModif + " de " + o.movPeriodo + (M.hayPeriodo ? " en la selección" : " · 6 meses");
+  h3.append(n3); c3.append(h3);
+  if (!o.modificados.length) {
+    const e3 = document.createElement("p"); e3.className = "empty"; e3.textContent = "Ninguno ✓"; c3.append(e3);
+  } else {
+    const rows3 = [...o.modificados]
+      .sort((a,b) => new Date(b.fechaMovimientosAct) - new Date(a.fechaMovimientosAct))
+      .map(h => filaCaso(h, td(parse(h.fechaMovimientosAct) ? fShort(parse(h.fechaMovimientosAct)) : "—")));
+    c3.append(tabla(["Caso","Doctora","País","Alin","Modificado"], rows3, [3]));
+    const nota3 = document.createElement("p"); nota3.className = "note";
+    nota3.textContent = "Casos movidos que después tuvieron actualización de movimientos (re-trabajo) — son los que forman la tasa de modificación. \"Modificado\" = fecha de esa actualización.";
+    c3.append(nota3);
+  }
+  main.append(c3);
+}
+
+function tipDoctora(ev, d, M) {
+  const filas = [];
+  const porMes = M.meses.map((m,i) => d.modsMes && d.modsMes[i] ? m.label + " " + d.modsMes[i] : null)
+    .filter(Boolean).join(" · ");
+  if (porMes) filas.push(["Pedidos por mes", porMes]);
+  for (const [caso, n] of d.casosModif.slice(0, 10))
+    filas.push([caso + " — " + (d.casoOrto?.get(caso) || M.casoInfo?.get(caso)?.orto || "s/d"), "×" + n]);
+  showTipLista(ev, "Modificaciones — " + d.nombre, filas,
+    (d.casosModif.length > 10 ? "y " + (d.casosModif.length-10) + " casos más · " : "") +
+    "×n = modificaciones registradas del caso");
+}
+
+function vistaDoctoras(main) {
+  const k = document.createElement("div"); k.className = "cards kpis";
+  k.append(
+    tile("Tasa de modificación", Math.round(M.tasaGlobal*100) + "%",
+      (M.hayFiltro ? "de la selección · " : "últimos 6 meses · ") + fmt(M.casosFiltrados) + " casos"),
+    tile(M.hayFiltro ? "Doctoras con casos" : "Doctoras con 5+ casos", fmt(M.ranking.length),
+      M.hayFiltro ? "en la selección" : "en el período"),
+    tile("Doctoras sobre 2× la media", fmt(M.ranking.filter(d => d.tasa > M.tasaGlobal*2).length),
+      "candidatas a capacitación"),
+    tile("Modificaciones pedidas", fmt(M.totalPedidos),
+      M.hayFiltro ? "en la selección" : "comunicaciones registradas · 6 meses"),
+  );
+  main.append(k);
+
+  const cEv = document.createElement("div"); cEv.className = "card"; cEv.style.marginTop = "12px";
+  const hEv = document.createElement("h3"); hEv.textContent = "Evolución de la tasa de modificación — mes a mes";
+  cEv.append(hEv, lineaTasa(M.meses, state.filtros.mes));
+  const nEv = document.createElement("p"); nEv.className = "note";
+  nEv.textContent = "Tasa = casos movidos en el mes que después tuvieron actualización de movimientos (fechaMovimientosAct en Noloco). * = mes en curso: las modificaciones llegan semanas después del movimiento, así que los meses recientes suben solos con el tiempo — comparar meses cerrados.";
+  cEv.append(nEv);
+  main.append(cEv);
+
+  // ranking inverso: quiénes más modificaciones piden
+  const cP = document.createElement("div"); cP.className = "card"; cP.style.marginTop = "12px";
+  const hP = document.createElement("h3"); hP.textContent = "Doctoras que más modificaciones piden" + (M.hayPeriodo ? "" : " — 6 meses");
+  const maxPed = Math.max(...M.rankingPedidos.map(d => d.modsPedidas), 1);
+  const rowsP = M.rankingPedidos.slice(0, 40).map(d => {
+    const tr = document.createElement("tr"); tr.className = "hoverable";
+    const bar = document.createElement("div"); bar.className = "bar-cell";
+    const track = document.createElement("div"); track.className = "track";
+    const fill = document.createElement("div"); fill.className = "fill";
+    fill.style.width = Math.round(100*d.modsPedidas/maxPed) + "%";
+    track.append(fill);
+    const val = document.createElement("span"); val.textContent = fmt(d.modsPedidas);
+    bar.append(track, val);
+    const nomP = td(d.nombre);
+    const waP = waBtn(d.id, "Hola! ¿Tenés un ratito esta semana para repasar un par de casos en curso?");
+    if (waP) nomP.append(waP);
+    const adP = adBadge(d.id);
+    if (adP) nomP.append(adP);
+    tr.append(nomP, td(bar), td(d.casos, true),
+      td(d.pctPedidos != null ? Math.round(d.pctPedidos*100) + "%" : "—", true),
+      td(d.ortoPrincipal || "—"));
+    tr.addEventListener("pointermove", ev => tipDoctora(ev, d, M));
+    tr.addEventListener("pointerleave", hideTip);
+    return tr;
+  });
+  cP.append(hP, tabla(["Doctora","Modif. pedidas","Casos 6m","Modif./casos","Ortodoncista"], rowsP, [2,3]));
+  const noteP = document.createElement("p"); noteP.className = "note";
+  noteP.textContent = "Cuenta comunicaciones con motivo modificaciones de video/renders. Modif./casos puede superar 100%: una doctora puede pedir varias modificaciones del mismo caso (y \"Casos\" cuenta solo los movidos en el período — los pedidos pueden venir de casos movidos antes). Ortodoncista = la que trabajó los casos MODIFICADOS de esa doctora (ponderado por cantidad de pedidos), no la que más casos le movió. Pasá el mouse para ver el detalle por mes y por caso.";
+  cP.append(noteP);
+  main.append(cP);
+
+  const c = document.createElement("div"); c.className = "card"; c.style.marginTop = "12px";
+  const h = document.createElement("h3"); h.textContent = "Ranking por tasa de modificación" + (M.hayPeriodo ? "" : " — 6 meses");
+  const maxTasa = Math.max(...M.ranking.map(d => d.tasaP), .01);
+  const rows = M.ranking.slice(0, 40).map(d => {
+    const tr = document.createElement("tr"); tr.className = "hoverable";
+    const bar = document.createElement("div"); bar.className = "bar-cell";
+    const track = document.createElement("div"); track.className = "track";
+    const fill = document.createElement("div"); fill.className = "fill";
+    fill.style.width = Math.round(100*d.tasaP/maxTasa) + "%";
+    track.append(fill);
+    const val = document.createElement("span"); val.textContent = Math.round(d.tasaP*100) + "%";
+    bar.append(track, val);
+    const nomR = td(d.nombre);
+    const waR = waBtn(d.id, "Hola! ¿Tenés un ratito esta semana para repasar un par de casos en curso?");
+    if (waR) nomR.append(waR);
+    const adR = adBadge(d.id);
+    if (adR) nomR.append(adR);
+    tr.append(nomR, td(bar), td(Math.round(d.tasa*100) + "%", true),
+      td(d.modif, true), td(d.casos, true), td(d.ortoPrincipal));
+    tr.addEventListener("pointermove", ev => tipDoctora(ev, d, M));
+    tr.addEventListener("pointerleave", hideTip);
+    return tr;
+  });
+  c.append(h, tabla(["Doctora","Tasa ponderada","Tasa real","Con modif.","Casos 6m","Ortodoncista"], rows, [2,3,4]));
+  const note = document.createElement("p"); note.className = "note";
+  note.textContent = "Tasa ponderada = corrige muestras chicas: cada doctora arranca en la media global (" + Math.round(M.tasaGlobal*100) + "%) y se aleja según la evidencia (fórmula bayesiana, peso 10 casos) — 3 de 3 ya no le gana a 30 de 100. Tasa real = modificados/casos sin corregir. Pasá el mouse para ver los casos, quién los movió y cuántas veces se modificaron.";
+  c.append(note);
+  main.append(c);
+
+  if (M.candidatasAD.length) {
+    const cAD = document.createElement("div"); cAD.className = "card"; cAD.style.marginTop = "12px";
+    const hAD = document.createElement("h3");
+    hAD.textContent = "Candidatas a aprobación directa ";
+    const nAD = document.createElement("span"); nAD.className = "n";
+    nAD.textContent = "· mucho volumen, casi sin re-trabajo, cero rechazos";
+    hAD.append(nAD); cAD.append(hAD);
+    const rowsAD = M.candidatasAD.map(d => {
+      const tr = document.createElement("tr"); tr.className = "hoverable";
+      const nom = td(d.nombre);
+      const wa = waBtn(d.id, "Hola! Por la confianza que ya tenemos con tus casos, te quería proponer activar la aprobación directa: salen a producción sin esperar tu OK del render. ¿Lo charlamos?");
+      if (wa) nom.append(wa);
+      tr.append(nom, td(d.casos, true), td(Math.round(d.tasa*100) + "%", true),
+        td(d.modif, true), td(d.ortoPrincipal));
+      tr.addEventListener("pointermove", ev => tipDoctora(ev, d, M));
+      tr.addEventListener("pointerleave", hideTip);
+      return tr;
+    });
+    cAD.append(tabla(["Doctora", M.hayPeriodo ? "Casos" : "Casos 6m", "Tasa modif.", "Con modif.", "Ortodoncista"], rowsAD, [1,2,3]));
+    const noteAD = document.createElement("p"); noteAD.className = "note";
+    noteAD.textContent = "Criterio: 8+ casos en el período, tasa de modificación ≤ la mitad de la media global (" + Math.round(M.tasaGlobal*100) + "%) y ningún rechazo de propuesta registrado. Hoy solo 7 doctoras tienen la aprobación directa activada en Noloco y casi todas son internas — esta lista es para salir a ofrecerla (guion en guion-acreditados-modificaciones.md; el botón verde abre el WhatsApp con la propuesta armada).";
+    cAD.append(noteAD);
+    main.append(cAD);
+  }
+}
+
+// ---------- navegación ----------
+function setView(v) {
+  state.view = v;
+  if (v === "orto" && state.filtros.orto) state.orto = state.filtros.orto;
+  document.querySelectorAll("nav.tabs button").forEach(b => b.classList.toggle("on", b.dataset.view === v));
+  $("#selOrto").hidden = v !== "orto";
+  const main = $("#main"); main.replaceChildren(); hideTip();
+  ({ equipo: vistaEquipo, orto: vistaOrto, doctoras: vistaDoctoras })[v](main);
+}
+
+async function init() {
+  const r = await fetch("data.json");
+  D = await r.json();
+  DATA_TAG = r.headers.get("etag");
+  ultimaVerif = Date.now();
+  try { OB = await (await fetch("objetivos.json")).json(); } catch (e) { OB = null; }
+  M = derivar(D);
+  const g = new Date(D.generado);
+  $("#meta").textContent = `datos de Noloco · ${fmt(D.historico.length)} casos movidos en ${D.histDias} días · actualizado ${fShort(g)} ${String(g.getHours()).padStart(2,"0")}:${String(g.getMinutes()).padStart(2,"0")}`;
+  const sel = $("#selOrto");
+  M.lista.forEach(o => {
+    const op = document.createElement("option"); op.value = o.id;
+    op.textContent = o.nombre + " (" + o.cola.filter(c=>!c._viejo).length + " en cola)";
+    sel.append(op);
+  });
+  sel.addEventListener("change", () => { state.orto = sel.value; setView("orto"); });
+
+  // fila de filtros
+  const fMes = $("#fMes"), fOrto = $("#fOrto"), fDra = $("#fDra");
+  const fDesde = $("#fDesde"), fHasta = $("#fHasta");
+  const hoyIso = new Date().toISOString().slice(0, 10);
+  const minIso = new Date(Date.now() - (D.histDias || 180) * MS_D).toISOString().slice(0, 10);
+  for (const inp of [fDesde, fHasta]) { inp.min = minIso; inp.max = hoyIso; }
+  const setRango = () => {
+    state.filtros.desde = fDesde.value; state.filtros.hasta = fHasta.value;
+    if (fDesde.value || fHasta.value) { state.filtros.mes = ""; fMes.value = ""; }
+    refrescar();
+  };
+  fDesde.addEventListener("change", setRango);
+  fHasta.addEventListener("change", setRango);
+  const hoy0 = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d0 = new Date(hoy0.getFullYear(), hoy0.getMonth()-i, 1);
+    const op = document.createElement("option");
+    op.value = d0.getFullYear()+"-"+d0.getMonth();
+    op.textContent = MESES[d0.getMonth()] + " " + d0.getFullYear();
+    fMes.append(op);
+  }
+  M.lista.forEach(o => {
+    const op = document.createElement("option"); op.value = o.id; op.textContent = o.nombre;
+    fOrto.append(op);
+  });
+  const dras = [...new Set(D.historico.map(h => h.doctorFullName).filter(Boolean))].sort();
+  const dl = $("#drasList");
+  dras.forEach(n => { const op = document.createElement("option"); op.value = n; dl.append(op); });
+  const drasSet = new Set(dras);
+  const refrescar = () => { M = derivar(D); setView(state.view); };
+  fMes.addEventListener("change", () => {
+    state.filtros.mes = fMes.value;
+    if (fMes.value) { state.filtros.desde = state.filtros.hasta = ""; fDesde.value = ""; fHasta.value = ""; }
+    refrescar();
+  });
+  fOrto.addEventListener("change", () => { state.filtros.orto = fOrto.value; refrescar(); });
+  fDra.addEventListener("change", () => {
+    state.filtros.doctora = drasSet.has(fDra.value) ? fDra.value : "";
+    if (!state.filtros.doctora) fDra.value = "";
+    refrescar();
+  });
+  $("#fLimpiar").addEventListener("click", () => {
+    state.filtros = { mes: "", orto: "", doctora: "", desde: "", hasta: "" };
+    fMes.value = ""; fOrto.value = ""; fDra.value = ""; fDesde.value = ""; fHasta.value = "";
+    refrescar();
+  });
+  document.querySelectorAll("nav.tabs button").forEach(b =>
+    b.addEventListener("click", () => setView(b.dataset.view)));
+  setView("equipo");
+}
+init().catch(e => { $("#main").textContent = "Error cargando data.json: " + e.message; });
+</script>
+</body>
+</html>

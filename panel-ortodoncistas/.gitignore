@@ -1,0 +1,4 @@
+.vercel
+data.json
+*.log
+.password-panel

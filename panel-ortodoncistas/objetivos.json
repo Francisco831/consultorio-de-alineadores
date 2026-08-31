@@ -1,0 +1,8 @@
+{
+  "_nota": "Objetivo de casos movidos por semana (definidos por Pancho 19/8/26). 'default' aplica a todas; 'porOrto' pisa el default por nombre completo como figura en el panel.",
+  "default": 22,
+  "porOrto": {
+    "Agustina Cercedo": 48,
+    "Daniela Marlene Soto": 26
+  }
+}
