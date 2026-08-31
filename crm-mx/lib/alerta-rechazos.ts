@@ -62,13 +62,18 @@ function piezas(texto: string | null): string[] {
   return [...new Set(texto?.match(/\b[1-4][1-8]\b/g) ?? [])].sort();
 }
 
+// Un caso con 2+ rechazos ya no se avisa si el conflicto quedó atrás: pasó a
+// una etapa de producción o la doctora aprobó el video DESPUÉS del último
+// rechazo ("Apruebo la segunda!"). Mismo criterio que el script local del 22/8.
+const ETAPAS_RESUELTAS = new Set(["FINALIZADO", "LABORATORIO", "IMPRESION", "IMPRESION_DIGITAL"]);
+
 export async function correrAlertaRechazos(
   db: SupabaseClient,
   email: string,
   password: string,
   webhook: string,
   log: (s: string) => void = () => {}
-): Promise<{ avisados: number; conDosOMas: number }> {
+): Promise<{ avisados: number; conDosOMas: number; descartados: number }> {
   const login = await gqlV2(
     `mutation { login(email: ${JSON.stringify(email)}, password: ${JSON.stringify(password)}) { token } }`
   );
@@ -106,27 +111,58 @@ export async function correrAlertaRechazos(
   if (error) throw new Error(`estado: ${error.message}`);
   const estado = new Map((filas ?? []).map((f) => [f.caso as string, f.rechazos as number]));
 
-  const nuevos = [...porCaso.entries()].filter(
+  let nuevos = [...porCaso.entries()].filter(
     ([caso, v]) => v.length >= 2 && v.length > (estado.get(caso) ?? 0)
   );
   const conDosOMas = [...porCaso.values()].filter((v) => v.length >= 2).length;
   if (nuevos.length === 0) {
     log("sin casos nuevos con 2+ rechazos");
-    return { avisados: 0, conDosOMas };
+    return { avisados: 0, conDosOMas, descartados: 0 };
   }
 
+  const guardarEstado = async () => {
+    const ahora = new Date().toISOString();
+    const upserts = [...porCaso.entries()]
+      .filter(([, v]) => v.length >= 2)
+      .map(([caso, v]) => ({
+        caso,
+        rechazos: Math.max(v.length, estado.get(caso) ?? 0),
+        updated_at: ahora,
+      }));
+    const { error: e2 } = await db.from("alerta_rechazos_estado").upsert(upserts, { onConflict: "caso" });
+    if (e2) throw new Error(`upsert estado: ${e2.message}`);
+  };
+
   const ids = nuevos.map(([c]) => `"${c}"`).join(", ");
-  const info = new Map<string, [string, string]>();
+  const info = new Map<string, { doctora: string; orto: string; stage: string | null; aprob: string | null }>();
   const q = await gqlV2(
     `{ keepsmilingCasosCollection(first: 100, where: {idExterno: {in: [${ids}]}}) {
-        edges { node { idExterno doctorFullName userMovimientos { fullName } } } } }`,
+        edges { node { idExterno doctorFullName stage fechaAprobacionVideo userMovimientos { fullName } } } } }`,
     token
   );
   for (const e of q.keepsmilingCasosCollection.edges) {
-    info.set(e.node.idExterno, [
-      e.node.doctorFullName || "—",
-      e.node.userMovimientos?.fullName || "sin asignar",
-    ]);
+    info.set(e.node.idExterno, {
+      doctora: e.node.doctorFullName || "—",
+      orto: e.node.userMovimientos?.fullName || "sin asignar",
+      stage: e.node.stage ?? null,
+      aprob: e.node.fechaAprobacionVideo ?? null,
+    });
+  }
+
+  const resuelto = ([caso, v]: [string, Com[]]) => {
+    const i = info.get(caso);
+    if (!i) return false;
+    if (i.stage && ETAPAS_RESUELTAS.has(i.stage)) return true;
+    const ultima = v.map((c) => c.createdAt).sort().at(-1)!;
+    return !!i.aprob && i.aprob > ultima;
+  };
+  const descartados = nuevos.filter(resuelto).map(([c]) => c);
+  nuevos = nuevos.filter((n) => !resuelto(n));
+  if (descartados.length) log(`descartados ${descartados.length} ya resueltos: ${descartados.join(", ")}`);
+  if (nuevos.length === 0) {
+    await guardarEstado();
+    log("nada abierto para avisar");
+    return { avisados: 0, conDosOMas, descartados: descartados.length };
   }
 
   const lineas: string[] = [];
@@ -139,7 +175,7 @@ export async function correrAlertaRechazos(
         if (prev.has(p) && !reps.includes(p)) reps.push(p);
       }
     }
-    const [doctora, ortoNombre] = info.get(caso) ?? ["—", "s/d"];
+    const { doctora, orto: ortoNombre } = info.get(caso) ?? { doctora: "—", orto: "s/d" };
     const orto = SLACK_IDS[ortoNombre] ? `<@${SLACK_IDS[ortoNombre]}>` : ortoNombre;
     const ultimo = (v[v.length - 1].mensajeCliente ?? "").replace(/\n/g, " ").trim().slice(0, 120);
     const extra = reps.length ? ` · 🔁 pieza ${reps.join(", ")} repetida` : "";
@@ -161,16 +197,7 @@ export async function correrAlertaRechazos(
   if (!res.ok) throw new Error(`Slack respondió ${res.status}`);
   log(`Slack: ${res.status}, avisados ${nuevos.length}`);
 
-  const ahora = new Date().toISOString();
-  const upserts = [...porCaso.entries()]
-    .filter(([, v]) => v.length >= 2)
-    .map(([caso, v]) => ({
-      caso,
-      rechazos: Math.max(v.length, estado.get(caso) ?? 0),
-      updated_at: ahora,
-    }));
-  const { error: e2 } = await db.from("alerta_rechazos_estado").upsert(upserts, { onConflict: "caso" });
-  if (e2) throw new Error(`upsert estado: ${e2.message}`);
+  await guardarEstado();
 
-  return { avisados: nuevos.length, conDosOMas };
+  return { avisados: nuevos.length, conDosOMas, descartados: descartados.length };
 }
