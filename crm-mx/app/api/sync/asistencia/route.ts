@@ -9,9 +9,10 @@
 // aunque esté todo en orden (sirve para probar el canal).
 //
 // Qué mira, por cada perfil activo que no sea ADMIN ni VIEWER:
-//  - "entró": auth.users.last_sign_in_at cae en el día de hoy (México). Si la
-//    sesión quedó abierta de otro día ese dato no se mueve — por eso la alarma
-//    NO salta solo por el login: salta cuando no CARGÓ nada.
+//  - "entró": lo más nuevo entre auth.users.last_sign_in_at y
+//    profiles.last_seen_at (la marca que deja el layout en cada carga, 0050)
+//    cae en el día de hoy (México). Aun así la alarma NO salta solo por el
+//    ingreso: salta cuando no CARGÓ nada.
 //  - "cargó": actividades creadas + tareas creadas + tareas completadas hoy.
 // El aviso sale al webhook SLACK_WEBHOOK_ASISTENCIA si existe; si no, al de
 // alertas de rechazos (mismo canal #alertas-rechazos).
@@ -86,7 +87,7 @@ export async function GET(req: Request) {
     // a quiénes se controla: el equipo operativo (hoy: Juan y Rocío)
     const { data: perfiles, error: ePerf } = await db
       .from("profiles")
-      .select("id, nombre, rol")
+      .select("id, nombre, rol, last_seen_at")
       .eq("activo", true)
       .not("rol", "in", '("ADMIN","VIEWER")');
     if (ePerf) throw new Error(`profiles: ${ePerf.message}`);
@@ -124,7 +125,12 @@ export async function GET(req: Request) {
         ]);
         const cargas =
           (acts.count ?? 0) + (tareasNuevas.count ?? 0) + (tareasHechas.count ?? 0);
-        const signin = signinDe.get(p.id) ?? null;
+        const entradas = [signinDe.get(p.id), p.last_seen_at].filter(
+          (v): v is string => v != null
+        );
+        const signin = entradas.length
+          ? entradas.reduce((a, b) => (new Date(a) > new Date(b) ? a : b))
+          : null;
         const entroHoy = signin != null && diaMXDe.format(new Date(signin)) === hoy;
         return {
           nombre: p.nombre.split(" ")[0],

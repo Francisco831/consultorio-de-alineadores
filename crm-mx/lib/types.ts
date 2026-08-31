@@ -60,6 +60,8 @@ export interface Profile {
   whatsapp_phone: string | null;
   /** Línea de la organización desde la que atiende en Periskope (0041). Solo dígitos, sin @c.us. */
   periskope_org_phone: string | null;
+  /** Última entrada real al CRM (0050): la toca el layout en cada carga de página. */
+  last_seen_at: string | null;
 }
 
 export interface PriorityReason {

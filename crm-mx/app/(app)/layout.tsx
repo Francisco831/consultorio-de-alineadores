@@ -16,11 +16,13 @@ export default async function AppLayout({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single<Profile>();
+  // la marca de entrada real (0050): last_sign_in_at solo se mueve al
+  // re-loguear, así que cada carga de página toca profiles.last_seen_at
+  // (la función frena sola si ya se tocó hace menos de 5 minutos)
+  const [{ data: profile }] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", user.id).single<Profile>(),
+    supabase.rpc("touch_last_seen"),
+  ]);
 
   return (
     <div className="flex h-screen overflow-hidden">

@@ -97,9 +97,10 @@ export default async function PanelPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  // último ingreso de cada uno (auth.users vía team_signins): el gate de rol
-  // vive en la función — a un rol sin gestión le devuelve error y el bloque
-  // "Ingresos al CRM" directamente no aparece
+  // última entrada de cada uno (team_signins = lo más nuevo entre el login de
+  // auth y profiles.last_seen_at, que el layout toca en cada carga — 0050): el
+  // gate de rol vive en la función — a un rol sin gestión le devuelve error y
+  // el bloque "Ingresos al CRM" directamente no aparece
   const [{ data: profilesRaw }, { data: signinsRaw }] = await Promise.all([
     supabase
       .from("profiles")
@@ -348,9 +349,9 @@ export default async function PanelPage({
     lista.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
 
   // ---- ingresos al CRM ("lo quiero ver en el panel", Pancho 22/8) ----
-  // OJO: last_sign_in_at es el último LOGIN — si la sesión quedó abierta de
-  // otro día, abrir la app no lo mueve; por eso el rojo solo salta en día
-  // hábil y la alarma de las 17:30 MX (api/sync/asistencia) mira también si
+  // Desde 0050 el dato es la última ENTRADA real (login o sesión abierta, la
+  // marca el layout), no el último login de auth. El rojo solo salta en día
+  // hábil; la alarma de las 17:30 MX (api/sync/asistencia) mira además si
   // cargaron algo.
   const esDiaHabil = !["Sat", "Sun"].includes(
     new Intl.DateTimeFormat("en-US", {
@@ -682,7 +683,7 @@ export default async function PanelPage({
                   Ingresos al CRM
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  Último login de cada uno. En día hábil, quien no entró
+                  Última entrada de cada uno. En día hábil, quien no entró
                   aparece en rojo; a las 17:30 de México sale la alarma por
                   Slack si alguien no entró ni cargó nada.
                 </p>
