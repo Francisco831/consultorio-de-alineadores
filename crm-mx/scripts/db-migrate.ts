@@ -144,6 +144,15 @@ async function connect(): Promise<Client> {
     });
     try {
       await client.connect();
+      // Los `raise notice` de las migraciones. Casi todas terminan con uno que
+      // dice qué verificaron ("0052 OK: las cuatro puertas cerradas…") y hasta
+      // hoy el runner los tiraba a la basura: la migración se auto-probaba y el
+      // resultado no lo leía nadie. Un chequeo que no se ve no tranquiliza a
+      // nadie, y encima esconde los avisos de las que cuentan cuántas filas
+      // tocaron.
+      client.on("notice", (n) => {
+        if (n.message) console.log(`    · ${n.message}`);
+      });
       console.log(`✓ conectado via ${host}`);
       return client;
     } catch (e) {

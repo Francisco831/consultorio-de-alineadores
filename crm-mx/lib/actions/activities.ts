@@ -25,11 +25,13 @@ export async function logActivity(formData: FormData) {
   });
   if (error) return { error: error.message };
 
-  // el último contacto del doctor se actualiza al vuelo (el motor lo recalcula igual)
-  await supabase
-    .from("doctors")
-    .update({ last_contact_at: new Date().toISOString() })
-    .eq("id", doctorId);
+  // `last_contact_at` NO se escribe acá. Lo deriva recompute_doctor del insert
+  // de arriba (greatest de la última actividad y el último caso, 0019), que se
+  // dispara solo por trigger. Escribirlo a mano no era solo redundante: ponía
+  // now() aunque la actividad se cargara con fecha de ayer —el panel deja elegir
+  // el día—, así que un contacto retroactivo dejaba al doctor como contactado
+  // hoy y lo sacaba de la cola de /hoy sin que nadie lo hubiera contactado.
+  // Desde 0052 la columna está protegida y este update fallaría.
 
   revalidatePath(`/doctores/${doctorId}`);
   // la carga rápida del panel personal también refresca sus tiles y listas

@@ -65,10 +65,8 @@ export async function completeTask(formData: FormData) {
       outcome,
       created_by: user.id,
     });
-    await supabase
-      .from("doctors")
-      .update({ last_contact_at: new Date().toISOString() })
-      .eq("id", task.doctor_id);
+    // el último contacto lo deriva recompute_doctor del insert de arriba; desde
+    // 0052 la columna está protegida y escribirla acá fallaría (ver activities.ts)
   }
 
   const nextTitle = String(formData.get("next_title") ?? "").trim();

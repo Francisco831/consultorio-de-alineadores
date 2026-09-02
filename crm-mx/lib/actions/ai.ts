@@ -146,11 +146,8 @@ export async function acceptRecommendation(
       .single();
     if (error)
       return failClaimed(`No se pudo registrar la actividad: ${error.message}`);
-    // el último contacto del doctor se actualiza al vuelo (el motor lo recalcula igual)
-    await supabase
-      .from("doctors")
-      .update({ last_contact_at: new Date().toISOString() })
-      .eq("id", rec.doctor_id);
+    // el último contacto lo deriva recompute_doctor del insert de arriba; desde
+    // 0052 la columna está protegida y escribirla acá fallaría (ver activities.ts)
     executedRef = { activity_id: activity.id };
   } else if (payload && payload.kind === "profile_update") {
     if (!rec.doctor_id)
