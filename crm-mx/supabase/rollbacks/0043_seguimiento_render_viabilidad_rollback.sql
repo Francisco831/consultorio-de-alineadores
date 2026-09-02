@@ -4,4 +4,4 @@ delete from automation_rules where key = 'viabilidad_sin_respuesta';
 update automation_rules
    set params = '{"days": 7, "cutoff": "2026-06-01"}'::jsonb
  where key = 'aprobacion_pendiente';
-\echo 'Reaplicar supabase/migrations/0020_tareas_acotadas.sql para restaurar evaluate_automations().'
+-- Después de este rollback hay que reaplicar supabase/migrations/0020_tareas_acotadas.sql para restaurar evaluate_automations(). (Antes esto era un \echo de psql, que node-pg no entiende y hacía fallar el archivo entero.)

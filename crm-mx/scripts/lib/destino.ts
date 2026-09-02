@@ -55,6 +55,15 @@ export interface OpcionesDestino {
    * hay que rechazarla — hay que confirmar contra ella.
    */
   refEfectivo?: string;
+  /**
+   * La confirmación escrita, pero pasada como argumento (`--confirmar <ref>`) en
+   * vez de tipeada en la terminal. Existe para GitHub Actions, donde no hay TTY:
+   * la persona escribe el ref en el formulario del workflow y el runner lo recibe
+   * acá. La vara es LA MISMA que en la terminal —hay que conocer y escribir el
+   * ref exacto—, solo cambia por dónde entra. `--yes` sigue sin alcanzar para
+   * producción ni para lo destructivo.
+   */
+  refConfirmado?: string;
 }
 
 export interface DestinoResuelto {
@@ -100,6 +109,17 @@ export function necesitaConfirmacion(
   destructivo: boolean | undefined
 ): boolean {
   return exigeConfirmacionManual || entorno !== "desarrollo" || !!destructivo;
+}
+
+/**
+ * ¿La confirmación escrita que llegó por argumento vale como la tipeada?
+ * Solo si es EXACTAMENTE el ref: ni un prefijo, ni con espacios, ni "yes".
+ */
+export function refConfirmadoValido(
+  ref: string,
+  refConfirmado: string | undefined
+): boolean {
+  return typeof refConfirmado === "string" && refConfirmado.trim() === ref && ref !== "";
 }
 
 /**
@@ -158,6 +178,19 @@ export async function confirmarDestino(
           : "  --yes NO alcanza acá: el destino no está identificado.\n"
     );
   }
+  // La confirmación escrita puede venir como argumento (GitHub Actions): tiene
+  // que ser el ref exacto. Un valor distinto no cae a la pregunta interactiva,
+  // corta: si alguien pasó --confirmar con otro ref, estaba pensando en otra base.
+  if (o.refConfirmado !== undefined) {
+    if (refConfirmadoValido(ref, o.refConfirmado)) {
+      console.log(`  Confirmación escrita recibida por argumento (${ref}).\n`);
+      return { ref, entorno: destino.entorno };
+    }
+    throw new DestinoRechazado(
+      `--confirmar no coincide con el destino (${ref}). No se escribió nada.`
+    );
+  }
+
   if (!process.stdin.isTTY) {
     throw new DestinoRechazado(
       "Destino no confirmado y no hay terminal interactiva. No se escribió nada."

@@ -14,6 +14,9 @@ import {
   compararConLedger,
   esArchivoDeMigracion,
   esRollback,
+  migracionQueDeshace,
+  valorDeFlag,
+  archivosExplicitos,
   MODOS,
   MODOS_SIN_ESCRITURA,
   ordenarMigraciones,
@@ -264,5 +267,48 @@ describe("compararConLedger", () => {
     // distintas, y solo se nota cuando alguien recrea la base desde cero.
     const r = compararConLedger(c, checksum("select 2;"));
     assert.equal(r.estado, "divergente");
+  });
+});
+
+describe("migracionQueDeshace", () => {
+  it("del nombre del rollback sale la migración que hay que sacar del ledger", () => {
+    assert.equal(
+      migracionQueDeshace("supabase/rollbacks/0051_editar_notas_rollback.sql"),
+      "0051_editar_notas.sql"
+    );
+    assert.equal(migracionQueDeshace("0028_migration_ledger_rollback.sql"), "0028_migration_ledger.sql");
+  });
+  it("si el nombre no sigue la convención, no adivina", () => {
+    assert.equal(migracionQueDeshace("supabase/rollbacks/deshacer_todo.sql"), null);
+    assert.equal(migracionQueDeshace("0051_editar_notas.sql"), null);
+  });
+});
+
+describe("archivosExplicitos", () => {
+  // El bug real: sin --hasta, `args[iHasta + 1]` era args[0], y el PRIMER
+  // argumento —el archivo— quedaba excluido. `db-migrate.ts 0027.sql --apply`
+  // aplicaba TODAS las pendientes en vez de ese archivo.
+  it("el archivo en primera posición cuenta como explícito", () => {
+    assert.deepEqual(
+      archivosExplicitos(["supabase/migrations/0027_x.sql", "--apply"], ["--hasta", "--confirmar"]),
+      ["supabase/migrations/0027_x.sql"]
+    );
+  });
+  it("excluye los valores de los flags que llevan valor, estén donde estén", () => {
+    assert.deepEqual(
+      archivosExplicitos(
+        ["--apply", "--confirmar", "yuxfgbbqhqquuoaudjdd", "supabase/migrations/0052_x.sql", "--hasta", "0051"],
+        ["--hasta", "--confirmar"]
+      ),
+      ["supabase/migrations/0052_x.sql"]
+    );
+  });
+  it("sin archivos devuelve vacío (= todas las pendientes)", () => {
+    assert.deepEqual(archivosExplicitos(["--sembrar", "--hasta", "0027"], ["--hasta", "--confirmar"]), []);
+    assert.deepEqual(archivosExplicitos(["--ensayo", "--yes"], ["--hasta", "--confirmar"]), []);
+  });
+  it("valorDeFlag devuelve el valor o undefined", () => {
+    assert.equal(valorDeFlag(["--hasta", "0027"], "--hasta"), "0027");
+    assert.equal(valorDeFlag(["--apply"], "--hasta"), undefined);
   });
 });

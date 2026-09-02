@@ -1,0 +1,61 @@
+name: CRM MX — Simulacro de restauración en desarrollo
+
+# Baja un respaldo (artifact de "Respaldo fuera de Supabase") y lo restaura en el
+# proyecto de DESARROLLO. Es el simulacro trimestral: prueba que el respaldo se
+# puede volver a levantar, y de paso deja desarrollo con datos frescos.
+#
+# Es DESTRUCTIVO para desarrollo (vacía public y reemplaza las cuentas). Por eso
+# exige escribir el ref de desarrollo en el formulario: la misma vara que en la
+# terminal. Contra producción no corre nunca desde acá.
+#
+# Necesita el secret CRM_MX_DB_PASSWORD (la misma contraseña sirve para las dos
+# bases) y el run_id de una corrida del respaldo.
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "run_id de la corrida de 'Respaldo fuera de Supabase' a restaurar"
+        required: true
+      confirmar:
+        description: "Escribí el ref de DESARROLLO (klujlknadykmsgatqtks) para confirmar"
+        required: true
+      ensayo:
+        description: "Solo ensayar (carga y revierte, no deja nada escrito)"
+        type: boolean
+        default: true
+
+jobs:
+  restaurar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: crm-mx
+    env:
+      SUPABASE_PROJECT_REF: klujlknadykmsgatqtks
+      SUPABASE_DB_HOST: aws-0-ca-central-1.pooler.supabase.com
+      SUPABASE_DB_PASSWORD: ${{ secrets.CRM_MX_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: crm-mx/package-lock.json
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: respaldo-prod-${{ inputs.run_id }}
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/bajado
+      - name: Descomprimir
+        run: mkdir -p "$RUNNER_TEMP/respaldo" && tar -C "$RUNNER_TEMP/respaldo" -xzf "$RUNNER_TEMP/bajado/respaldo.tgz"
+      - name: Poner desarrollo al día en migraciones (por si el volcado es más nuevo)
+        run: npx tsx scripts/db-migrate.ts --apply --yes
+      - name: Restaurar
+        run: |
+          npx tsx scripts/restaurar-datos.ts \
+            --desde "$RUNNER_TEMP/respaldo" --con-auth \
+            --confirmar "${{ inputs.confirmar }}" \
+            ${{ inputs.ensayo && '--ensayo' || '' }}

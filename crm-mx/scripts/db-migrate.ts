@@ -65,18 +65,22 @@ import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { config } from "dotenv";
 import {
+  archivosExplicitos,
   checksum,
   claveLedger,
   compararConLedger,
   esRollback,
+  migracionQueDeshace,
   ordenarMigraciones,
   prefijo,
   QUE_HACE,
   refEfectivo,
   resolverEntorno,
   resolverModo,
+  valorDeFlag,
   type Modo,
 } from "./lib/migrate-core";
+import { refConfirmadoValido } from "./lib/destino";
 
 config({ path: ".env.local" });
 
@@ -154,7 +158,12 @@ async function connect(): Promise<Client> {
 }
 
 /** Anuncia el destino y, si va a escribir, exige confirmación proporcional al riesgo. */
-async function confirmarDestino(files: string[], modo: Modo, auto: boolean): Promise<void> {
+async function confirmarDestino(
+  files: string[],
+  modo: Modo,
+  auto: boolean,
+  refConfirmado: string | undefined
+): Promise<void> {
   const destino = resolverEntorno(ref, leerRegistroEntornos(), process.env.SUPABASE_DEV_REF);
 
   console.log("");
@@ -183,6 +192,17 @@ async function confirmarDestino(files: string[], modo: Modo, auto: boolean): Pro
         ? "  --yes NO alcanza acá: el destino es PRODUCCIÓN.\n"
         : "  --yes NO alcanza acá: el destino no está identificado sin ambigüedad.\n"
     );
+  }
+  // La confirmación escrita puede llegar por argumento (`--confirmar <ref>`): es
+  // lo que usa el workflow de GitHub Actions, donde no hay terminal. La vara es
+  // la misma que tipearla —el ref exacto— y un valor distinto corta en vez de
+  // caer a la pregunta: quien pasó otro ref estaba pensando en otra base.
+  if (refConfirmado !== undefined) {
+    if (!refConfirmadoValido(ref, refConfirmado)) {
+      throw new SalidaLimpia(4, `--confirmar no coincide con el destino (${ref}). No se aplicó nada.`);
+    }
+    console.log(`  Confirmación escrita recibida por argumento (${ref}).\n`);
+    return;
   }
   if (!process.stdin.isTTY) {
     throw new SalidaLimpia(4, "Destino no confirmado y no hay terminal interactiva.");
@@ -230,7 +250,9 @@ async function aplicarArchivo(
   ruta: string,
   sql: string,
   seco: boolean,
-  conLedger: boolean
+  conLedger: boolean,
+  /** Si el archivo es un rollback: la migración que deshace, para sacarla del ledger. */
+  deshaceA: string | null = null
 ): Promise<void> {
   const inicio = performance.now();
   await client.query("begin");
@@ -239,6 +261,12 @@ async function aplicarArchivo(
     if (conLedger) {
       const ms = Math.round(performance.now() - inicio);
       await client.query(SQL_REGISTRAR, [claveLedger(ruta), checksum(sql), ms, null]);
+    }
+    // Un rollback que deja la fila en el ledger miente dos veces: --check-connection
+    // dice "aplicada" y --apply la saltea para siempre. Va en la misma transacción
+    // que el SQL del rollback: o se deshacen las dos cosas o ninguna.
+    if (deshaceA) {
+      await client.query("delete from ops.schema_migrations where filename = $1", [deshaceA]);
     }
     await client.query(seco ? "rollback" : "commit");
   } catch (e) {
@@ -369,7 +397,13 @@ async function asegurarLedger(client: Client, seco: boolean): Promise<boolean> {
 // Siembra
 // ---------------------------------------------------------------------------
 
-async function sembrar(client: Client, files: string[], hasta: number, auto: boolean) {
+async function sembrar(
+  client: Client,
+  files: string[],
+  hasta: number,
+  auto: boolean,
+  refConfirmado: string | undefined
+) {
   const aSembrar = files.filter((f) => {
     const p = prefijo(f);
     return p != null && p <= hasta;
@@ -397,12 +431,21 @@ async function sembrar(client: Client, files: string[], hasta: number, auto: boo
   );
 
   if (!auto) {
-    if (!process.stdin.isTTY) throw new SalidaLimpia(4, "La siembra necesita confirmación.");
-    const rl = createInterface({ input: process.stdin, output: process.stdout });
-    const r = (await rl.question(`  Escribí "sembrar" para confirmar: `)).trim();
-    rl.close();
-    if (r !== "sembrar") throw new SalidaLimpia(4, "Cancelado. No se sembró nada.");
-    console.log("");
+    // Sin terminal (GitHub Actions) la confirmación escrita es el ref exacto por
+    // `--confirmar`: afirmar que algo ya corrió en ESA base exige nombrarla.
+    if (refConfirmado !== undefined) {
+      if (!refConfirmadoValido(ref, refConfirmado)) {
+        throw new SalidaLimpia(4, `--confirmar no coincide con el destino (${ref}). No se sembró nada.`);
+      }
+      console.log(`  Confirmación escrita recibida por argumento (${ref}).\n`);
+    } else {
+      if (!process.stdin.isTTY) throw new SalidaLimpia(4, "La siembra necesita confirmación.");
+      const rl = createInterface({ input: process.stdin, output: process.stdout });
+      const r = (await rl.question(`  Escribí "sembrar" para confirmar: `)).trim();
+      rl.close();
+      if (r !== "sembrar") throw new SalidaLimpia(4, "Cancelado. No se sembró nada.");
+      console.log("");
+    }
   }
 
   await client.query("begin");
@@ -429,9 +472,10 @@ async function main() {
   const modo = r.modo;
   const auto = args.includes("--yes");
   const permitirDivergencia = args.includes("--permitir-divergencia");
-  const iHasta = args.indexOf("--hasta");
-  const hasta = iHasta >= 0 ? parseInt(args[iHasta + 1] ?? "", 10) : NaN;
-  const explicit = args.filter((a) => !a.startsWith("--") && a !== args[iHasta + 1]);
+  const hastaRaw = valorDeFlag(args, "--hasta");
+  const hasta = hastaRaw !== undefined ? parseInt(hastaRaw, 10) : NaN;
+  const refConfirmado = valorDeFlag(args, "--confirmar");
+  const explicit = archivosExplicitos(args, ["--hasta", "--confirmar"]);
 
   if (!ref) throw new SalidaLimpia(1, "Falta SUPABASE_PROJECT_REF o NEXT_PUBLIC_SUPABASE_URL");
   if (!password && modo !== "print-target") throw new SalidaLimpia(1, "Falta SUPABASE_DB_PASSWORD");
@@ -459,13 +503,27 @@ async function main() {
     files = orden.map((f) => join(DIR_MIGRACIONES, f));
   }
 
-  await confirmarDestino(files, modo, auto);
+  await confirmarDestino(files, modo, auto, refConfirmado);
   if (modo === "print-target") return;
 
   const client = await connect();
   try {
+    // Un ALTER TABLE detrás de una transacción larga de la app esperaría el lock
+    // para siempre y, mientras tanto, frenaría a todo el que venga después. Con
+    // tope, el runner falla rápido y se reintenta en un momento tranquilo.
+    await client.query("set lock_timeout = '10s'");
+    if (modo === "apply" || modo === "sembrar") {
+      // Un solo runner escribiendo por vez (dos corridas a la vez —una desde la
+      // Mac y otra desde GitHub Actions— aplicarían el mismo archivo dos veces).
+      const { rows } = await client.query<{ ok: boolean }>(
+        "select pg_try_advisory_lock(hashtext('crm-mx-migrate')) as ok"
+      );
+      if (!rows[0].ok) {
+        throw new SalidaLimpia(7, "Otra corrida del runner tiene el candado sobre esta base. Esperá a que termine.");
+      }
+    }
     if (modo === "check-connection") return await informarConexion(client);
-    if (modo === "sembrar") return await sembrar(client, files, hasta, auto);
+    if (modo === "sembrar") return await sembrar(client, files, hasta, auto, refConfirmado);
 
     const seco = modo === "dry-run" || modo === "ensayo";
 
@@ -563,7 +621,14 @@ async function main() {
         : "";
       process.stdout.write(`→ ${f}${etiqueta} ... `);
       try {
-        await aplicarArchivo(client, f, sql, seco, hayLedger && !rollback);
+        await aplicarArchivo(
+          client,
+          f,
+          sql,
+          seco,
+          hayLedger && !rollback,
+          rollback && hayLedger ? migracionQueDeshace(f) : null
+        );
         console.log(seco ? "OK (revertido)" : "OK");
         aplicados++;
       } catch (e) {

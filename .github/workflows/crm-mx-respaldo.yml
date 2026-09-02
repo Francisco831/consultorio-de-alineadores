@@ -1,0 +1,56 @@
+name: CRM MX — Respaldo fuera de Supabase
+
+# Copia diaria de los DATOS de producción (public + cuentas de auth, con hash
+# de contraseña) a un artifact de GitHub, 30 días de retención. Es la copia
+# FUERA del proveedor: el respaldo de todos los días vive en Supabase Storage
+# (cron de Vercel /api/ops/respaldo). Si Supabase desaparece, esto es lo que hay.
+#
+# Necesita, en Settings → Secrets and variables → Actions:
+#   secret  CRM_MX_DB_PASSWORD   contraseña de Postgres del proyecto de PRODUCCIÓN
+#   (los refs y hosts no son secretos: están en supabase/environments.json)
+#
+# Corre también a mano (workflow_dispatch). Nunca escribe en la base.
+on:
+  schedule:
+    - cron: "15 7 * * *" # 07:15 UTC = 01:15 de México
+  workflow_dispatch:
+
+jobs:
+  respaldo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: crm-mx
+    env:
+      SUPABASE_PROJECT_REF: yuxfgbbqhqquuoaudjdd
+      SUPABASE_DB_HOST: aws-0-us-east-2.pooler.supabase.com
+      SUPABASE_DB_PASSWORD: ${{ secrets.CRM_MX_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: crm-mx/package-lock.json
+      - run: npm ci
+      - name: Volcar producción (solo lectura)
+        run: npx tsx scripts/backup-datos.ts --destino "$RUNNER_TEMP/respaldo"
+      - name: Comprimir
+        run: tar -C "$RUNNER_TEMP/respaldo" -czf "$RUNNER_TEMP/respaldo.tgz" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-prod-${{ github.run_id }}
+          path: ${{ runner.temp }}/respaldo.tgz
+          retention-days: 30
+          if-no-files-found: error
+      - name: Avisar a Slack si falló
+        if: failure()
+        env:
+          SLACK_WEBHOOK_CRM: ${{ secrets.SLACK_WEBHOOK_CRM }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK_CRM" ]; then
+            curl -s -X POST -H 'Content-Type: application/json' \
+              -d "{\"text\":\"⚠ *CRM MX — el respaldo diario en GitHub falló* ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)\"}" \
+              "$SLACK_WEBHOOK_CRM"
+          fi

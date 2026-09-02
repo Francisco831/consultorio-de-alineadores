@@ -186,12 +186,47 @@ export function esRollback(ruta: string): boolean {
 }
 
 /**
+ * La migración que un rollback deshace, por convención de nombre:
+ * `0051_editar_notas_rollback.sql` → `0051_editar_notas.sql`. Es la fila que hay
+ * que sacar del ledger al correrlo; si el nombre no sigue la convención, null y
+ * el runner avisa en vez de adivinar.
+ */
+export function migracionQueDeshace(ruta: string): string | null {
+  const nombre = claveLedger(ruta);
+  const m = nombre.match(/^(\d+_.+)_rollback\.sql$/i);
+  return m ? `${m[1]}.sql` : null;
+}
+
+/**
  * La clave del ledger es el NOMBRE del archivo, no la ruta que se tipeó.
  * `supabase/migrations/0001_x.sql` y `./supabase/migrations/0001_x.sql` son la
  * misma migración; con la ruta cruda quedaban dos filas y la segunda se re-aplicaba.
  */
 export function claveLedger(ruta: string): string {
   return ruta.split(/[/\\]/).pop() ?? ruta;
+}
+
+/** El valor que sigue a un flag (`--hasta 0027` → "0027"), o undefined si no está. */
+export function valorDeFlag(args: string[], flag: string): string | undefined {
+  const i = args.indexOf(flag);
+  return i >= 0 ? args[i + 1] : undefined;
+}
+
+/**
+ * Los archivos nombrados explícitamente: todo lo que no es un flag ni el valor de
+ * un flag que lleva valor. Hasta el 2/9/2026 esto se hacía con
+ * `a !== args[iHasta + 1]` y, sin `--hasta`, `iHasta + 1` era 0: el PRIMER
+ * argumento quedaba excluido. `db-migrate.ts 0027.sql --apply` aplicaba todas las
+ * pendientes en vez de ese archivo. Se sabía que "funcionaba" solo porque los
+ * docs ponían el flag antes del archivo.
+ */
+export function archivosExplicitos(args: string[], flagsConValor: string[]): string[] {
+  const valores = new Set<number>();
+  for (const flag of flagsConValor) {
+    const i = args.indexOf(flag);
+    if (i >= 0 && i + 1 < args.length) valores.add(i + 1);
+  }
+  return args.filter((a, i) => !a.startsWith("--") && !valores.has(i));
 }
 
 /** Prefijo numérico de una migración, o null si no tiene. */

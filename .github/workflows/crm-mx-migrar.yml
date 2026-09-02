@@ -1,0 +1,57 @@
+name: CRM MX — Migraciones en producción
+
+# Las migraciones de la base dejan de depender de una terminal en la Mac de
+# alguien. Dos modos:
+#   · ensayo (default): corre TODAS las pendientes en una transacción contra
+#     producción y la revierte. No escribe nada. Sirve para saber si la cadena
+#     que está en el repo aplica limpia.
+#   · aplicar: escribe de verdad. Exige escribir el ref de producción en el
+#     formulario — la misma vara que en la terminal (`--yes` no alcanza).
+#
+# El orden correcto sigue siendo: mergear la migración → correr esto en modo
+# aplicar → recién después el deploy del código que la usa (Vercel despliega
+# solo al pushear a crm-mx-ai, así que la migración va ANTES del push que la
+# necesita, o el código tiene que tolerar el schema viejo durante minutos).
+#
+# Necesita el secret CRM_MX_DB_PASSWORD.
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: "ensayo (no escribe) o aplicar"
+        type: choice
+        options: [ensayo, aplicar]
+        default: ensayo
+      confirmar:
+        description: "Solo para aplicar: escribí el ref de PRODUCCIÓN (yuxfgbbqhqquuoaudjdd)"
+        required: false
+
+jobs:
+  migrar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: crm-mx
+    env:
+      SUPABASE_PROJECT_REF: yuxfgbbqhqquuoaudjdd
+      SUPABASE_DB_HOST: aws-0-us-east-2.pooler.supabase.com
+      SUPABASE_DB_PASSWORD: ${{ secrets.CRM_MX_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: crm-mx/package-lock.json
+      - run: npm ci
+      - name: Estado del ledger
+        run: npx tsx scripts/db-migrate.ts --check-connection
+      - name: Ensayo de la cadena pendiente (siempre, no escribe)
+        run: npx tsx scripts/db-migrate.ts --ensayo
+      - name: Aplicar
+        if: inputs.modo == 'aplicar'
+        run: npx tsx scripts/db-migrate.ts --apply --confirmar "${{ inputs.confirmar }}"
+      - name: Verificar
+        if: inputs.modo == 'aplicar'
+        run: npx tsx scripts/db-migrate.ts --check-connection

@@ -55,24 +55,42 @@ async function main() {
     `);
 
     const conteos: Record<string, number> = {};
-    for (const { t } of tablas) {
-      // Ordenar por la clave primaria si la hay, para que dos volcados de la misma
-      // base sean comparables línea a línea.
+    // Vuelca una tabla a <schema>.<tabla>.ndjson (las de public van sin prefijo,
+    // que es el nombre que scripts/restaurar-datos.ts espera). Ordena por la
+    // clave primaria si la hay, para que dos volcados de la misma base sean
+    // comparables línea a línea.
+    const volcar = async (schema: string, t: string, archivoNombre: string) => {
       const { rows: pk } = await db.query<{ c: string }>(`
         select a.attname as c
           from pg_index i
           join pg_attribute a on a.attrelid = i.indrelid and a.attnum = any(i.indkey)
-         where i.indrelid = 'public.${t}'::regclass and i.indisprimary
+         where i.indrelid = '${schema}.${t}'::regclass and i.indisprimary
          order by a.attnum
       `);
       const orden = pk.length ? ` order by ${pk.map((r) => `"${r.c}"`).join(", ")}` : "";
-      const { rows } = await db.query(`select * from "${t}"${orden}`);
+      const { rows } = await db.query(`select * from "${schema}"."${t}"${orden}`);
 
-      const archivo = join(dir, `${t}.ndjson`);
+      const archivo = join(dir, `${archivoNombre}.ndjson`);
       writeFileSync(archivo, "");
       for (const fila of rows) appendFileSync(archivo, JSON.stringify(fila) + "\n");
-      conteos[t] = rows.length;
-      console.log(`    ${t.padEnd(24)} ${String(rows.length).padStart(7)} filas`);
+      conteos[archivoNombre] = rows.length;
+      console.log(`    ${archivoNombre.padEnd(24)} ${String(rows.length).padStart(7)} filas`);
+    };
+
+    for (const { t } of tablas) await volcar("public", t, t);
+
+    // Las cuentas. Sin esto el volcado no alcanza para levantar el CRM en un
+    // proyecto nuevo: profiles.id apunta a auth.users(id) y Supabase no deja
+    // crear un usuario con un id elegido por API. Van con su hash de contraseña,
+    // que es justamente lo que permite que la gente siga entrando después de una
+    // restauración. Si el rol de conexión no puede leerlas, se avisa y se sigue:
+    // un respaldo sin cuentas es peor que ninguno, pero no por eso se aborta.
+    for (const t of ["users", "identities"]) {
+      try {
+        await volcar("auth", t, `auth.${t}`);
+      } catch (e) {
+        console.log(`    ⚠ auth.${t}: no se pudo volcar (${(e as Error).message})`);
+      }
     }
 
     // Hasta qué migración está esta base, si tiene ledger. Sin él se anota null:
@@ -101,8 +119,9 @@ async function main() {
           migraciones_aplicadas: ledger,
           nota:
             "Volcado de DATOS, no de schema. Para recuperar: crear la base, correr " +
-            "supabase/migrations hasta la última de migraciones_aplicadas, y recargar " +
-            "los .ndjson respetando el orden de dependencias (doctors antes que cases, etc.).",
+            "supabase/migrations hasta la última de migraciones_aplicadas, y cargar " +
+            "este directorio con scripts/restaurar-datos.ts (--con-auth si el proyecto " +
+            "es nuevo y hay que traer las cuentas).",
         },
         null,
         2

@@ -8,7 +8,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { refAmbiguo, necesitaConfirmacion, refDeLaUrl } from "./lib/destino";
+import { refAmbiguo, necesitaConfirmacion, refDeLaUrl, refConfirmadoValido } from "./lib/destino";
 import { resolverEntorno } from "./lib/migrate-core";
 
 const DEV = "klujlknadykmsgatqtks";
@@ -89,5 +89,22 @@ describe("necesitaConfirmacion", () => {
       necesitaConfirmacion(dev.entorno, dev.exigeConfirmacionManual, true),
       true
     );
+  });
+});
+
+describe("refConfirmadoValido", () => {
+  // GitHub Actions no tiene terminal: la confirmación escrita entra por
+  // argumento. La vara es la misma que tipearla: el ref exacto y nada más.
+  it("acepta el ref exacto (con espacios alrededor, que el formulario agrega)", () => {
+    assert.equal(refConfirmadoValido(PROD, PROD), true);
+    assert.equal(refConfirmadoValido(PROD, `  ${PROD}\n`), true);
+  });
+  it("rechaza cualquier otra cosa: otro ref, un prefijo, 'yes', vacío", () => {
+    assert.equal(refConfirmadoValido(PROD, DEV), false);
+    assert.equal(refConfirmadoValido(PROD, PROD.slice(0, 8)), false);
+    assert.equal(refConfirmadoValido(PROD, "yes"), false);
+    assert.equal(refConfirmadoValido(PROD, ""), false);
+    assert.equal(refConfirmadoValido(PROD, undefined), false);
+    assert.equal(refConfirmadoValido("", ""), false);
   });
 });
