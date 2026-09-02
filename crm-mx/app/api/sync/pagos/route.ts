@@ -38,11 +38,14 @@ export const maxDuration = 300;
 const PANEL_URL = "https://crm-mx-puce.vercel.app/panel";
 
 async function avisar(texto: string): Promise<void> {
-  const webhook =
-    process.env.SLACK_WEBHOOK_PAGOS ??
-    process.env.SLACK_WEBHOOK_ASISTENCIA ??
-    process.env.SLACK_WEBHOOK_ALERTA_RECHAZOS;
-  if (!webhook?.startsWith("https://hooks.slack.com/")) return;
+  const webhook = process.env.SLACK_WEBHOOK_PAGOS || process.env.SLACK_WEBHOOK_CRM;
+  if (!webhook?.startsWith("https://hooks.slack.com/")) {
+    // Sin webhook el sync corre igual: el aviso queda en el log de Vercel y el
+    // resultado en sync_runs. Nunca cae al webhook de rechazos, que es el canal
+    // de las ortodoncistas y no del equipo de México.
+    console.warn(`[sync/pagos] falta SLACK_WEBHOOK_CRM, aviso no enviado:\n${texto}`);
+    return;
+  }
   try {
     await fetch(webhook, {
       method: "POST",

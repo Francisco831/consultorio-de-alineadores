@@ -14,8 +14,9 @@
 //    cae en el día de hoy (México). Aun así la alarma NO salta solo por el
 //    ingreso: salta cuando no CARGÓ nada.
 //  - "cargó": actividades creadas + tareas creadas + tareas completadas hoy.
-// El aviso sale al webhook SLACK_WEBHOOK_ASISTENCIA si existe; si no, al de
-// alertas de rechazos (mismo canal #alertas-rechazos).
+// El aviso sale al webhook SLACK_WEBHOOK_ASISTENCIA si existe; si no, al
+// general del CRM (SLACK_WEBHOOK_CRM, canal #alertas-crm). Nunca al de
+// rechazos: ese canal lo leen las ortodoncistas, no el equipo de México.
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
@@ -48,11 +49,10 @@ export async function GET(req: Request) {
   }
 
   const webhook =
-    process.env.SLACK_WEBHOOK_ASISTENCIA ??
-    process.env.SLACK_WEBHOOK_ALERTA_RECHAZOS;
+    process.env.SLACK_WEBHOOK_ASISTENCIA || process.env.SLACK_WEBHOOK_CRM;
   if (!webhook?.startsWith("https://hooks.slack.com/")) {
     return NextResponse.json(
-      { error: "Falta SLACK_WEBHOOK_ASISTENCIA (o SLACK_WEBHOOK_ALERTA_RECHAZOS)" },
+      { error: "Falta SLACK_WEBHOOK_CRM (webhook del canal #alertas-crm)" },
       { status: 503 }
     );
   }
