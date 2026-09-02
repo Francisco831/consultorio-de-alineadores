@@ -51,9 +51,14 @@ export default async function ActividadEquipoPage({
   const { items, profiles } = await fetchActividad(supabase, desde, hasta);
   const nombreDe = new Map(profiles.map((p) => [p.id, p.nombre]));
 
+  // `cuentaEnElDia` en false = corregir el texto de una nota vieja (0051). Se ve
+  // en la lista —es algo que la persona hizo— pero no suma al número del día:
+  // arreglar un typo no es haber contactado a nadie.
   const totalPor = new Map<string, number>();
   for (const i of items)
-    if (i.actor) totalPor.set(i.actor, (totalPor.get(i.actor) ?? 0) + 1);
+    if (i.actor && i.cuentaEnElDia)
+      totalPor.set(i.actor, (totalPor.get(i.actor) ?? 0) + 1);
+  const totalTodos = items.filter((i) => i.cuentaEnElDia).length;
 
   const visibles = u ? items.filter((i) => i.actor === u) : items;
   const equipo = profiles.filter((p) => p.activo && p.rol !== "VIEWER");
@@ -129,7 +134,7 @@ export default async function ActividadEquipoPage({
       <div className="flex flex-wrap gap-2">
         <Link href={`/equipo/actividad?d=${d}`}>
           <Badge variant={u ? "outline" : "default"}>
-            Todos · {items.length}
+            Todos · {totalTodos}
           </Badge>
         </Link>
         {equipo.map((p) => (

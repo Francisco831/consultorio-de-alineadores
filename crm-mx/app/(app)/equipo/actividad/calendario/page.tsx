@@ -38,9 +38,12 @@ export default async function CalendarioActividadPage({
   const { items, profiles } = await fetchActividad(supabase, desde, hasta);
   const equipo = profiles.filter((p) => p.activo && p.rol !== "VIEWER");
 
+  // igual que la vista diaria: una corrección de texto (0051) se ve pero no
+  // suma, ni al total de la persona ni al del día en el calendario.
   const totalPor = new Map<string, number>();
   for (const i of items)
-    if (i.actor) totalPor.set(i.actor, (totalPor.get(i.actor) ?? 0) + 1);
+    if (i.actor && i.cuentaEnElDia)
+      totalPor.set(i.actor, (totalPor.get(i.actor) ?? 0) + 1);
 
   const visibles = u ? items.filter((i) => i.actor === u) : items;
   const porDia = new Map<string, { total: number; contactos: number }>();
@@ -48,7 +51,7 @@ export default async function CalendarioActividadPage({
     const dia = diaMX(i.ts);
     if (!porDia.has(dia)) porDia.set(dia, { total: 0, contactos: 0 });
     const c = porDia.get(dia)!;
-    c.total++;
+    if (i.cuentaEnElDia) c.total++;
     if (i.esContacto) c.contactos++;
   }
 

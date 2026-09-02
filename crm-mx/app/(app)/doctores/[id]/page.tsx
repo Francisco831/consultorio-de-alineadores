@@ -109,6 +109,7 @@ export default async function DoctorPage({
     { data: contactsRaw },
     { data: profilesRaw },
     { data: waChatsRaw },
+    { data: authData },
   ] = await Promise.all([
     supabase
       .from("cases")
@@ -146,8 +147,13 @@ export default async function DoctorPage({
         "id, periskope_chat_id, chat_name, phone, unanswered, activity_bucket, lineas, asignado"
       )
       .eq("doctor_id", id),
+    // quién está mirando la ficha: decide qué notas del timeline llevan el
+    // botón de corregir. Va adentro del Promise.all para no sumar un viaje en
+    // serie a una página que ya hace ocho.
+    supabase.auth.getUser(),
   ]);
 
+  const userId = authData?.user?.id ?? null;
   const cases = (casesRaw ?? []) as Case[];
   const opps = (oppsRaw ?? []) as Opportunity[];
   const tasks = (tasksRaw ?? []) as Task[];
@@ -180,6 +186,15 @@ export default async function DoctorPage({
       detail: a.outcome,
       actor: a.created_by ? profileName.get(a.created_by) : undefined,
       isDemo: a.is_demo,
+      edited: Boolean(a.edited_at),
+      // corrige quien escribió (regla de Pancho, 31/8, que el guard de 0051
+      // hace cumplir en la base). El `userId &&` no es de más: sin él, una
+      // actividad que trajo el sync —created_by null— quedaría "editable" para
+      // una sesión sin usuario, y el botón no haría más que mostrar un error.
+      editable:
+        userId && a.created_by === userId
+          ? { activityId: a.id, summary: a.summary, outcome: a.outcome }
+          : undefined,
     });
   }
   for (const c of cases) {

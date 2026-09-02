@@ -88,6 +88,12 @@ Antes de que esas claves además existan en un tercero, conviene rotar en Supaba
 otras cosas al lado y en la raíz no hay `package.json`. Se configura en Settings → General →
 Root Directory.
 
+**El deploy sale por `git push` a `crm-mx-ai`.** No hay que correr nada a mano. Y sobre todo:
+**no correr `npx vercel --prod` desde `crm-mx/`** — como el Root Directory del proyecto ya es
+`crm-mx`, la CLI sube el contenido de esa carpeta y Vercel busca `crm-mx/crm-mx`, que no
+existe: el deploy falla con `NOW_SANDBOX_WORKER_ROOTDIR_NOT_EXIST` y llega el mail de
+"Failed production deployment" aunque la producción esté sana (pasó el 28/8/2026).
+
 El resto es cero configuración: Vercel detecta Next.js, corre `npm ci` y `npm run build`.
 **No hace falta `vercel.json`** — `maxDuration` ya está declarado en cada route file, que es
 la forma vigente de hacerlo, y no hay nada más que ajustar. Un `vercel.json` vacío o con

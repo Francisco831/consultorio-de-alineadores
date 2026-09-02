@@ -3,7 +3,10 @@
 // La libreta personal de pendientes (tabla `pendientes`, migración 0039).
 // Pedido de Pancho el 26/8: "un lugar para cada uno donde puedan anotar sus
 // tareas diarias, tipo Trello, bien simple". NO es `tasks`: acá nadie mide a
-// nadie, se escribe / se tacha / se borra y listo.
+// nadie, se escribe / se corrige / se tacha / se borra y listo.
+// La corrección la sumó Pancho el 31/8 ("Rocío subió una nota y la quiere
+// modificar"): acá no hizo falta migración, la policy de 0039 ya la limita a
+// quien la escribió.
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -71,6 +74,38 @@ export async function togglePendiente(formData: FormData) {
   const { data, error } = await supabase
     .from("pendientes")
     .update({ hecho })
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
+  if (error) return { error: error.message };
+  if (!data) return { error: DE_OTRO };
+
+  revalidarLibreta();
+  return { ok: true };
+}
+
+export async function editarPendiente(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Sesión expirada" };
+
+  const id = String(formData.get("id") ?? "");
+  const texto = String(formData.get("texto") ?? "").trim();
+  // Corregir no es borrar (regla de Pancho, 31/8): dejarlo vacío no saca el
+  // pendiente de la libreta, y el CHECK de 0039 lo rebotaría en crudo.
+  if (!texto)
+    return { error: "Un pendiente vacío no se guarda: si ya no va, borralo con la X" };
+  // el CHECK de 0039 corta en 500: validamos acá para dar un error legible
+  if (texto.length > 500)
+    return { error: "Máximo 500 caracteres para un pendiente" };
+
+  // Se manda SOLO el texto: corregir la redacción no destacha nada (el trigger
+  // pendientes_transition de 0039 solo mira `hecho`) ni mueve el orden.
+  const { data, error } = await supabase
+    .from("pendientes")
+    .update({ texto })
     .eq("id", id)
     .select("id")
     .maybeSingle();

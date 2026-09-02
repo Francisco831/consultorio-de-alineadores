@@ -4,6 +4,7 @@ import { crearEvento, borrarEvento } from "@/lib/actions/events";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { NotasEvento } from "@/components/eventos/notas-evento";
 
 // Eventos grupales (charla, webinar, KeepDay, acreditación): cada evento se
 // despliega y muestra dictante + doctores que asistieron. El intranet no
@@ -20,12 +21,19 @@ const TIPO_LABEL: Record<string, string> = {
 
 export default async function EventosPage() {
   const supabase = await createClient();
-  const { data: eventos } = await supabase
-    .from("events")
-    .select(
-      "id, titulo, tipo, fecha, dictante, modalidad, notas, event_attendees(id, nombre_crudo, doctor_id, doctors(nombre))"
-    )
-    .order("fecha", { ascending: false });
+  // Quién está mirando viaja junto con los eventos, no después: se necesita
+  // solo para saber cuáles puede corregir (created_by), y encadenarlo le
+  // sumaría un viaje en serie a una pantalla que hoy hace una sola consulta.
+  const [{ data: eventos }, { data: sesion }] = await Promise.all([
+    supabase
+      .from("events")
+      .select(
+        "id, titulo, tipo, fecha, dictante, modalidad, notas, created_by, event_attendees(id, nombre_crudo, doctor_id, doctors(nombre))"
+      )
+      .order("fecha", { ascending: false }),
+    supabase.auth.getUser(),
+  ]);
+  const yo = sesion?.user?.id ?? null;
 
   return (
     <div className="space-y-4 p-6">
@@ -122,6 +130,10 @@ export default async function EventosPage() {
               doctor_id: string | null;
               doctors: { nombre: string } | { nombre: string }[] | null;
             }>;
+            // Las notas las corrige quien cargó el evento y nadie más (regla de
+            // Pancho, 31/8; la policy events_update de 0051 la hace cumplir).
+            // Un evento sin created_by —importado— no es de nadie: se lee y ya.
+            const esMio = !!e.created_by && e.created_by === yo;
             return (
               <details key={e.id} className="group rounded-lg border bg-card">
                 <summary className="flex cursor-pointer select-none flex-wrap items-center gap-2 px-4 py-3">
@@ -141,7 +153,13 @@ export default async function EventosPage() {
                       <span className="text-muted-foreground">Dictante: </span>
                       {e.dictante ?? "—"}
                     </p>
-                    {e.notas ? (
+                    {esMio ? (
+                      // si es tuyo el textarea aparece siempre, tenga notas o
+                      // no: así se le agregan a un evento que se cargó apurado
+                      <div className="pt-1">
+                        <NotasEvento eventoId={e.id} notas={e.notas} />
+                      </div>
+                    ) : e.notas ? (
                       <p className="text-muted-foreground">{e.notas}</p>
                     ) : null}
                   </div>

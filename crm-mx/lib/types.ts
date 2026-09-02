@@ -210,6 +210,12 @@ export interface Activity {
   outcome: string | null;
   created_by: string | null;
   is_demo: boolean;
+  // ---- rastro de la corrección (migración 0051) ----
+  /** Cuándo se corrigió el texto. Lo estampa el trigger, nunca la app; null = está como se cargó. */
+  edited_at: string | null;
+  edited_by: string | null;
+  /** Huella con la que el cron reconoce lo que ya trajo, congelada al insertar: no sigue al summary, para que corregir una nota importada no la duplique. */
+  sync_key: string | null;
 }
 
 export interface Task {

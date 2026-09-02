@@ -87,7 +87,8 @@ printf '%s' 'Juan'         | npx vercel env add CALENDAR_PROFILE_2 production
 ```
 
 No hay que tocar código para agregar a alguien. Las envs nuevas entran en el
-próximo deploy (`npx vercel --prod`).
+próximo deploy, que sale solo con `git push` a `crm-mx-ai` (nunca `vercel --prod` desde
+`crm-mx/`: ver [DESPLIEGUE_VERCEL.md](DESPLIEGUE_VERCEL.md#configuración-del-proyecto-en-vercel)).
 
 Sin ninguna terna cargada, `/api/sync/calendar` responde **503** y no rompe nada.
 

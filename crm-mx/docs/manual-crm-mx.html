@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Manual CRM MX</title>
+<style>
+  @page { size:210mm 297mm; margin:0; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --navy:#001d57; --accent:#2f6df6; --gold:#f5a623; --green:#1a9e5c; --red:#d64545;
+    --ink:#1a2233; --muted:#66708a; --bg:#f4f6fb; --card:#fff; --line:#e3e8f2;
+  }
+  body { font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; color:var(--ink); }
+  .page { width:210mm; height:296mm; page-break-after:always; background:var(--bg);
+          padding:13mm 13mm 16mm; position:relative; display:flex; flex-direction:column; overflow:hidden; }
+  .page:last-child { page-break-after:auto; }
+  .strip { position:absolute; top:0; left:0; right:0; height:4mm; background:linear-gradient(90deg,var(--navy),var(--accent)); }
+  .foot { position:absolute; bottom:5mm; left:13mm; right:13mm; display:flex; justify-content:space-between; font-size:8pt; color:var(--muted); }
+  .kicker { font-size:8.5pt; font-weight:700; letter-spacing:2pt; text-transform:uppercase; color:var(--accent); margin-bottom:1.5mm; }
+  h2 { font-size:17pt; color:var(--navy); letter-spacing:-.3pt; margin-bottom:1.5mm; }
+  .sub { font-size:10pt; color:var(--muted); margin-bottom:4.5mm; line-height:1.35; }
+  .sub b, .card b { color:var(--ink); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:3mm; padding:4mm; box-shadow:0 .8mm 2.5mm rgba(0,29,87,.05); }
+  .card h3 { font-size:11pt; color:var(--navy); margin-bottom:1.5mm; }
+  .card p, .card li { font-size:9pt; color:var(--muted); line-height:1.4; }
+  .pill { display:inline-block; border-radius:99px; padding:.8mm 3mm; font-size:8.5pt; font-weight:700; }
+  .field { display:flex; gap:2.5mm; padding:1.6mm 0; border-bottom:1px dashed var(--line); font-size:9pt; }
+  .field:last-child { border-bottom:none; }
+  .field .fname { min-width:30mm; font-weight:700; color:var(--navy); }
+  .field .fdesc { color:var(--muted); line-height:1.35; }
+  .tip { background:#eef3fe; border:1px solid #c9d9fb; border-radius:2.5mm; padding:2.8mm 3.5mm; font-size:9pt; color:#2c4a8c; line-height:1.4; }
+  .warn { background:#fff8ec; border:1px solid #f3ddb0; border-radius:2.5mm; padding:2.8mm 3.5mm; font-size:9pt; color:#7a6233; line-height:1.4; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:4mm; }
+  .stage { display:flex; gap:2.5mm; align-items:flex-start; padding:1.5mm 0; }
+  .stage .n { width:5.5mm; height:5.5mm; border-radius:50%; background:var(--navy); color:#fff; font-size:8pt; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:.3mm; }
+  .stage b { font-size:9.2pt; color:var(--navy); }
+  .stage span { font-size:8.6pt; color:var(--muted); line-height:1.3; display:block; }
+  .btnrow { display:flex; gap:2mm; flex-wrap:wrap; align-items:center; }
+  .sysvs { display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid var(--line); border-radius:2.5mm; overflow:hidden; font-size:9pt; }
+  .sysvs > div { padding:2.5mm 3.5mm; }
+  .sysvs .h { background:var(--navy); color:#fff; font-weight:700; font-size:9pt; }
+  .sysvs .a { background:#fff; border-bottom:1px solid var(--line); }
+  .sysvs .b2 { background:#f8fafd; border-bottom:1px solid var(--line); }
+  .cover { background:linear-gradient(135deg,var(--navy) 0%,#00133b 65%,#001d57 100%); color:#fff; justify-content:center; }
+  .toc { font-size:10pt; color:#c9d6f5; line-height:2; }
+  .toc b { color:#fff; }
+  .toc .pn { color:#7e96d4; font-size:9pt; }
+</style>
+</head>
+<body>
+
+<!-- ====== 1 PORTADA + INDICE ====== -->
+<div class="page cover">
+  <div style="font-size:11pt; font-weight:700; letter-spacing:3pt; text-transform:uppercase; color:#9db4e8; margin-bottom:7mm;">KeepSmiling · México</div>
+  <h1 style="font-size:33pt; line-height:1.05; margin-bottom:4mm;">CRM Comercial MX<br>Manual de uso completo</h1>
+  <p style="font-size:12.5pt; color:#c9d6f5; margin-bottom:8mm; max-width:150mm;">Qué es cada pantalla, para qué sirve y cómo se completa — campo por campo. El principio no cambia: <b style="color:#fff;">el CRM te dice qué hacer; vos hacés los llamados.</b></p>
+  <span style="display:inline-block; background:#fff; color:var(--navy); font-weight:800; font-size:12pt; padding:3.5mm 7mm; border-radius:3mm; align-self:flex-start;">crm-mx-puce.vercel.app</span>
+  <div style="margin-top:11mm; border-top:1px solid #2c4a8c; padding-top:6mm;">
+    <div style="font-size:9pt; letter-spacing:2pt; text-transform:uppercase; color:#7e96d4; margin-bottom:3mm;">Índice</div>
+    <div class="toc" style="columns:2; column-gap:12mm;">
+      <div><b>2</b> · Cómo pensar el CRM</div>
+      <div><b>3</b> · Hoy — tu pantalla de arranque</div>
+      <div><b>4</b> · Doctores y la ficha 360</div>
+      <div><b>5</b> · Cargar actividades y tareas</div>
+      <div><b>6</b> · Oportunidades, acreditar y más</div>
+      <div><b>7</b> · Por acreditarse: Pipeline y Lista</div>
+      <div><b>8</b> · Oportunidades: el tablero de ventas</div>
+      <div><b>9</b> · Casos y de dónde salen los números</div>
+      <div><b>10</b> · Dashboard cuadro por cuadro</div>
+      <div><b>11</b> · Tareas y Eventos</div>
+      <div><b>12</b> · Equipo y Reportes</div>
+      <div><b>13</b> · Calidad y Ajustes</div>
+      <div><b>14</b> · La IA y las reglas de oro</div>
+    </div>
+  </div>
+  <div style="position:absolute; right:13mm; bottom:13mm; text-align:right;">
+    <div style="font-size:10pt; color:#9db4e8;">El único número que importa</div>
+    <div style="font-size:16pt; font-weight:800; color:var(--gold);">Casos pagados / mes</div>
+  </div>
+</div>
+
+<!-- ====== 2 COMO PENSAR ====== -->
+<div class="page">
+  <div class="strip"></div>
+  <div class="kicker">Página 2</div>
+  <h2>Cómo pensar el CRM: dos universos, una verdad por dato</h2>
+  <p class="sub">Todo doctor está en uno de dos universos. <b>Por acreditarse</b>: todavía no es cliente — el trabajo es captarlo. <b>Acreditados</b>: ya puede mandar casos — el trabajo es que arranque, crezca y no se duerma. La barra lateral, Tareas, Hoy y el buscador usan siempre esa misma división.</p>
+  <div class="grid2" style="margin-bottom:4mm;">
+    <div class="card" style="border-left:2.5mm solid var(--gold);">
+      <h3>🌱 Por acreditarse (~6.800 doctores)</h3>
+      <p>Se trabajan desde <b>Pipeline</b> (tablero visual por etapa) y <b>Lista</b> (tabla para trabajar en volumen). El objetivo del área: llevarlos etapa por etapa hasta el botón <b>Acreditar</b>.</p>
+    </div>
+    <div class="card" style="border-left:2.5mm solid var(--green);">
+      <h3>🚀 Acreditados (~210 doctores)</h3>
+      <p>Viven en <b>Doctores</b> (la ficha completa), <b>Oportunidades</b> (ventas en curso) y <b>Casos</b> (su producción real). El objetivo: primer caso → ritmo → growth.</p>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:4mm;">
+    <h3>Quién es la fuente de verdad de cada dato</h3>
+    <div class="sysvs" style="margin-top:2mm;">
+      <div class="h">Dato</div><div class="h">De dónde sale y qué significa</div>
+      <div class="a"><b>Casos</b></div><div class="a">Espejo de Noloco (producción). Se sincroniza solo cada 2 horas. <b>Nadie los edita en el CRM.</b></div>
+      <div class="b2"><b>Pagos</b></div><div class="b2">Planilla de Administración MX. Es el KPI real del mes: "pagado" es plata, no promesa.</div>
+      <div class="a"><b>Doctores, tareas, actividades, oportunidades</b></div><div class="a">Los carga el equipo. <b>Esto es lo que el CRM te pide mantener vivo</b> — un import nunca los pisa.</div>
+      <div class="b2"><b>Health, prioridad, acción recomendada</b></div><div class="b2">Los calcula el sistema cada noche y con cada movimiento. No se editan a mano.</div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="tip">⌘K (o Ctrl+K) en cualquier pantalla abre el <b>buscador universal</b>: escribí un doctor o una sección y saltás directo. Es el camino más corto a todo.</div>
+    <div class="tip">El brief de la IA se genera solo <b>todos los días a las 7:00 (CDMX)</b>. Los casos entran solos cada 2 horas. Lo único que el CRM no puede hacer solo es hablar con los doctores — eso es tuyo.</div>
+  </div>
+  <div class="foot"><span>CRM Comercial · KeepSmiling MX</span><span>2</span></div>
+</div>
+
+<!-- ====== 3 HOY ====== -->
+<div class="page">
+  <div class="strip"></div>
+  <div class="kicker">Página 3 · pantalla Hoy</div>
+  <h2>Hoy: tu pantalla de arranque (15 minutos)</h2>
+  <p class="sub">Es la única pantalla que hace falta abrir todas las mañanas. Tiene cinco bloques, en este orden de lectura:</p>
+  <div style="display:grid; gap:3.5mm; flex:1; align-content:start;">
+    <div class="card">
+      <h3>1 · AI Morning Brief</h3>
+      <p>El director comercial AI resume el día en ~150 palabras: meta del mes, qué cambió, 3 acciones y 1 riesgo. Se genera solo a las 7:00; el botón <b>Regenerar brief</b> lo rehace al momento si querés números de ahora. Cada dato trae su fecha ("datos al…").</p>
+    </div>
+    <div class="card">
+      <h3>2 · ¿A quién contacto hoy?</h3>
+      <p>El CRM elige los doctores que más mueven la aguja, agrupados por urgencia: <span class="pill" style="background:#fde8e8;color:var(--red);">Crítico</span> <span class="pill" style="background:#fdf3e0;color:#b07607;">Alto impacto</span> <span class="pill" style="background:#eef3fe;color:#2c4a8c;">Seguimientos</span> y más. Cada tarjeta dice <b>la acción recomendada y el porqué con números reales</b> ("lleva 26 días sin caso, su ritmo era cada 14"). Trabajalo de arriba hacia abajo; el nombre te lleva a la ficha.</p>
+    </div>
+    <div class="card">
+      <h3>3 · Mis tareas de hoy</h3>
+      <p>Tus tareas pendientes con fecha de hoy o vencida (las sin fecha NO aparecen acá — por eso siempre se carga fecha). Desde el tilde se completan sin salir de la pantalla.</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>4 · WhatsApp esperando respuesta</h3>
+        <p>Doctores cuyo último mensaje quedó sin responder (primero los de la última semana). <b>Se responde desde Periskope</b> — este bloque es el recordatorio, no el chat.</p>
+      </div>
+      <div class="card">
+        <h3>5 · Alertas</h3>
+        <p>Señales que el motor abre solo (doctor frenado, caso trabado…). Cada una se cierra con <b style="color:var(--green);">Resolver</b> (ya me ocupé) o <b style="color:var(--red);">Descartar</b> (no aplica — decí por qué: el sistema aprende del motivo).</p>
+      </div>
+    </div>
+    <div class="tip">💡 <b>La regla que hace funcionar todo:</b> lo que hagas a partir de esta pantalla (llamadas, videollamadas, WhatsApp) <b>registralo como actividad</b> en la ficha. El motor recalcula con eso a la noche: si no registrás, mañana te propone lo mismo.</div>
+  </div>
+  <div class="foot"><span>CRM Comercial · KeepSmiling MX</span><span>3</span></div>
+</div>
+
+<!-- ====== 4 DOCTORES + FICHA ====== -->
+<div class="page">
+  <div class="strip"></div>
+  <div class="kicker">Página 4 · Doctores</div>
+  <h2>Doctores: la lista y la ficha 360</h2>
+  <p class="sub"><b>La lista</b> (solo acreditados) se busca por nombre, se filtra por estado del ciclo de vida y viene ordenada por prioridad — los de arriba son los que más atención necesitan. Click en un nombre → <b>la ficha</b>, donde vive TODO lo de ese doctor:</p>
+  <div class="grid2" style="margin-bottom:4mm;">
+    <div class="card">
+      <h3>Qué muestra la ficha</h3>
+      <div class="field"><span class="fname">Cabecera</span><span class="fdesc">Nombre, categoría (Elite/Gold/Silver…), etapa del ciclo, ciudad, teléfonos, Instagram.</span></div>
+      <div class="field"><span class="fname">Semáforos</span><span class="fdesc">Health (¿mantiene SU ritmo de casos?) y Prioridad (¿conviene actuar ya?) — cada punto trae su razón escrita y la confianza del dato.</span></div>
+      <div class="field"><span class="fname">Casos</span><span class="fdesc">Su producción real (Noloco), con etapa de cada caso.</span></div>
+      <div class="field"><span class="fname">Pagos</span><span class="fdesc">Lo que Administración registró cobrado.</span></div>
+      <div class="field"><span class="fname">Oportunidades</span><span class="fdesc">Ventas en curso con este doctor.</span></div>
+      <div class="field"><span class="fname">Tareas + timeline</span><span class="fdesc">Lo pendiente y el historial completo de contactos, hitos y cambios.</span></div>
+      <div class="field"><span class="fname">WhatsApp</span><span class="fdesc">Sus chats identificados en las líneas MX; si no hay, botón para escribirle igual.</span></div>
+    </div>
+    <div style="display:grid; gap:3.5mm; align-content:start;">
+      <div class="card">
+        <h3>Los botones de arriba (acá se carga todo)</h3>
+        <div class="btnrow" style="margin-top:1mm;">
+          <span class="pill" style="background:#1db954;color:#fff;">💬 WhatsApp</span>
+          <span class="pill" style="background:#eef3fe;color:var(--navy);">＋ Actividad</span>
+          <span class="pill" style="background:#eef3fe;color:var(--navy);">📋 Tarea</span>
+          <span class="pill" style="background:#eef3fe;color:var(--navy);">🎯 Oportunidad</span>
+          <span class="pill" style="background:#eef3fe;color:var(--navy);">🔍 Viabilidad</span>
+          <span class="pill" style="background:var(--gold);color:#3a2a00;">✅ Acreditar</span>
+          <span class="pill" style="background:#eef3fe;color:var(--navy);">→ Mover etapa</span>
+          <span class="pill" style="background:#fff;color:var(--muted);border:1px dashed var(--line);">✏️ Editar</span>
+        </div>
+        <p style="margin-top:2mm;">Los formularios de cada botón están explicados campo por campo en las páginas 5 y 6.</p>
+      </div>
+      <div class="warn">⚠️ <b>Los semáforos no se editan.</b> Health y prioridad se recalculan solos. Si el potencial de un doctor te parece mal, el manager puede fijar un <b>override de potencial</b> — queda registrado quién y cuándo.</div>
+      <div class="tip">El ciclo de vida completo: Prospecto → Contactado → … → Acreditado → En activación → Activado → Activo → Growth, con las salidas En riesgo / Dormido / Reactivado / Perdido. La etapa se mueve sola con la evidencia (casos, acreditación) — y a mano solo en el área de captación.</div>
+    </div>
+  </div>
+  <div class="foot"><span>CRM Comercial · KeepSmiling MX</span><span>4</span></div>
+</div>
+
+<!-- ====== 5 CARGAR ACTIVIDAD + TAREA ====== -->
+<div class="page">
+  <div class="strip"></div>
+  <div class="kicker">Página 5 · cargar (1 de 2)</div>
+  <h2>Registrar actividad y crear tarea, campo por campo</h2>
+  <p class="sub">La distinción: <b>actividad = ya pasó</b> (la registrás para que cuente) · <b>tarea = va a pasar</b> (te la debés a futuro). Las dos se cargan desde la ficha del doctor.</p>
+  <div class="grid2" style="align-items:start;">
+    <div class="card">
+      <h3>＋ Registrar actividad <span style="font-weight:400; color:var(--muted); font-size:9pt;">(cada contacto real)</span></h3>
+      <div class="field"><span class="fname">Tipo</span><span class="fdesc">Llamada · <b>Videollamada</b> · WhatsApp · Visita · Reunión · Revisión clínica · Email · Nota · KeepDay. Elegí el canal real: las metas del equipo cuentan por tipo.</span></div>
+      <div class="field"><span class="fname">Resumen</span><span class="fdesc">Qué pasó, en una frase: "le mostré el caso de la paciente García, quedó en juntar fotos".</span></div>
+      <div class="field"><span class="fname">Resultado <i>(opcional)</i></span><span class="fdesc">El desenlace si lo hubo: "interesada, pide precio".</span></div>
+      <p style="margin-top:2mm;"><b>Dónde queda:</b> en el timeline de la ficha, en los contadores de /equipo y alimenta el recálculo nocturno de prioridades.</p>
+      <div class="tip" style="margin-top:2.5mm;">Regla de oro: <b>si no está registrado, para el CRM no pasó</b> — y te lo vuelve a proponer mañana.</div>
+    </div>
+    <div style="display:grid; gap:3.5mm;">
+      <div class="card">
+        <h3>📋 Nueva tarea</h3>
+        <div class="field"><span class="fname">Qué hay que hacer</span><span class="fdesc">Título concreto: "Seguimiento del paciente García", "Mandarle el arancel".</span></div>
+        <div class="field"><span class="fname">Tipo</span><span class="fdesc">Llamada · <b>Videollamada</b> · WhatsApp · Visita · Reunión · Revisión clínica · Seguimiento.</span></div>
+        <div class="field"><span class="fname">Fecha</span><span class="fdesc"><b style="color:var(--red);">Cargala siempre.</b> Una tarea sin fecha existe en /tareas pero NUNCA te aparece en Hoy.</span></div>
+        <p style="margin-top:2mm;"><b>Dónde queda:</b> en Tareas (pestañas "mías"/todas), en la ficha, y en Hoy el día que vence.</p>
+      </div>
+      <div class="card">
+        <h3>✅ Completar una tarea (el truco del hilo)</h3>
+        <div class="field"><span class="fname">Resultado</span><span class="fdesc">Qué salió: "paciente interesado, pide financiación". Se guarda como actividad automáticamente.</span></div>
+        <div class="field"><span class="fname">Próxima tarea <i>(opcional)</i></span><span class="fdesc">Título + tipo + fecha del siguiente paso, en el mismo formulario. Así el seguimiento nunca se corta: toda tarea muere dejando la próxima.</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>CRM Comercial · KeepSmiling MX</span><span>5</span></div>
+</div>
+
+<!-- ====== 6 OPORTUNIDAD / ACREDITAR / ETAPA / CONTACTO ====== -->
+<div class="page">
+  <div class="strip"></div>
+  <div class="kicker">Página 6 · cargar (2 de 2)</div>
+  <h2>Oportunidades, viabilidades, acreditar y el resto</h2>
+  <div class="grid2" style="align-items:start; margin-top:2mm;">
+    <div style="display:grid; gap:3.5mm;">
+      <div class="card">
+        <h3>🎯 Nueva oportunidad <span style="font-weight:400;color:var(--muted);font-size:9pt;">(un paciente potencial)</span></h3>
+        <div class="field"><span class="fname">Paciente</span><span class="fdesc">Nombre del paciente que el doctor tiene en la mira.</span></div>
+        <div class="field"><span class="fname">Monto MXN <i>(opcional)</i></span><span class="fdesc">Lo que valdría el caso — arma el forecast en plata.</span></div>
+        <div class="field"><span class="fname">Cierre estimado</span><span class="fdesc">Para cuándo creés que ingresa. Ordena el tablero.</span></div>
+        <p style="margin-top:2mm;">Nace en etapa <b>Paciente potencial</b> y de ahí se mueve por el tablero (página 8).</p>
+      </div>
+      <div class="card">
+        <h3>🔍 Nueva viabilidad</h3>
+        <p>Igual que oportunidad pero nace en etapa <b>Viabilidad</b>: un posible caso que el doctor está evaluando si entra (consulta clínica previa). Si prospera, avanza a paciente potencial.</p>
+      </div>
+      <div class="warn">⚠️ Un doctor <b>no acreditado</b> puede tener oportunidad igual (pasa con doctores importantes). El CRM la acepta y te avisa: el caso no va a poder ingresar hasta acreditarlo — tener un paciente esperando es el mejor motivo para acelerar la acreditación.</div>
+    </div>
+    <div style="display:grid; gap:3.5mm;">
+      <div class="card">
+        <h3>✅ Acreditar <span style="font-weight:400;color:var(--muted);font-size:9pt;">(el cruce de universo)</span></h3>
+        <p>Un solo campo: <b>nota opcional</b> (cómo se cerró, qué acordaron). Al confirmar, con recibo a la vista:</p>
+        <ul style="margin:1.5mm 0 0 4mm;">
+          <li>· Queda acreditado con fecha de hoy.</li>
+          <li>· Se cierran solas las tareas de captación abiertas.</li>
+          <li>· Queda el hito en su historial.</li>
+          <li>· Arranca su pipeline de activación (hasta el 1er caso pagado).</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>→ Mover etapa <span style="font-weight:400;color:var(--muted);font-size:9pt;">(solo Por acreditarse)</span></h3>
+        <p>Elegís la etapa nueva del pipeline de captación (las 10, página 7). Acreditar NO se hace desde acá — es el botón propio, que además deja el recibo.</p>
+      </div>
+      <div class="card">
+        <h3>✏️ Editar contacto</h3>
+        <p>Teléfono, WhatsApp, ciudad, Instagram, notas. <b>Conseguir un teléfono que faltaba vale oro</b>: habilita el botón de WhatsApp y el contacto directo. Nada de esto lo pisa ningún import.</p>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>CRM Comercial · KeepSmiling MX</span><span>6</span></div>
+</div>
+
+<!-- ====== 7 PROSPECCION ====== -->
+<div class="page">
+  <div class="strip"></div>
+  <div class="kicker">Página 7 · Por acreditarse</div>
+  <h2>Pipeline y Lista: el camino a la acreditación</h2>
+  <p class="sub">Las 10 etapas del pipeline de captación. Cada doctor está en una; moverlo = registrar la realidad, no un deseo. <b>Pipeline</b> lo muestra como tablero (arrastrás tarjetas); <b>Lista</b> es la tabla para trabajar de a decenas, filtrable por etapa.</p>
+  <div class="card" style="margin-bottom:4mm;">
+    <div class="grid2" style="gap:1mm 8mm;">
+      <div class="stage"><span class="n">1</span><div><b>Identificado</b><span>Sabemos que existe (censo, Instagram, congreso). Nadie habló todavía.</span></div></div>
+      <div class="stage"><span class="n">2</span><div><b>Contacto intentado</b><span>Le escribimos o llamamos y aún no respondió.</span></div></div>
+      <div class="stage"><span class="n">3</span><div><b>Contactado</b><span>Respondió: hay conversación abierta.</span></div></div>
+      <div class="stage"><span class="n">4</span><div><b>Calificado</b><span>Confirmamos que es ortodoncista con pacientes para alineadores: vale la pena invertirle tiempo.</span></div></div>
+      <div class="stage"><span class="n">5</span><div><b>Reunión agendada</b><span>Hay fecha con día y hora para presentarle KS.</span></div></div>
+      <div class="stage"><span class="n">6</span><div><b>Reunión realizada</b><span>La presentación ya ocurrió; se evalúa el interés real.</span></div></div>
+      <div class="stage"><span class="n">7</span><div><b>Interés en acreditarse</b><span>Dijo que quiere: falta concretar la acreditación.</span></div></div>
+      <div class="stage"><span class="n">8</span><div><b>Acreditación agendada</b><span>Fecha puesta para el alta/capacitación. Lo más caliente del área.</span></div></div>
+      <div class="stage"><span class="n">9</span><div><b>Acreditado</b><span>Cruzó de universo — se hace con el botón Acreditar, no arrastrando.</span></div></div>
+      <div class="stage"><span class="n">✗</span><div><b>No interesado</b><span>Dijo que no. Queda registrado para no insistir a ciegas (se puede retomar más adelante).</span></div></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>Cómo trabajar la Lista</h3>
+      <p>Filtrá por etapa con las solapas de arriba y barré en orden: los de <b>Reunión agendada</b> y <b>Acreditación agendada</b> primero (están a un paso), después los <b>Contactados</b> sin próxima acción. Cada fila muestra casos históricos, ritmo y teléfono — si falta el teléfono, conseguirlo ES la tarea.</p>
+    </div>
+    <div class="tip">💡 El embudo real de hoy está cargado en los extremos (miles en Identificado/Contactado, casi nadie en el medio). El trabajo que mueve la aguja es <b>empujar del 3 al 5</b>: pasar de "respondió" a "hay reunión con fecha".</div>
+  </div>
+  <div class="foot"><span>CRM Comercial · KeepSmiling MX</span><span>7</span></div>
+</div>
+
+<!-- ====== 8 OPORTUNIDADES ====== -->
+<div class="page">
+  <div class="strip"></div>
+  <div class="kicker">Página 8 · Oportunidades</div>
+  <h2>El tablero de ventas: de la viabilidad al caso ganado</h2>
+  <p class="sub">Cada tarjeta es <b>un paciente concreto</b> de un doctor acreditado (o por acreditar). Se arrastra de columna en columna a medida que avanza. Esto arma el forecast del Dashboard: tablero vacío = forecast ciego.</p>
+  <div class="card" style="margin-bottom:4mm;">
+    <div class="grid2" style="gap:1mm 8mm;">
+      <div class="stage"><span class="n">1</span><div><b>Viabilidad</b><span>El doctor evalúa si el caso es tratable con alineadores (consulta clínica previa).</span></div></div>
+      <div class="stage"><span class="n">2</span><div><b>Paciente potencial</b><span>Hay un paciente con nombre y apellido interesado.</span></div></div>
+      <div class="stage"><span class="n">3</span><div><b>Documentación</b><span>Se están juntando fotos, radiografías y escaneo. Acá se traba la mayoría — empujar esto es plata.</span></div></div>
+      <div class="stage"><span class="n">4</span><div><b>Caso ingresado</b><span>Ya entró a producción en Noloco.</span></div></div>
+      <div class="stage"><span class="n">5</span><div><b>Planificación</b><span>KS está armando el plan de tratamiento (staging).</span></div></div>
+      <div class="stage"><span class="n">6</span><div><b>Presentada</b><span>El doctor le presentó el plan y el precio al paciente.</span></div></div>
+      <div class="stage"><span class="n">7</span><div><b>Decisión</b><span>El paciente lo está pensando.</span></div></div>
+      <div class="stage"><span class="n">8</span><div><b>Compromiso</b><span>Dijo que sí — falta el pago.</span></div></div>
+      <div class="stage"><span class="n">✓</span><div><b>Ganada</b><span>Pagó. Suma al KPI del mes.</span></div></div>
+      <div class="stage"><span class="n">✗</span><div><b>Perdida</b><span>No avanzó. Registrá por qué: los motivos enseñan más que las ganadas.</span></div></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="tip">💡 <b>Regla de mantenimiento:</b> el tablero se toca cuando la realidad cambia, no a fin de mes. Mover la tarjeta en el momento cuesta 5 segundos; reconstruirlo después, una tarde.</div>
+    <div class="warn">⚠️ Forecast y meta son métricas distintas: el forecast proyecta <b>casos nuevos</b>; la meta se mide en <b>casos pagados</b>. El Dashboard los muestra por separado — no se "cubre" una con la otra.</div>
+  </div>
+  <div class="foot"><span>CRM Comercial · KeepSmiling MX</span><span>8</span></div>
+</div>
+
+<!-- ====== 9 CASOS ====== -->
+<div class="page">
+  <div class="strip"></div>
+  <div class="kicker">Página 9 · Casos</div>
+  <h2>Casos: la producción real (y cómo no contarla mal)</h2>
+  <p class="sub">La pantalla Casos es el espejo de Noloco: cada caso con su doctor, su etapa de producción y sus fechas. <b>Es de solo lectura</b> — se actualiza sola cada 2 horas; si algo está mal ahí, se corrige en Noloco, no acá.</p>
+  <div style="display:flex; gap:0; margin-bottom:4mm; align-items:stretch;">
+    <div class="card" style="flex:1; text-align:center; background:#fdf3e0; border-color:#f0dcae;"><b style="color:#8a5b00;">🌱 Prospecto</b><p>Pipeline / Lista</p></div>
+    <div style="align-self:center; padding:0 2mm; font-weight:700; color:var(--muted);">→</div>
+    <div class="card" style="flex:1; text-align:center; background:#e6f5ec; border-color:#bfe4cd;"><b style="color:var(--green);">🎓 Se acredita</b><p>Botón Acreditar</p></div>
+    <div style="align-self:center; padding:0 2mm; font-weight:700; color:var(--muted);">→</div>
+    <div class="card" style="flex:1; text-align:center; background:#eef3fe; border-color:#c9d9fb;"><b style="color:var(--accent);">📦 Genera casos</b><p>Espejo Noloco, cada 2h</p></div>
+    <div style="align-self:center; padding:0 2mm; font-weight:700; color:var(--muted);">→</div>
+    <div class="card" style="flex:1; text-align:center; background:var(--navy);"><b style="color:var(--gold);">💰 Paga</b><p style="color:#c9d6f5;">Planilla Admin = KPI</p></div>
+  </div>
+  <div class="grid2">
+    <div class="card" style="border-left:2.5mm solid var(--red);">
+      <h3 style="color:var(--red);">Error clásico #1 — sumar etapas</h3>
+      <p>Un caso pasa por varias etapas de producción. <b>Caso nuevo = solo su 1ª etapa.</b> Sumar todas las etapas cuenta el mismo caso varias veces (infla ~70%). El CRM ya lo descuenta — confiá en su número, no en la suma de Noloco.</p>
+    </div>
+    <div class="card" style="border-left:2.5mm solid var(--red);">
+      <h3 style="color:var(--red);">Error clásico #2 — cargado ≠ pagado</h3>
+      <p>Que un caso haya entrado a producción no es plata. La meta del mes se mide contra el <b>registro de pagos de Administración</b>. Dashboard y Reportes ya miran la fuente correcta.</p>
+    </div>
+    <div class="card" style="grid-column:1/-1;">
+      <h3>Para qué usar esta pantalla</h3>
+      <p>· Ver si el caso que el doctor dice que mandó <b>ya entró</b> (si no está, el problema es documentación).<br>· Detectar casos <b>frenados en una etapa</b> hace demasiados días — motivo de llamada de servicio, no de venta.<br>· Confirmar producción antes de una visita o videollamada: llegás sabiendo qué tiene en curso.</p>
+    </div>
+  </div>
+  <div class="foot"><span>CRM Comercial · KeepSmiling MX</span><span>9</span></div>
+</div>
+
+<!-- ====== 10 DASHBOARD ====== -->
+<div class="page">
+  <div class="strip"></div>
+  <div class="kicker">Página 10 · Dashboard</div>
+  <h2>Dashboard: ¿cómo viene el mes?, cuadro por cuadro</h2>
+  <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:2.5mm; margin:2mm 0 4mm;">
+    <div class="card" style="padding:3mm; border-top:2mm solid var(--gold);"><b style="font-size:9.5pt; color:var(--navy);">Pagados / objetivo</b><p style="font-size:8.2pt;">Casos cobrados vs meta. <b>EL número del mes.</b></p></div>
+    <div class="card" style="padding:3mm;"><b style="font-size:9.5pt; color:var(--navy);">Casos nuevos</b><p style="font-size:8.2pt;">Ingresados a producción este mes (solo 1ª etapa).</p></div>
+    <div class="card" style="padding:3mm;"><b style="font-size:9.5pt; color:var(--navy);">Forecast</b><p style="font-size:8.2pt;">Proyección de casos nuevos al cierre, según ritmo y pipeline.</p></div>
+    <div class="card" style="padding:3mm; border-top:2mm solid var(--red);"><b style="font-size:9.5pt; color:var(--navy);">Gap</b><p style="font-size:8.2pt;">Lo que falta para la meta de pagados.</p></div>
+    <div class="card" style="padding:3mm;"><b style="font-size:9.5pt; color:var(--navy);">Acreditados nuevos</b><p style="font-size:8.2pt;">Doctores que se sumaron este mes (meta: 10).</p></div>
+    <div class="card" style="padding:3mm;"><b style="font-size:9.5pt; color:var(--navy);">Primeros casos</b><p style="font-size:8.2pt;">Activaciones: doctores que debutaron este mes.</p></div>
+    <div class="card" style="padding:3mm; border-top:2mm solid var(--muted);"><b style="font-size:9.5pt; color:var(--navy);">Dormidos</b><p style="font-size:8.2pt;">Doctores que dejaron de mandar casos.</p></div>
+    <div class="card" style="padding:3mm; background:#eef3fe;"><b style="font-size:9.5pt; color:var(--navy);">Gráfico 12 meses</b><p style="font-size:8.2pt;">Casos nuevos por mes: la tendencia de fondo.</p></div>
+  </div>
+  <div class="grid2" style="margin-bottom:4mm;">
+    <div class="card">
+      <h3>El embudo completo del país</h3>
+      <div style="display:flex; gap:1mm; margin-top:2mm; align-items:flex-end;">
+        <div style="flex:1;text-align:center;"><div style="background:#c9d9fb;height:18mm;border-radius:1mm 1mm 0 0;"></div><p style="font-size:6.8pt;margin-top:.8mm;">Identif.</p></div>
+        <div style="flex:1;text-align:center;"><div style="background:#a8c2f8;height:15mm;"></div><p style="font-size:6.8pt;margin-top:.8mm;">Contact.</p></div>
+        <div style="flex:1;text-align:center;"><div style="background:#87abf5;height:11mm;"></div><p style="font-size:6.8pt;margin-top:.8mm;">Reuniones</p></div>
+        <div style="flex:1;text-align:center;"><div style="background:#6694f2;height:8mm;"></div><p style="font-size:6.8pt;margin-top:.8mm;">Acredit.</p></div>
+        <div style="flex:1;text-align:center;"><div style="background:#457df0;height:6.5mm;"></div><p style="font-size:6.8pt;margin-top:.8mm;">Activados</p></div>
+        <div style="flex:1;text-align:center;"><div style="background:#2f6df6;height:5mm;"></div><p style="font-size:6.8pt;margin-top:.8mm;">Repiten</p></div>
+        <div style="flex:1;text-align:center;"><div style="background:#1e50c4;height:3.8mm;"></div><p style="font-size:6.8pt;margin-top:.8mm;">Activos</p></div>
+        <div style="flex:1;text-align:center;"><div style="background:var(--navy);height:2.8mm;"></div><p style="font-size:6.8pt;margin-top:.8mm;">Growth</p></div>
+      </div>
+      <p style="margin-top:2mm;">Dónde se angosta más de lo normal = dónde está el trabajo del mes.</p>
+    </div>
+    <div class="card">
+      <h3>Los 3 motores del negocio</h3>
+      <div style="display:grid; gap:1.8mm; margin-top:2mm;">
+        <div style="border-left:2mm solid var(--gold); padding-left:3mm;"><b style="font-size:9.2pt;">1 · Adquisición</b><p style="font-size:8.6pt;">Prospectos activos · en reunión o más · acreditados del mes · contactados históricos.</p></div>
+        <div style="border-left:2mm solid var(--green); padding-left:3mm;"><b style="font-size:9.2pt;">2 · Activación</b><p style="font-size:8.6pt;">Acreditados sin activar · primeros casos del mes · tasa histórica · días hasta el 1er caso.</p></div>
+        <div style="border-left:2mm solid var(--accent); padding-left:3mm;"><b style="font-size:9.2pt;">3 · Growth & Retención</b><p style="font-size:8.6pt;">Activos · casos por doctor · en riesgo · dormidos y reactivados.</p></div>
+      </div>
+      <p style="margin-top:2mm;">Mes flojo → estos tres bloques dicen <b>cuál</b> motor falla, y ahí va la energía.</p>
+    </div>
+  </div>
+  <div class="tip">💡 Cómo leerlo en 60 segundos: <b>Pagados/objetivo</b> (¿llegamos?) → <b>Gap</b> (¿cuánto falta?) → <b>motor flojo</b> (¿dónde empujo?) → y de ahí a Hoy, que ya tiene elegidos los doctores de ese empujón.</div>
+  <div class="foot"><span>CRM Comercial · KeepSmiling MX</span><span>10</span></div>
+</div>
+
+<!-- ====== 11 TAREAS + EVENTOS ====== -->
+<div class="page">
+  <div class="strip"></div>
+  <div class="kicker">Página 11 · Tareas y Eventos</div>
+  <h2>Tareas: tu lista viva · Eventos: lo grupal</h2>
+  <div class="grid2" style="align-items:start; margin-top:2mm;">
+    <div style="display:grid; gap:3.5mm;">
+      <div class="card">
+        <h3>📋 La pantalla Tareas</h3>
+        <p>Pestañas <b>Mías / Todos</b> y tres pilas para no mezclar mundos:</p>
+        <div class="field"><span class="fname">Por acreditarse</span><span class="fdesc">Tareas de captación ("llamar para que se acredite").</span></div>
+        <div class="field"><span class="fname">Acreditados</span><span class="fdesc">Tareas de activación y growth ("preguntar por próximos pacientes").</span></div>
+        <div class="field"><span class="fname">Sin doctor</span><span class="fdesc">Tareas generales no atadas a una ficha.</span></div>
+        <p style="margin-top:2mm;">Se ordenan por vencimiento. Completar abre el formulario de resultado + próxima tarea (página 5).</p>
+      </div>
+      <div class="warn">⚠️ Si ves una montaña de tareas automáticas viejas ("prospecto sin seguimiento"), no intentes vaciarla a mano: es un pendiente de configuración del sistema. Tu foco son <b>tus</b> tareas con fecha.</div>
+    </div>
+    <div style="display:grid; gap:3.5mm;">
+      <div class="card">
+        <h3>🗓 Crear un evento</h3>
+        <div class="field"><span class="fname">Título</span><span class="fdesc">"Charla de neuroventas CDMX", "KeepDay Guadalajara".</span></div>
+        <div class="field"><span class="fname">Fecha</span><span class="fdesc">Cuándo fue (o será).</span></div>
+        <div class="field"><span class="fname">Dictante</span><span class="fdesc">Quién lo dio: Rocío, un KOL invitado…</span></div>
+        <div class="field"><span class="fname">Asistentes</span><span class="fdesc">Un nombre por línea. El CRM los matchea contra las fichas; lo que no matchea queda guardado igual (no se pierde nadie).</span></div>
+      </div>
+      <div class="card">
+        <h3>Para qué sirve</h3>
+        <p>Cada asistente queda vinculado a su ficha: cuando ese doctor se acredite o mande su primer caso, se puede responder <b>"¿qué evento lo trajo?"</b> — o sea, qué eventos pagan y cuáles no. Sin la lista de asistentes cargada, esa pregunta no tiene respuesta.</p>
+      </div>
+      <div class="tip">💡 Cargá el evento el mismo día, con la lista de asistencia en la mano. A la semana ya nadie se acuerda quiénes fueron.</div>
+    </div>
+  </div>
+  <div class="foot"><span>CRM Comercial · KeepSmiling MX</span><span>11</span></div>
+</div>
+
+<!-- ====== 12 EQUIPO + REPORTES ====== -->
+<div class="page">
+  <div class="strip"></div>
+  <div class="kicker">Página 12 · Equipo y Reportes</div>
+  <h2>Equipo: metas y actividad · Reportes: las 6 miradas</h2>
+  <div class="grid2" style="align-items:start; margin-top:2mm;">
+    <div style="display:grid; gap:3.5mm;">
+      <div class="card">
+        <h3>👥 Equipo</h3>
+        <p>Quiénes usan el CRM, su rol, su <b>último ingreso</b> (si alguien no entra hace días, el CRM no es su tablero — conversalo) y su actividad registrada.</p>
+      </div>
+      <div class="card">
+        <h3>Metas del comercial (mes en curso)</h3>
+        <p>Real vs meta por persona, en cuatro contadores:</p>
+        <div class="field"><span class="fname">Contactos</span><span class="fdesc">Llamadas + videollamadas + WhatsApp + visitas + reuniones registradas.</span></div>
+        <div class="field"><span class="fname">Videollamadas</span><span class="fdesc">Las de tipo videollamada (y las reuniones históricas).</span></div>
+        <div class="field"><span class="fname">KeepDays</span><span class="fdesc">Actividades tipo KeepDay.</span></div>
+        <div class="field"><span class="fname">Casos</span><span class="fdesc">Casos pagados atribuidos.</span></div>
+        <p style="margin-top:2mm;">Los managers <b>estipulan las metas ahí mismo</b> (editable inline). Solo cuenta lo registrado: otra razón para cargar cada actividad.</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📊 Reportes — 6 pestañas, cada una responde una pregunta</h3>
+      <div class="field"><span class="fname">Producción</span><span class="fdesc">¿Cuántos casos y de qué doctores? Serie mensual y ranking.</span></div>
+      <div class="field"><span class="fname">Eventos y congresos</span><span class="fdesc">¿Qué eventos trajeron doctores que después produjeron?</span></div>
+      <div class="field"><span class="fname">Acreditación y activación</span><span class="fdesc">¿Cuántos se acreditan, cuántos debutan y cuánto tardan?</span></div>
+      <div class="field"><span class="fname">Pipeline</span><span class="fdesc">¿Cuánto hay en el tablero de ventas y cómo envejece?</span></div>
+      <div class="field"><span class="fname">Actividad vs resultados</span><span class="fdesc">¿El esfuerzo registrado (llamadas, visitas) se traduce en casos?</span></div>
+      <div class="field"><span class="fname">Calidad de datos</span><span class="fdesc">¿Qué le falta al CRM para no estar ciego? (teléfonos, owners, clasificaciones).</span></div>
+      <p style="margin-top:2mm;">Uso típico: la reunión semanal se prepara con Producción + Pipeline + Actividad vs resultados.</p>
+    </div>
+  </div>
+  <div class="foot"><span>CRM Comercial · KeepSmiling MX</span><span>12</span></div>
+</div>
+
+<!-- ====== 13 CALIDAD + AJUSTES ====== -->
+<div class="page">
+  <div class="strip"></div>
+  <div class="kicker">Página 13 · Calidad y Ajustes</div>
+  <h2>Calidad: lo que el sistema no puede deducir solo · Ajustes</h2>
+  <div class="grid2" style="align-items:start; margin-top:2mm;">
+    <div class="card">
+      <h3>🛡 Calidad — 3 colas que revisa un manager</h3>
+      <div class="field"><span class="fname">Casos sin clasificar</span><span class="fdesc">¿Este caso es del propio doctor, de su 1er paciente o de un paciente más? El journey (acreditación → caso propio → 1er paciente) depende de esta respuesta; sin clasificar, los hitos quedan en "desconocido".</span></div>
+      <div class="field"><span class="fname">Interacciones sin clasificar</span><span class="fdesc">¿Ese chat fue una conversación real o un saludo? Hasta que alguien lo diga, el reloj de "días sin contacto" no es confiable.</span></div>
+      <div class="field"><span class="fname">Alertas de servicio sin calificar</span><span class="fdesc">¿Esto puede dañar la confianza del doctor? Calificar el impacto ordena qué servicio va primero.</span></div>
+      <p style="margin-top:2mm;"><b>Por qué importa:</b> cada respuesta acá vuelve más preciso el brief, las prioridades de Hoy y los reportes. Es la inversión de 10 minutos con más retorno del CRM.</p>
+    </div>
+    <div class="card">
+      <h3>⚙️ Ajustes — qué hay en cada bloque</h3>
+      <div class="field"><span class="fname">Objetivos mensuales</span><span class="fdesc">Las metas del país (casos pagados, acreditaciones) que usan Dashboard y brief. Las edita el manager.</span></div>
+      <div class="field"><span class="fname">Automatizaciones</span><span class="fdesc">Las reglas que abren alertas y tareas solas, con sus umbrales editables (ej: "doctor en riesgo a los X días"). Si una regla te inunda, acá se calibra.</span></div>
+      <div class="field"><span class="fname">Equipo</span><span class="fdesc">Roles de cada usuario (quién puede escribir qué).</span></div>
+      <div class="field"><span class="fname">Quién puede tener cuenta</span><span class="fdesc">La lista de invitados: un mail que no está acá no puede crearse cuenta, aunque tenga el link.</span></div>
+      <div class="field"><span class="fname">Inteligencia comercial</span><span class="fdesc">Estado de la capa AI y su gasto del día (hay tope diario).</span></div>
+      <div class="field"><span class="fname">Sistema</span><span class="fdesc">Recalcular scores a mano y <b>Borrar datos demo</b> (elimina todo lo marcado como demo, no toca datos reales).</span></div>
+    </div>
+  </div>
+  <div class="foot"><span>CRM Comercial · KeepSmiling MX</span><span>13</span></div>
+</div>
+
+<!-- ====== 14 IA + REGLAS ====== -->
+<div class="page">
+  <div class="strip"></div>
+  <div class="kicker">Página 14 · la IA</div>
+  <h2>La IA propone, vos decidís — y las reglas de oro</h2>
+  <div class="grid2" style="align-items:start; margin:2mm 0 4mm;">
+    <div class="card">
+      <h3>🌅 Brief de la mañana</h3>
+      <p>Solo, todos los días a las <b>7:00 (CDMX)</b>, en Hoy: meta, qué cambió, 3 acciones, 1 riesgo — 150 palabras. <b>Regenerar brief</b> lo rehace al momento. El detalle y la evidencia van en los hallazgos y recomendaciones desplegables.</p>
+    </div>
+    <div class="card">
+      <h3>💬 Preguntale al CRM</h3>
+      <p>Pregunta libre en lenguaje natural: <i>"¿qué doctores necesitan atención hoy?"</i>, <i>"¿cómo viene la meta?"</i>. Contesta con números de la base (nunca inventados — si no hay dato, dice "sin dato") y siempre con la fecha de los datos.</p>
+    </div>
+  </div>
+  <div class="card" style="background:#eef3fe; border-color:#c9d9fb; margin-bottom:4mm;">
+    <h3>Cuando la IA recomienda una acción, tenés 3 botones</h3>
+    <div class="btnrow" style="margin-top:1.5mm;">
+      <span class="pill" style="background:var(--green);color:#fff;">✓ Aprobar y ejecutar</span>
+      <span class="pill" style="background:#fff;color:var(--muted);border:1px solid var(--line);">✏️ Editar antes</span>
+      <span class="pill" style="background:#fff;color:var(--red);border:1px solid #f0c5c5;">✗ Rechazar y decir por qué</span>
+    </div>
+    <p style="margin-top:2mm;">Nada se ejecuta sin tu click. Los rechazos con motivo entrenan la lista negra: eso deja de proponerse. La IA nunca escribe sola en el CRM.</p>
+  </div>
+  <div class="card">
+    <h3>📏 Las reglas de oro, todas juntas</h3>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5mm 7mm; margin-top:2mm; font-size:9.2pt;">
+      <div><b style="color:var(--green);">✓</b> Todo contacto real se registra como actividad</div>
+      <div><b style="color:var(--red);">✗</b> No edites scores ni etapas de casos a mano</div>
+      <div><b style="color:var(--green);">✓</b> Toda tarea se crea con fecha</div>
+      <div><b style="color:var(--red);">✗</b> No sumes etapas de Noloco para contar casos</div>
+      <div><b style="color:var(--green);">✓</b> Toda tarea muere dejando la próxima</div>
+      <div><b style="color:var(--red);">✗</b> No confundas caso cargado con caso pagado</div>
+      <div><b style="color:var(--green);">✓</b> Las tarjetas se mueven cuando la realidad cambia</div>
+      <div><b style="color:var(--red);">✗</b> No des descuentos fuera de campaña</div>
+      <div><b style="color:var(--green);">✓</b> Meta del mes = casos pagados (Dashboard)</div>
+      <div><b style="color:var(--red);">✗</b> No ignores alertas: resolvé o descartá con motivo</div>
+      <div><b style="color:var(--green);">✓</b> ⌘K para llegar a cualquier lado</div>
+      <div><b style="color:var(--red);">✗</b> Datos demo se borran desde Ajustes, no a mano</div>
+    </div>
+  </div>
+  <div class="foot"><span>CRM Comercial · KeepSmiling MX · crm-mx-puce.vercel.app</span><span>14</span></div>
+</div>
+
+</body>
+</html>

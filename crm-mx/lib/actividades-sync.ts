@@ -7,8 +7,10 @@
 //     keepsmilingComunicacion) — credenciales KEEPSMILING_EMAIL/PASSWORD
 //
 // La consumen scripts/import-actividades-mx.ts (manual) y /api/sync/actividades
-// (cron diario). Idempotente: dedup por (doctor, día, resumen). El matching de
-// doctores NUNCA adivina: exacto > ficha con noloco_id > se reporta ambiguo.
+// (cron diario). Idempotente: dedup por (doctor, día, resumen), guardado en
+// activities.sync_key al insertar (0051) para que corregir una nota no la
+// duplique. El matching de doctores NUNCA adivina: exacto > ficha con
+// noloco_id > se reporta ambiguo.
 // Las llamadas de Rocío (sheet) y las oportunidades de la planilla NO están acá:
 // esas fuentes no tienen API y siguen siendo import manual del script.
 
@@ -89,14 +91,50 @@ export async function perfilPorPista(db: SupabaseClient, pista: string): Promise
 }
 
 export async function actividadesExistentes(db: SupabaseClient): Promise<Set<string>> {
-  const rows = await fetchAll<{ doctor_id: string; occurred_at: string; summary: string | null }>(
-    db,
-    "activities",
-    "doctor_id, occurred_at, summary"
-  );
-  return new Set(
-    rows.map((r) => `${r.doctor_id}|${r.occurred_at.slice(0, 10)}|${(r.summary ?? "").slice(0, 80)}`)
-  );
+  const rows = await fetchAll<{
+    doctor_id: string;
+    occurred_at: string;
+    summary: string | null;
+    sync_key: string | null;
+  }>(db, "activities", "doctor_id, occurred_at, summary, sync_key");
+
+  // Cada fila entra al Set con DOS claves, y las dos hacen falta:
+  //
+  //   · `sync_key` (0051) es la huella congelada al insertar. Es la que importa
+  //     desde que Rocío puede corregir el texto de una nota (pedido de Pancho,
+  //     31/8): la clave calculada sobre el summary sigue al texto, así que una
+  //     nota corregida dejaba de matchear y la corrida siguiente la volvía a
+  //     insertar como si fuera nueva.
+  //   · la calculada al vuelo sobre el summary de hoy es la red por abajo: cubre
+  //     cualquier fila que por lo que sea no tenga `sync_key` (una insertada
+  //     fuera del cron mientras la migración no estaba puesta, por ejemplo).
+  //     Ojo: NO cubre a una nota corregida —esa clave se va con el texto nuevo—,
+  //     y por eso el corte de `cortar80` tiene que dar exactamente lo mismo que
+  //     el `left()` del backfill. Ver el comentario de esa función.
+  //
+  // No hay riesgo de saltear algo por tener dos: las dos claves de una fila
+  // apuntan a la misma actividad, así que lo único que crece es el Set.
+  const claves = new Set<string>();
+  for (const r of rows) {
+    if (r.sync_key) claves.add(r.sync_key);
+    claves.add(`${r.doctor_id}|${r.occurred_at.slice(0, 10)}|${cortar80(r.summary ?? "")}`);
+  }
+  return claves;
+}
+
+/**
+ * Los primeros 80 CARACTERES, contados como los cuenta Postgres.
+ *
+ * `left(summary, 80)` —el que usa el backfill de 0051 y el trigger que congela
+ * la `sync_key`— cuenta code points; `"…".slice(0, 80)` cuenta unidades UTF-16,
+ * o sea que un emoji vale 2. Para un summary con un emoji entre los primeros 80
+ * caracteres, las dos fórmulas daban strings distintos: la clave congelada no
+ * coincidía con la calculada acá, y en cuanto esa nota se corrigiera —que es
+ * justo para lo que existe la sync_key— el cron la insertaba de nuevo.
+ * Con el spread, los dos lados cortan igual.
+ */
+function cortar80(texto: string): string {
+  return [...texto].slice(0, 80).join("");
 }
 
 export function claveActividad(doctorId: string, iso: string, summary: string): string {
@@ -106,7 +144,7 @@ export function claveActividad(doctorId: string, iso: string, summary: string): 
   // los mismos 13 contact points vespertinos se re-insertaban en CADA corrida
   // (detectado 20/8: ×4 copias; limpiado a mano, este fix evita la quinta).
   const dia = new Date(iso).toISOString().slice(0, 10);
-  return `${doctorId}|${dia}|${summary.slice(0, 80)}`;
+  return `${doctorId}|${dia}|${cortar80(summary)}`;
 }
 
 export interface ReporteFuente {
@@ -247,7 +285,10 @@ export async function sincronizarContactPoints(
       : /whatsapp/i.test(e.details ?? "") ? "whatsapp"
       : e.modality === "Presencial" ? "visita"
       : "reunion";
-    filas.push({ doctor_id: doctorId, type, occurred_at: occurred, summary, outcome: e.reason, created_by: autor });
+    // sync_key va explícita aunque el trigger de 0051 sepa calcularla: así la
+    // huella queda con la MISMA semántica de corte que el dedup de acá
+    // (`.slice(0, 80)` sobre UTF-16), y no con la de `left()` de Postgres.
+    filas.push({ doctor_id: doctorId, type, occurred_at: occurred, summary, outcome: e.reason, created_by: autor, sync_key: clave });
   }
   for (let i = 0; i < filas.length; i += 200) {
     const { error } = await db.from("activities").insert(filas.slice(i, i + 200));
@@ -329,7 +370,7 @@ export async function sincronizarComunicaciones(
     const clave = claveActividad(caso.doctor_id, c.createdAt, summary);
     if (existentes.has(clave)) { rep.duplicadas++; continue; }
     existentes.add(clave);
-    filas.push({ doctor_id: caso.doctor_id, type: "revision_clinica", occurred_at: c.createdAt, summary, outcome: c.estado });
+    filas.push({ doctor_id: caso.doctor_id, type: "revision_clinica", occurred_at: c.createdAt, summary, outcome: c.estado, sync_key: clave });
   }
   for (let i = 0; i < filas.length; i += 200) {
     const { error } = await db.from("activities").insert(filas.slice(i, i + 200));
