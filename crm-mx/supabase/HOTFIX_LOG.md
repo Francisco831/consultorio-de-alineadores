@@ -201,3 +201,73 @@ Exposición real: ninguna (devuelve `trigger`, no invocable por RPC). Lo cierra
 `0033`, aplicada en desarrollo el mismo día y ensayada OK contra producción.
 
 Desarrollo, que estaba en 30, quedó en 33 (`0031`+`0032`+`0033` en una corrida).
+
+---
+
+## 0050_ultima_entrada.sql — SEMBRADA (no ejecutada)
+
+**Qué pasó:** la migración estaba **aplicada en producción desde el 31/8** —
+`profiles.last_seen_at`, `touch_last_seen()` y la versión nueva de
+`team_signins()` existían y funcionaban— pero **no figuraba en el ledger**: se
+corrió por fuera del runner. El ledger decía 49 y la base estaba en 50.
+
+Eso no es un detalle contable: el runner decide qué aplicar leyendo el ledger.
+Mientras la fila faltara, cualquier corrida iba a intentar re-ejecutar 0050
+encima de sus propios objetos.
+
+| Base | Estado | Fecha | Aplicado por | Verificación |
+|---|---|---|---|---|
+| Producción | **Sembrada** | 2/9/2026 | Claude (sesión de auditoría) | los objetos de 0050 verificados presentes ANTES de sembrar: `touch_last_seen` ✓, `profiles.last_seen_at` ✓ |
+| Desarrollo | **Aplicada** | 2/9/2026 | Claude | corrida normal del runner (dev estaba en 33) |
+
+```
+npx tsx scripts/db-migrate.ts --sembrar --hasta 0050 --confirmar yuxfgbbqhqquuoaudjdd
+→ Se van a marcar como aplicadas, SIN ejecutarlas: 0050_ultima_entrada.sql
+  (49 ya estaban en el ledger)
+✓ 1 migración(es) sembrada(s). No se ejecutó ningún SQL.
+```
+
+---
+
+## 0051_editar_notas.sql
+
+**Qué hace:** abre la corrección del texto ya cargado —notas de la ficha, notas
+de un evento— con dos candados en la base: la corrige quien la escribió, y solo
+el texto (la fecha, el tipo y el doctor quedan como se cargaron). Suma el audit
+de `activities`, la huella `sync_key` para que el cron no duplique una nota
+corregida, y saca el recálculo del doctor del camino de una corrección.
+
+**Rollback:** `supabase/rollbacks/0051_editar_notas_rollback.sql`.
+
+| Base | Estado | Fecha | Aplicado por | Verificación |
+|---|---|---|---|---|
+| Desarrollo | **Aplicada** | 2/9/2026 | Claude | corrida del runner, autoverificación de la migración OK |
+| Producción | **Aplicada** | 2/9/2026 | Claude (sesión de auditoría) | ensayo previo + autoverificación + los 9 chequeos de abajo |
+
+```
+npx tsx scripts/db-migrate.ts --ensayo
+→ 0051_editar_notas.sql ... OK   ✓ corren limpio encadenadas. Todo revertido.
+
+npx tsx scripts/db-migrate.ts --apply --confirmar yuxfgbbqhqquuoaudjdd
+→ 0051_editar_notas.sql ... OK   ✓ 1 aplicada(s), 50 ya estaban
+```
+
+### Verificación posterior (2/9/2026, contra producción)
+
+| Chequeo | Resultado |
+|---|---|
+| `activities.edited_at` y `activities.sync_key` creadas | ✓ |
+| Actividades sin `sync_key` (el cron las duplicaría) | **0** de 5.240 |
+| `activities_edicion_guard_trg` · `activities_audit_trg` · `activities_recompute_upd_trg` · `events_guard_trg` | los 4 montados |
+| `events_update` acotada al autor (`auth.uid()`) | ✓ |
+| Funciones nuevas ejecutables por `anon` | **0** de 4 |
+| Ledger | 51, última `0051_editar_notas.sql` |
+| `diff-entornos` desarrollo ↔ producción | **coinciden**: 32 tablas, 472 columnas, 93 funciones, 79 policies |
+| `security-checks --baseline` contra producción | 6 OK · 1 FALLA · 0 PENDIENTE · 1 omitido. La FALLA es el chequeo 8 (lectura `using (true)`), que es decisión de producto del 8/8 y no cambió acá |
+| Smoke de punta a punta: `/api/sync/render` contra la app desplegada | ✓ 1.073 casos leídos, corrida registrada |
+
+**Nota de orden:** la base quedó en 0051 y el código que usa esas columnas está
+commiteado pero **sin desplegar**. Es el orden correcto y es seguro: la
+migración solo agrega, y el código viejo sigue andando (el guard de edición
+tiene en su lista blanca las columnas que hoy escribe `/calidad`, y el cron de
+actividades entra sin `sync_key` porque el trigger se la calcula).
