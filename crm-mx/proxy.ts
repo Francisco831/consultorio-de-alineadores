@@ -47,10 +47,21 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // todo menos assets estáticos y las rutas que corren SIN sesión: /api/sync/*
-    // y /api/ai/brief/cron se protegen solas con CRON_SECRET (Bearer) y
-    // /api/webhooks/* con su token en la URL — un redirect a /login les
-    // respondería 307 al cron/webhook y nunca correrían
-    "/((?!_next/static|_next/image|favicon.ico|api/sync/|api/ai/brief/cron|api/webhooks/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Todo menos los assets estáticos y **todo `/api/`**.
+    //
+    // Hasta el 2/9/2026 esto excluía rutas de API una por una (`api/sync/`,
+    // `api/ai/brief/cron`, `api/webhooks/`) y cada ruta nueva que corriera sin
+    // sesión había que acordarse de sumarla. `/api/ops/respaldo` nació sin esa
+    // línea y el redirect a /login se la comía: el cron del respaldo contestaba
+    // 307 y no corría nunca. Un cron que no corre no avisa, así que eso podía
+    // pasar meses sin que nadie lo notara.
+    //
+    // Excluir `/api/` entero es correcto, no una concesión: **cada ruta de API
+    // se protege sola y es mejor puerta que ésta**. Las de cron y el respaldo
+    // exigen `Authorization: Bearer $CRON_SECRET`, el webhook su token, y las
+    // tres de IA verifican sesión y rol adentro del handler (`lib/ai/guard.ts`).
+    // Además, a un cliente de API le corresponde un 401 en JSON y no un 307 a
+    // una pantalla de login. Verificado el 2/9: las 13 rutas tienen su guard.
+    "/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
