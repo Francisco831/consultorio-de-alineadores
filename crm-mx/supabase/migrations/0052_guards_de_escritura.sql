@@ -263,6 +263,7 @@ declare
   v_doctor uuid;
   v_task uuid;
   v_opp uuid;
+  v_task_auto uuid;
   v_err text;
 begin
   if not exists (select 1 from pg_trigger where tgname = 'tasks_guard_trg') then
@@ -313,7 +314,12 @@ begin
     end if;
 
     begin
-      update doctors set lifecycle_stage = 'growth' where id = v_doctor;
+      -- un valor GARANTIZADO distinto del actual: si por casualidad el doctor ya
+      -- estuviera en esa etapa, el update no sería un cambio, el guard no tendría
+      -- nada que frenar, y la prueba pasaría sin haber probado nada
+      update doctors
+         set lifecycle_stage = (case when lifecycle_stage = 'growth' then 'dormido' else 'growth' end)::lifecycle_stage
+       where id = v_doctor;
       v_err := '(no falló)';
     exception when others then v_err := sqlerrm;
     end;
@@ -330,25 +336,48 @@ begin
       raise exception '0052: escribir last_contact_at a mano no lo frenó el guard. Resultado: %', v_err;
     end if;
 
+    -- `not is_demo` SIEMPRE es un cambio, tenga el valor que tenga la fila. Es la
+    -- diferencia entre probar el guard y probar que la fila que me tocó ya estaba
+    -- como yo esperaba: la primera versión de esto ponía `automation_rule_id =
+    -- null` sobre la tarea más nueva, y en producción esa tarea era manual y ya
+    -- lo tenía en null. El update no cambiaba nada, el guard no tenía qué frenar
+    -- y la prueba habría pasado sin haber probado nada. Falló acá, que es donde
+    -- tenía que fallar.
     if v_task is not null then
       begin
-        update tasks set automation_rule_id = null where id = v_task;
+        update tasks set is_demo = not is_demo where id = v_task;
+        v_err := '(no falló)';
+      exception when others then v_err := sqlerrm;
+      end;
+      if position('de dónde salió' in v_err) = 0 then
+        raise exception '0052: marcar una tarea como demo no lo frenó el guard. Resultado: %', v_err;
+      end if;
+    end if;
+
+    -- y la marca de tarea automática, sobre una tarea que de verdad la tenga
+    select id into v_task_auto from tasks where automation_rule_id is not null
+     order by created_at desc limit 1;
+    if v_task_auto is not null then
+      begin
+        update tasks set automation_rule_id = null where id = v_task_auto;
         v_err := '(no falló)';
       exception when others then v_err := sqlerrm;
       end;
       if position('de dónde salió' in v_err) = 0 then
         raise exception '0052: borrar la marca de tarea automática no lo frenó el guard. Resultado: %', v_err;
       end if;
+    else
+      raise notice '0052: no hay ninguna tarea automática en esta base, se saltea esa prueba';
     end if;
 
     if v_opp is not null then
       begin
-        update opportunities set doctor_id = v_doctor where id = v_opp;
+        update opportunities set is_demo = not is_demo where id = v_opp;
         v_err := '(no falló)';
       exception when others then v_err := sqlerrm;
       end;
       if position('de qué doctor' in v_err) = 0 then
-        raise exception '0052: mover una oportunidad de doctor no lo frenó el guard. Resultado: %', v_err;
+        raise exception '0052: marcar una oportunidad como demo no lo frenó el guard. Resultado: %', v_err;
       end if;
     end if;
 
