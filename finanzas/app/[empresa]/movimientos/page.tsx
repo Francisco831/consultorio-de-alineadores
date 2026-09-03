@@ -59,12 +59,12 @@ export default async function MovimientosPage({
 
   // contabilidades separadas (caja Coni): fuera del listado salvo su propia pestaña
   const { data: cuentasTodas } = await supabase
-    .from("accounts").select("id, name, separate_books, ks_custody")
+    .from("accounts").select("id, name, currency, separate_books, ks_custody")
     .eq("company_id", ctx.companyId).order("name");
   const idsSep = (cuentasTodas ?? []).filter((a) => a.separate_books).map((a) => a.id);
   const custodiaKs = new Set((cuentasTodas ?? []).filter((a) => a.ks_custody).map((a) => a.id));
   const { data: categorias } = await supabase
-    .from("categories").select("id, name")
+    .from("categories").select("id, name, flow")
     .eq("company_id", ctx.companyId).eq("is_active", true).order("name");
 
   let query = supabase
@@ -72,7 +72,7 @@ export default async function MovimientosPage({
     .select(
       // movements tiene DOS FKs hacia accounts: sin el hint del constraint el
       // embed es ambiguo (PGRST201) y PostgREST devuelve data=null en silencio
-      "id, occurred_on, kind, status, amount, currency, description, source, transfer_group_id, account_id, counterparty:counterparties(display_name), category:categories(name), account:accounts!movements_account_company_fk(name)",
+      "id, occurred_on, kind, status, amount, currency, description, source, transfer_group_id, account_id, category_id, counterparty:counterparties(display_name), category:categories(name), account:accounts!movements_account_company_fk(name)",
       { count: "exact" }
     )
     .eq("company_id", ctx.companyId);
@@ -381,7 +381,17 @@ export default async function MovimientosPage({
                       {negativo ? "−" : mv.kind === "income" ? "+" : ""}{formatMoney(Number(mv.amount), mv.currency, locale)}
                     </TableCell>
                     <TableCell>
-                      <RowActions empresa={ctx.config.slug} movementId={mv.id} status={mv.status} source={mv.source} />
+                      <RowActions
+                        empresa={ctx.config.slug}
+                        movimiento={{
+                          id: mv.id, status: mv.status, source: mv.source, kind: mv.kind,
+                          amount: Number(mv.amount), currency: mv.currency,
+                          occurredOn: mv.occurred_on, accountId: mv.account_id,
+                          categoryId: mv.category_id, description: mv.description,
+                        }}
+                        cuentas={(cuentasTodas ?? []).map((a) => ({ id: a.id, name: a.name, currency: a.currency }))}
+                        categorias={categorias ?? []}
+                      />
                     </TableCell>
                   </TableRow>
                 );

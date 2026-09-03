@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireEmpresa } from "@/lib/empresa-context";
+import { recalcularLiquidaciones } from "@/lib/liquidaciones/recalcular";
 
 const MovimientoSchema = z.object({
   empresa: z.enum(["mx", "ar"]),
@@ -116,11 +117,80 @@ export async function crearTransferencia(input: z.infer<typeof TransferenciaSche
 }
 
 export async function anularMovimiento(empresa: "mx" | "ar", movementId: string) {
-  await requireEmpresa(empresa);
+  const ctx = await requireEmpresa(empresa);
   const supabase = await createClient();
+  // ¿Estaba liquidado? Se pregunta ANTES de anular, porque después el ítem se
+  // limpia solo en el recálculo. Sin esto, anular un cobro lo sacaba del ledger
+  // y lo dejaba igual en la liquidación de la doctora: el total la seguía
+  // incluyendo y confirmar ahí pagaba el 40% de plata que ya no existe.
+  const { data: liquidado } = await supabase.from("settlement_items")
+    .select("id").eq("company_id", ctx.companyId).eq("movement_id", movementId).maybeSingle();
+
   const { error } = await supabase.rpc("void_movement", { p_movement_id: movementId });
   if (error) return { error: error.message };
+  if (liquidado) await recalcularSiSePuede(supabase, ctx.companyId);
   revalidatePath(`/${empresa}/movimientos`);
   revalidatePath(`/${empresa}/hoy`);
+  revalidatePath(`/${empresa}/liquidaciones`);
   return { ok: true };
+}
+
+const CorreccionSchema = z.object({
+  empresa: z.enum(["mx", "ar"]),
+  movementId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  amount: z.number().positive(),
+  occurredOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  categoryId: z.string().uuid().nullable().optional(),
+  description: z.string().trim().max(500).optional(),
+});
+
+/**
+ * Corrige un movimiento en el lugar: la cuenta con la que se pagó, la fecha, el
+ * monto, la categoría o el concepto. Las reglas (origen, conciliación, saldo de
+ * la deuda) las decide correct_movement en la base, que es donde viven las otras.
+ */
+export async function corregirMovimiento(input: z.infer<typeof CorreccionSchema>) {
+  const parsed = CorreccionSchema.safeParse(input);
+  if (!parsed.success) return { error: "Datos inválidos" };
+  const d = parsed.data;
+  const ctx = await requireEmpresa(d.empresa);
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("correct_movement", {
+    p_movement_id: d.movementId,
+    p_account_id: d.accountId,
+    p_occurred_on: d.occurredOn,
+    p_amount: d.amount,
+    p_category_id: d.categoryId ?? null,
+    p_description: d.description || null,
+  });
+  if (error) return { error: error.message };
+
+  // Corregir el monto o la fecha de un cobro liquidado le cambia el número a la
+  // doctora: la liquidación se rehace acá y no cuando alguien se acuerde.
+  const { data: liquidado } = await supabase.from("settlement_items")
+    .select("id").eq("company_id", ctx.companyId).eq("movement_id", d.movementId).maybeSingle();
+  if (liquidado) await recalcularSiSePuede(supabase, ctx.companyId);
+
+  for (const ruta of ["movimientos", "hoy", "pagar", "cobrar", "liquidaciones"]) {
+    revalidatePath(`/${d.empresa}/${ruta}`);
+  }
+  return { ok: true };
+}
+
+/**
+ * Rehace las liquidaciones abiertas después de tocar un cobro que estaba
+ * liquidado. Si el recálculo falla no se deshace la corrección —el movimiento ya
+ * cambió y eso está bien— pero tampoco se rompe la pantalla: el panel de
+ * liquidaciones tiene su propio botón de Recalcular y avisa lo que encuentre.
+ */
+async function recalcularSiSePuede(
+  supabase: Awaited<ReturnType<typeof createClient>>, companyId: string
+) {
+  try {
+    await recalcularLiquidaciones(supabase, companyId);
+  } catch {
+    // el panel lo va a mostrar en su próximo recálculo
+  }
 }
