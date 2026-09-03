@@ -109,6 +109,22 @@ function pesificador(tc: TablaTC) {
   return { arsDe, notaCambio };
 }
 
+/**
+ * Un número de la liquidación escrito a mano (settlement_line_overrides, 0030).
+ * NULL en cualquiera de los dos = "ese no lo toco, vale lo que calculó el motor".
+ */
+export type OverrideLinea = {
+  cobradoArs: number | null;
+  costoKsArs: number | null;
+  motivo: string;
+};
+
+/** Un override que quedó colgado: la caja editó su fila y el movimiento se anuló. */
+export type OverrideHuerfano = OverrideLinea & {
+  movementId: string;
+  snapshot: { fecha?: string; paciente?: string; doctora?: string; periodo?: string };
+};
+
 export type Calculo = {
   calculadas: LineaLiquidacion[];
   movs: MovimientoBase[];
@@ -119,6 +135,10 @@ export type Calculo = {
   arsDe: (m: MovimientoBase) => number;
   /** Nota del cambio ("US$ 360 al t/c 1.505 del 03/07"), sólo para los USD. */
   notaCambio: (m: MovimientoBase) => string | null;
+  /** Lo que se puso a mano en cada línea, por movimiento. */
+  overrides: Map<string, OverrideLinea>;
+  /** Los que apuntan a un movimiento que la caja anuló: el número dejó de aplicarse. */
+  overridesHuerfanos: OverrideHuerfano[];
   etiquetas: Map<string, string>;
   pctPorDoctora: Map<string, number>;
   idPorDoctora: Map<string, string>;
@@ -139,6 +159,7 @@ export type Calculo = {
 export function filaDeItem(
   calc: Calculo, companyId: string, settlementId: string, m: MovimientoBase
 ) {
+  const ov = calc.overrides.get(m.id);
   return {
     company_id: companyId,
     settlement_id: settlementId,
@@ -146,9 +167,33 @@ export function filaDeItem(
     base_amount: calc.arsDe(m),
     currency: "ARS",
     ks_cost: calc.costoArs.get(m.id) ?? 0,
-    label: [m.meta?.motivo, calc.notaCambio(m), calc.etiquetas.get(m.id)]
-      .filter(Boolean).join(" · ") || null,
+    label: [
+      m.meta?.motivo,
+      // Si el importe se puso a mano, "US$ 2.600 × t/c 1.505" pasa a ser
+      // mentira: esa cuenta ya no da el número de la línea.
+      ov?.cobradoArs == null ? calc.notaCambio(m) : null,
+      calc.etiquetas.get(m.id),   // el costo a mano ya se explica solo
+      ov?.cobradoArs == null ? null : notaCobradoAMano(ov.cobradoArs, ov.motivo, m),
+    ].filter(Boolean).join(" · ") || null,
   };
+}
+
+/**
+ * Lo que lee la doctora en su PDF cuando el importe se puso a mano.
+ *
+ * Dice "puesto a mano" y nunca "corregido": es un papel que ella recibe, y
+ * tiene que poder preguntar por esa línea sin que el texto la acuse de nada. El
+ * motivo va (es lo único que va a tener sentido en seis meses); el quién y el
+ * cuándo no — eso vive en audit_log y en el panel de cambios a mano.
+ */
+function notaCobradoAMano(cobradoArs: number, motivo: string, m: MovimientoBase): string {
+  const original = m.currency === "USD"
+    ? `US$ ${Number(m.amount).toLocaleString("es-AR")}`
+    : `$${Math.round(Number(m.amount)).toLocaleString("es-AR")}`;
+  return (
+    `cobrado puesto a mano: $${Math.round(cobradoArs).toLocaleString("es-AR")} ` +
+    `(la caja dice ${original})` + (motivo ? ` — ${motivo}` : "")
+  );
 }
 
 /**
@@ -210,7 +255,7 @@ export async function calcularTodo(
       `(desde ${f[0]}): ampliar el rango de scripts/sync-cotizaciones.ts.`
     );
   }
-  const { arsDe, notaCambio } = pesificador(tc);
+  const { arsDe: arsDeCaja, notaCambio } = pesificador(tc);
 
   // Correcciones de imputación (0022): el cobro se liquida a quien diga esta
   // tabla, y si dice NULL no se le liquida a nadie.
@@ -229,6 +274,46 @@ export async function calcularTodo(
       revisado: Boolean(i.revisado),
     });
   }
+
+  // ---------- lo que se puso a mano en una línea (0030) ----------
+  // Va acá, al lado de las imputaciones, porque es lo mismo: una decisión de
+  // Pancho que el motor tiene que respetar en CADA corrida. Si viviera fuera de
+  // calcularTodo(), el próximo recálculo —el botón, guardar un pacto o tocar la
+  // lista de precios— la pisaría sin que nadie se entere.
+  const { data: ovRaw, error: eOv } = await db.from("settlement_line_overrides")
+    .select("movement_id, collected_ars, ks_cost_ars, reason, snapshot")
+    .eq("company_id", companyId).eq("status", "active");
+  // Se frena, no se sigue con la lista vacía: si esta lectura falla, el recálculo
+  // reescribiría settlement_items y totals con los valores CALCULADOS y se
+  // llevaría puestos todos los números puestos a mano, sin un mensaje y sin una
+  // fila de diagnóstico — y el panel los seguiría mostrando desde su propia
+  // tabla. Un recálculo que no puede leer las correcciones no es un recálculo.
+  if (eOv) throw new Error(`leer los números puestos a mano: ${eOv.message}`);
+  const overrides = new Map<string, OverrideLinea>();
+  const overridesHuerfanos: OverrideHuerfano[] = [];
+  for (const o of ovRaw ?? []) {
+    const linea: OverrideLinea = {
+      cobradoArs: o.collected_ars == null ? null : Number(o.collected_ars),
+      costoKsArs: o.ks_cost_ars == null ? null : Number(o.ks_cost_ars),
+      motivo: (o.reason as string) ?? "",
+    };
+    // Mismo caso que las imputaciones huérfanas, pero más caro: acá lo que se
+    // pierde es un NÚMERO. Si desapareciera en silencio, la liquidación
+    // volvería sola al valor calculado sobre un cobro que alguien corrigió
+    // justamente porque estaba mal. Se reporta uno por uno (guardarDiagnostico).
+    if (!vivos.has(o.movement_id as string)) {
+      overridesHuerfanos.push({
+        ...linea, movementId: o.movement_id as string,
+        snapshot: (o.snapshot ?? {}) as OverrideHuerfano["snapshot"],
+      });
+      continue;
+    }
+    overrides.set(o.movement_id as string, linea);
+  }
+
+  /** Lo cobrado de una línea: el número puesto a mano, o el de la caja pesificado. */
+  const arsDe = (m: MovimientoBase): number =>
+    overrides.get(m.id)?.cobradoArs ?? arsDeCaja(m);
 
   // El orden de la caja (meta.seq) decide qué cuota define el pacto cuando hay
   // pagos parciales. Sin él el costeo reparte distinto, así que se frena.
@@ -287,6 +372,15 @@ export async function calcularTodo(
     );
   }
 
+  // El costo puesto a mano entra ADENTRO del costeo, no después: el tope por
+  // caso vive en un acumulador local de costearCuotas(). Pisar el resultado
+  // desde afuera dejaría a las cuotas siguientes del mismo paciente imputando
+  // su share automático, y el caso cargaría su costo DOS veces.
+  const costoManualArs = new Map<string, { monto: number; motivo: string }>();
+  for (const [id, o] of overrides) {
+    if (o.costoKsArs != null) costoManualArs.set(id, { monto: o.costoKsArs, motivo: o.motivo });
+  }
+
   const { costoArs, etiquetas, sinCostear } = costearCuotas(cobrosAlineadores, {
     precioDefault: {
       list_price: Number(precio.list_price), discount_pct: Number(precio.discount_pct),
@@ -299,7 +393,23 @@ export async function calcularTodo(
     costoEtapaAdicional: pactos.costoEtapaAdicional,
     descuentoKsEspecial: pactos.descuentoKsEspecial,
     tcPorFecha: tc,
+    costoManualArs,
   });
+
+  // Un costo a mano sobre un cobro que NO es de alineadores (una consulta, una
+  // placa) no pasa por costearCuotas —que sólo recibe los de alineadores— así
+  // que se aplica acá. No hay tope que consumir: el tope es del caso de
+  // alineadores, y esto no lo es.
+  const idsAlineadores = new Set(cobrosAlineadores.map((c) => c.id));
+  for (const [id, m] of costoManualArs) {
+    if (idsAlineadores.has(id)) continue;
+    costoArs.set(id, Math.round(m.monto));
+    etiquetas.set(
+      id,
+      `costo KS $${Math.round(m.monto).toLocaleString("es-AR")} puesto a mano` +
+      (m.motivo ? ` — ${m.motivo}` : "")
+    );
+  }
 
   // ---------- liquidaciones ----------
   const doctoraFinal = new Map<string, string | null>(
@@ -327,6 +437,7 @@ export async function calcularTodo(
 
   return {
     calculadas, movs, doctoraFinal, periodoFinal, costoArs, arsDe, notaCambio,
+    overrides, overridesHuerfanos,
     etiquetas, pctPorDoctora, idPorDoctora, nombrePorId, sinCostear, huerfanas,
   };
 }
@@ -389,6 +500,22 @@ export async function guardarLiquidaciones(
       const s = existentes.find((e) => e.id === it.settlement_id);
       enCongelada.set(it.movement_id as string, s ? `${s.periodo} ${s.doctora}` : "una liquidación cerrada");
     }
+  }
+
+  // Los ítems de movimientos ANULADOS. `movs` excluye los void, así que un cobro
+  // que la caja anuló (o que se anuló a mano desde Movimientos) deja su ítem
+  // colgado para siempre: los totales se recalculan sin él y el detalle lo
+  // sigue mostrando. Con el subtotal nuevo de la pantalla eso se ve como un
+  // descuadre; acá se arregla. Los de una liquidación cerrada no se tocan: ese
+  // detalle es el respaldo de plata que ya se pagó.
+  const { data: anulados } = await db.from("movements")
+    .select("id").eq("company_id", companyId).eq("status", "void");
+  const idsAnulados = (anulados ?? []).map((m) => m.id as string)
+    .filter((id) => !enCongelada.has(id));
+  for (let i = 0; i < idsAnulados.length; i += 200) {
+    const { error } = await db.from("settlement_items").delete()
+      .eq("company_id", companyId).in("movement_id", idsAnulados.slice(i, i + 200));
+    if (error) throw new Error(`limpiar ítems de movimientos anulados: ${error.message}`);
   }
 
   for (const periodo of periodos) {
@@ -511,6 +638,22 @@ async function guardarDiagnostico(
     filas.push({
       company_id: companyId, kind: "cobro_trabado", movement_id: null,
       period: t.slice(0, 7), professional: null, amount: null, currency: null, detail: t,
+    });
+  }
+  // Un número puesto a mano que dejó de aplicarse merece nombre y apellido: si
+  // se contara agregado como las imputaciones, nadie podría ir a arreglarlo.
+  for (const h of calc.overridesHuerfanos) {
+    const que = h.costoKsArs != null
+      ? `el costo KS de $${Math.round(h.costoKsArs).toLocaleString("es-AR")}`
+      : `el cobrado de $${Math.round(h.cobradoArs ?? 0).toLocaleString("es-AR")}`;
+    filas.push({
+      company_id: companyId, kind: "override_huerfano", movement_id: h.movementId,
+      period: h.snapshot.periodo ?? null, professional: h.snapshot.doctora ?? null,
+      amount: h.costoKsArs ?? h.cobradoArs ?? null, currency: "ARS",
+      detail:
+        `${h.snapshot.paciente ?? "Un cobro"}${h.snapshot.fecha ? ` (${h.snapshot.fecha})` : ""}: ` +
+        `${que} que pusiste a mano quedó colgado — la caja editó esa fila, el ` +
+        `movimiento se anuló y nació otro. Hay que volver a ponerlo en la fila nueva.`,
     });
   }
   if (resumen.huerfanas) {

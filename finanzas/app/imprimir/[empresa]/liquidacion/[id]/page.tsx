@@ -62,6 +62,11 @@ export default async function LiquidacionImprimiblePage({
 
   const t = (liq.totals as Totales) ?? {};
   const ars = t.ARS ?? {};
+  const subCobrado = lineas.reduce((a, x) => a + Number(x.base_amount), 0);
+  const subCosto = lineas.reduce((a, x) => a + Number(x.ks_cost), 0);
+  // Con signo: cuando el detalle suma de MÁS (un ítem que quedó colgado) decir
+  // "faltan" sería mentirle a la doctora justo en el papel con el que reclama.
+  const descuadre = subCobrado - Number(ars.collected ?? 0);
   const usd = t.USD ?? {};
   const doctora =
     (liq.professional as unknown as { display_name?: string } | null)?.display_name ?? "—";
@@ -122,7 +127,34 @@ export default async function LiquidacionImprimiblePage({
               );
             })}
           </tbody>
+          {/* El papel nunca sumaba sus propias líneas: si el detalle y el
+              recuadro de abajo no dan lo mismo, la doctora lo descubre sumando.
+              Pasa hoy con las liquidaciones viejas que quedaron sin detalle. */}
+          <tfoot>
+            <tr className="border-t-2 border-neutral-300 font-medium">
+              <td className="py-1.5 pr-2" colSpan={3}>Subtotal de las {lineas.length} líneas</td>
+              <td className="py-1.5 pr-2 text-right tabular-nums">
+                {formatMoney(subCobrado, "ARS", locale)}
+              </td>
+              <td className="py-1.5 pr-2 text-right tabular-nums text-neutral-500">
+                {subCosto ? `−${formatMoney(subCosto, "ARS", locale)}` : "—"}
+              </td>
+              <td className="py-1.5 text-right tabular-nums">
+                {formatMoney(subCobrado - subCosto, "ARS", locale)}
+              </td>
+            </tr>
+          </tfoot>
         </table>
+
+        {Math.abs(descuadre) >= 1 ? (
+          <p className="mt-3 rounded border border-neutral-300 px-3 py-2 text-[11px] text-neutral-600">
+            El detalle de arriba suma {formatMoney(subCobrado, "ARS", locale)} y el total del mes
+            dice {formatMoney(ars.collected ?? 0, "ARS", locale)}:{" "}
+            {descuadre < 0
+              ? `faltan ${formatMoney(-descuadre, "ARS", locale)} de detalle en esta liquidación`
+              : `el detalle tiene ${formatMoney(descuadre, "ARS", locale)} de más que el total del mes`}.
+          </p>
+        ) : null}
 
         <div className="mt-6 ml-auto w-full max-w-[340px] text-[13px]">
           <div className="flex justify-between border-b border-neutral-200 py-1.5">

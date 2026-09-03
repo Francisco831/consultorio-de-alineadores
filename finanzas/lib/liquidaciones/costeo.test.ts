@@ -336,3 +336,136 @@ test("un cobro que es cuota Y contención sigue costeando la cuota", () => {
   ], { precioDefault: PRECIO });
   assert.equal(r.costoArs.get("a"), CUOTA_DE_6);
 });
+
+// ---------------------------------------------------------------------------
+// Pago total del tratamiento (Pancho, 2/9/26) y costo puesto a mano (0030)
+// ---------------------------------------------------------------------------
+
+test("pago total: el caso de Castiglioni carga el costo entero sin pacto ni cuotas", () => {
+  // el motivo real de la caja del 28/8/26; no dice "cuota N de Y" y la paciente
+  // no tiene pacto cargado, así que hasta hoy quedaba SIN COSTEAR
+  const r = costearCuotas([
+    cobro({
+      id: "a", seq: 410, fecha: "2026-08-28", ars: 3638700, paciente: "Castiglioni Isabella",
+      motivo: "Abona total tratamiento U$S 2600 con 10% descuento",
+      texto: "Abona total tratamiento U$S 2600 con 10% descuento",
+    }),
+  ], { precioDefault: PRECIO });
+  assert.equal(r.costoArs.get("a"), Math.round(2731000 * 0.6));
+  assert.equal(r.sinCostear, 0);
+  assert.match(r.etiquetas.get("a")!, /paga el tratamiento entero/);
+});
+
+test("pago total: las otras formas que escribe la caja también costean", () => {
+  for (const texto of [
+    "Abona tratamiento completo con 10% descuento",
+    "Abona  total del tratamiento",
+    "Abona el tratamiento con 10% de descuento",
+    "paga el total",
+    "pago total",
+    "cancela el tratamiento",
+  ]) {
+    const r = costearCuotas([cobro({ id: "a", seq: 1, ars: 3000000, motivo: texto, texto })],
+      { precioDefault: PRECIO });
+    assert.equal(r.costoArs.get("a"), Math.round(2731000 * 0.6), `no costeó: "${texto}"`);
+  }
+});
+
+test("pago total: un parcial, una cuota o una etapa adicional NO son el 100%", () => {
+  for (const texto of [
+    "abona resto del tratamiento",          // parcial: RE_PARCIAL
+    "saldo total del tratamiento",          // parcial aunque diga total
+    "Abona el tratamiento en 6 cuotas",     // describe el plan, no lo paga entero
+    "cuota 6 de 6, cancela el tratamiento", // la última cuota, no el caso
+    "abona total tratamiento adicional",    // la etapa tiene sus propias reglas
+    "abona cuota 1 de 6 descontado el anticipo",
+    "abona de contado",                     // eso es el MEDIO de pago
+  ]) {
+    const r = costearCuotas([cobro({ id: "a", seq: 1, ars: 500000, motivo: texto, texto })],
+      { precioDefault: PRECIO });
+    assert.notEqual(
+      r.costoArs.get("a"), Math.round(2731000 * 0.6),
+      `cargó el caso entero a un cobro que no lo paga: "${texto}"`
+    );
+  }
+});
+
+test("pago total: el tope evita que un caso con pacto cargue su costo dos veces", () => {
+  const r = costearCuotas([
+    cobro({ id: "t", seq: 1, fecha: "2026-01-10", ars: 3000000, motivo: "abona tratamiento completo", texto: "abona tratamiento completo" }),
+    cobro({ id: "c", seq: 2, fecha: "2026-02-10", ars: 300000, motivo: "cuota 2 de 6", texto: "cuota 2 de 6" }),
+  ], { precioDefault: PRECIO });
+  assert.equal(r.costoArs.get("t"), Math.round(2731000 * 0.6));
+  assert.equal(r.costoArs.get("c"), 0, "el caso ya cargó su costo completo");
+});
+
+test("costo a mano: el número escrito gana sobre toda regla, incluso una contención", () => {
+  const r = costearCuotas([
+    cobro({ id: "a", seq: 1, motivo: "contención", texto: "contención" }),
+  ], {
+    precioDefault: PRECIO,
+    costoManualArs: new Map([["a", { monto: 250000, motivo: "lo pagó la clínica" }]]),
+  });
+  assert.equal(r.costoArs.get("a"), 250000);
+  assert.match(r.etiquetas.get("a")!, /puesto a mano — lo pagó la clínica/);
+});
+
+test("costo a mano: consume el tope del caso, así las cuotas siguientes no lo cobran de nuevo", () => {
+  const costo = Math.round(2731000 * 0.6);
+  const r = costearCuotas([
+    cobro({ id: "c1", seq: 1, fecha: "2026-01-05", ars: 650000, motivo: "cuota 1 de 6", texto: "cuota 1 de 6" }),
+    cobro({ id: "c2", seq: 2, fecha: "2026-02-05", ars: 650000, motivo: "cuota 2 de 6", texto: "cuota 2 de 6" }),
+  ], {
+    precioDefault: PRECIO,
+    costoManualArs: new Map([["c1", { monto: costo, motivo: "el caso entero" }]]),
+  });
+  assert.equal(r.costoArs.get("c1"), costo);
+  assert.equal(r.costoArs.get("c2"), 0, "el caso ya cargó su costo completo");
+});
+
+test("costo a mano: un cobro sin costear deja de estar sin costear", () => {
+  const r = costearCuotas([
+    cobro({ id: "a", seq: 1, motivo: "abona", texto: "abona" }),
+  ], {
+    precioDefault: PRECIO,
+    costoManualArs: new Map([["a", { monto: 100000, motivo: "acordado" }]]),
+  });
+  assert.equal(r.sinCostear, 0);
+  assert.equal(r.costoArs.get("a"), 100000);
+});
+
+test("pago total: regresión Gonzalez Alzaga — el texto dice todo pero el monto dice seña", () => {
+  // Dos filas del 21/1/26 con el MISMO motivo: $75.000 y US$ 2.200. Sin la
+  // prueba de monto, la chica (que viene primera por seq) se llevaba el costo
+  // entero del caso y la grande quedaba en $0 por el tope.
+  const r = costearCuotas([
+    cobro({
+      id: "chica", seq: 423, fecha: "2026-01-21", ars: 75000, usd: 0,
+      paciente: "Gonzalez Alzaga Elisa",
+      motivo: "Abona  total del tratamiento", texto: "Abona  total del tratamiento",
+    }),
+    cobro({
+      id: "grande", seq: 424, fecha: "2026-01-21", ars: 0, usd: 2200,
+      paciente: "Gonzalez Alzaga Elisa",
+      motivo: "Abona  total del tratamiento", texto: "Abona  total del tratamiento",
+    }),
+  ], {
+    precioDefault: PRECIO,
+    precioPactadoUsd: { "Gonzalez Alzaga Elisa": 2200 },
+    tcPorFecha: () => 1250,
+  });
+  const costo = Math.round(2731000 * 0.6);
+  assert.ok(
+    r.costoArs.get("chica")! < costo * 0.1,
+    `la seña de $75.000 no puede cargar el caso entero (cargó ${r.costoArs.get("chica")})`
+  );
+  assert.equal(r.costoArs.get("grande"), costo - r.costoArs.get("chica")!,
+    "el costo del caso lo carga el cobro que sí lo paga");
+});
+
+test("pago total: sin precio conocido se le cree al texto — es el caso Castiglioni", () => {
+  const r = costearCuotas([
+    cobro({ id: "a", seq: 1, ars: 3638700, motivo: "Abona total tratamiento", texto: "Abona total tratamiento" }),
+  ], { precioDefault: PRECIO });
+  assert.equal(r.costoArs.get("a"), Math.round(2731000 * 0.6));
+});

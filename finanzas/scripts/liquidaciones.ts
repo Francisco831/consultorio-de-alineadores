@@ -86,6 +86,18 @@ async function main() {
     if (deLaCaja) movidas.add(`${periodo}|${deLaCaja}`);
     if (final) movidas.add(`${periodo}|${final}`);
   }
+  // Y lo mismo con los NÚMEROS PUESTOS A MANO (0030): cuando Pancho corrige el
+  // cobrado o el costo KS de una línea, el mes deja de coincidir con la foto del
+  // script viejo por definición — esa es la corrección, no una regresión. Sin
+  // este tercer Set, bajar un cobrado en cualquier mes anterior a la referencia
+  // frenaría el guardado para siempre con un mensaje sobre build_liquidaciones.py
+  // que no tiene nada que ver.
+  const aMano = new Set<string>();
+  for (const [id] of calc.overrides) {
+    aMano.add(`${calc.periodoFinal.get(id)}|${calc.doctoraFinal.get(id)}`);
+  }
+  const corregidas: string[] = [];
+
   for (const l of calculadas) {
     if (l.periodo > maxRef) continue;            // mes posterior a la foto
     const r = refPorClave.get(`${l.periodo}|${l.doctora}`);
@@ -108,6 +120,16 @@ async function main() {
         `${l.periodo} ${l.doctora}: la referencia decía ` +
         `$${r.cobrado_ars.toLocaleString("es-AR")} → ahora ` +
         `$${l.cobradoArs.toLocaleString("es-AR")} (hay cobros movidos a mano en ese mes)`
+      );
+      continue;
+    }
+    if (aMano.has(`${l.periodo}|${l.doctora}`)) {
+      corregidas.push(
+        `${l.periodo} ${l.doctora}: la referencia decía ` +
+        `$${r.cobrado_ars.toLocaleString("es-AR")} de cobrado y ` +
+        `$${r.gastos_tratamiento.toLocaleString("es-AR")} de costo KS → ahora ` +
+        `$${l.cobradoArs.toLocaleString("es-AR")} y $${l.gastosTratamiento.toLocaleString("es-AR")} ` +
+        `(hay líneas con números puestos a mano en ese mes)`
       );
       continue;
     }
@@ -135,6 +157,15 @@ async function main() {
       );
     }
     const distintos = campos.filter(([, a, b]) => Math.abs(a - b) >= 1);
+    // Sólo el COBRADO frena. Tentaba sumar el costo KS —una baja del costo sube
+    // el 40% de la doctora, que es lo más caro que puede hacer un error a mano—
+    // pero probado contra la base son 13 doctora-mes las que dan un costo KS
+    // menor que la referencia, y todas por cambios de criterio LEGÍTIMOS
+    // (2/9/26): lista histórica, contenciones sin costo, el descuento especial
+    // del 16%. La foto de build_liquidaciones.py ya no representa el costo KS de
+    // hoy, así que exigirlo dejaría el gate en rojo para siempre y el script no
+    // guardaría nunca más. Las bajas de costo KS se siguen listando abajo, en
+    // `crecidos`.
     const bajo = campos.some(([c, a, b]) => c.startsWith("cobrado") && a < b - 1);
     if (bajo) {
       difs.push(
@@ -152,7 +183,12 @@ async function main() {
 
   console.log(`\nLiquidaciones calculadas: ${calculadas.length} · comparables con la referencia: ${iguales + difs.length}` +
     (pesificados.length ? ` · ${pesificados.length} con cobros en dólares, ya no comparables` : "") +
-    (reimputadas.length ? ` · ${reimputadas.length} con cobros movidos a mano` : ""));
+    (reimputadas.length ? ` · ${reimputadas.length} con cobros movidos a mano` : "") +
+    (corregidas.length ? ` · ${corregidas.length} con números puestos a mano` : ""));
+  if (corregidas.length) {
+    console.log(`\n  Con números puestos a mano (settlement_line_overrides — esperado):`);
+    for (const c of corregidas) console.log(`     ${c}`);
+  }
   console.log(`  ✓ idénticas o crecidas por cargas tardías: ${iguales}`);
   console.log(`  ${difs.length ? "✗" : "✓"} con REGRESIONES: ${difs.length}`);
   if (crecidos.length) {

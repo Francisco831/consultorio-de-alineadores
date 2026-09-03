@@ -49,6 +49,43 @@ export const RE_PARCIAL = /\bparte\b|\bresto\b|\bsaldo\b|\bseña\b|\ba\s*c(?:uo|
 // lado. Son 7 de los 12 casos sin costear al 26/8/26.
 export const RE_CONTENCION = /contenci[oó]n|placa\s*bis/i;
 
+// Un cobro que declara pagar el TRATAMIENTO ENTERO vale el 100% del caso
+// (Pancho, 2/9/26). Es el cobro de Castiglioni Isabella del 28/8: "Abona total
+// tratamiento U$S 2600 con 10% descuento" — un solo pago, sin pacto cargado y
+// sin "cuota N de Y". El costeo no tenía de dónde sacar un porcentaje: lo
+// dejaba SIN COSTEAR con costo $0 y a la doctora se le liquidaba el 40% del
+// BRUTO ($1.455.480 en vez de $800.040 en esa línea).
+//
+// La regla tapa además un agujero que todavía no explotó: con el pacto cargado
+// al precio de LISTA, un pago total CON descuento prorratea 90% y el 10% de
+// costo que falta no lo carga nunca nadie, porque no vienen más cobros.
+//
+// Formas que la caja YA escribió: "Abona total tratamiento", "Abona  total del
+// tratamiento", "Abona tratamiento completo", "Abona el tratamiento con 10% de
+// descuento". Se agregan las que va a escribir: "paga el total", "pago total",
+// "cancela el tratamiento".
+//
+// Lo que NO entra: "total" suelto (la caja escribe importes con esa palabra) ni
+// "contado" suelto — "abona de contado" describe el MEDIO de pago, no que haya
+// pagado el tratamiento entero, y la caja nunca lo usó con ese sentido.
+export const RE_TOTAL =
+  /\b(?:abona|abono|paga|pag[oó]|cancela)\s+(?:el\s+|la\s+|su\s+|todo\s+el\s+)?(?:total(?:idad)?|trat(?:amiento)?)\b|\btotal(?:idad)?\s+(?:d?el\s+)?trat(?:amiento)?\b|\btrat(?:amiento)?\s+(?:completo|entero|[ií]ntegro)\b/i;
+
+/**
+ * Cuánto del precio conocido tiene que cubrir un cobro para creerle que paga el
+ * tratamiento entero. Con un descuento de contado, redondeos o un adelanto
+ * previo, un pago "total" puede quedar bastante abajo del precio de lista; con
+ * menos que esto ya no es un pago total, es una seña escrita de más.
+ */
+export const UMBRAL_PAGO_TOTAL = 0.7;
+
+// Cualquier mención a una cuota saca al cobro de la regla del total: "Abona el
+// tratamiento en 6 cuotas" describe el PLAN, y "cuota 6 de 6, cancela el
+// tratamiento" es la última cuota, no el 100%. Es a propósito más ancha que
+// RE_CUOTA (que exige "N de Y"): acá conviene no disparar de más —se cae al
+// camino de siempre— antes que cargarle el caso entero a un pago parcial.
+const RE_MENCIONA_CUOTA = /\bc(?:uo)?tas?\b/i;
+
 /** Último recurso: no hay cotización de esa fecha NI t/c escrito en la fila. */
 export const TC_FALLBACK = 1500;
 
@@ -116,6 +153,13 @@ export function costearCuotas(
     // la fila y después a TC_FALLBACK — que es exactamente lo que la regla del
     // 25/8/26 vino a sacar del medio.
     tcPorFecha?: (fecha: string) => number | undefined;
+    // Costo KS escrito a mano para UN cobro (migración 0030), en pesos.
+    // Entra acá y no después de esta función a propósito: el tope por caso vive
+    // en el Map `acumulado` de más abajo, que es local. Un costo puesto afuera
+    // no lo consume, así que las cuotas siguientes del mismo paciente volverían
+    // a imputar su share automático y el caso cargaría su costo DOS VECES —
+    // plata de la doctora, en silencio.
+    costoManualArs?: Map<string, { monto: number; motivo: string }>;
   }
 ): ResultadoCosteo {
   // Ingreso del caso por paciente: manda la fecha real de Noloco; si falta, se
@@ -219,6 +263,25 @@ export function costearCuotas(
   for (const c of [...cobros].sort((a, b) => a.fecha.localeCompare(b.fecha) || a.seq - b.seq)) {
     const k = clavePaciente(c.paciente);
     const texto = c.texto;
+
+    // Un costo escrito a mano le gana a TODAS las reglas de abajo (contención,
+    // etapa adicional, pacto, plan × cuota): si alguien se sentó a poner el
+    // número, ese es el número. No se clampea al costo del caso —clampear sería
+    // ignorar en silencio lo que se escribió— pero SÍ consume el acumulador,
+    // así que si se pasa, las cuotas siguientes del caso quedan en $0 solas y
+    // lo dicen en su etiqueta ("tope: el caso ya cargó su costo completo").
+    const manual = opts.costoManualArs?.get(c.id);
+    if (manual) {
+      acumulado.set(k, (acumulado.get(k) ?? 0) + manual.monto);
+      costoArs.set(c.id, Math.round(manual.monto));
+      etiquetas.set(
+        c.id,
+        `costo KS $${Math.round(manual.monto).toLocaleString("es-AR")} puesto a mano` +
+        (manual.motivo ? ` — ${manual.motivo}` : "")
+      );
+      continue;
+    }
+
     // La etapa adicional viene incluida en el programa 1 a 4 — pero eso vale
     // para los tratamientos FULL. En un Medium o un Fast la etapa se cobra
     // aparte y tiene su propio precio (Pancho, 25/8/26, sobre Daira Castellón).
@@ -265,6 +328,28 @@ export function costearCuotas(
     // moneda del cobro.
     const pArs = pactado.get(k), pUsd = pactadoUsd.get(k);
     const base = cuotaBase.get(`${k}|${cur}`);
+    // ¿La fila dice que paga el tratamiento entero? Se le piden tres cosas más:
+    // que no sea un pago parcial ("abona resto del tratamiento" es el 51%, no el
+    // 100%), que no hable de cuotas, y que no sea de una etapa o tratamiento
+    // ADICIONAL —"cuota 1 de 2 de tratamiento adicional"—, que tiene sus propias
+    // reglas más arriba.
+    //
+    // Y una cuarta, que es la que evita el daño caro: si el precio del caso se
+    // CONOCE, el cobro tiene que llegar a cubrirlo. Elisa Gonzalez Alzaga tiene
+    // dos filas del 21/1/26 con el mismo texto "Abona  total del tratamiento":
+    // una de $75.000 y otra de US$ 2.200. Sin esta prueba, la de $75.000 —que
+    // viene primera por seq— se lleva el costo entero del caso y se imprime con
+    // un neto de −$1.400.000, y la de US$ 2.200 queda en $0 por el tope. El
+    // texto puede mentir sobre lo que se pagó; el monto contra el pacto, no.
+    const precioConocido =
+      cur === "ARS" ? (pArs ?? (pUsd != null ? pUsd * tc : undefined))
+                    : (pUsd ?? (pArs != null ? pArs / tc : undefined));
+    const precioReferencia =
+      precioConocido ?? (plan.has(k) && base ? plan.get(k)! * base : undefined);
+    const pagaTodo =
+      RE_TOTAL.test(texto) && !RE_PARCIAL.test(texto) &&
+      !RE_MENCIONA_CUOTA.test(texto) && !norm(texto).includes("adicional") &&
+      (precioReferencia == null || monto >= precioReferencia * UMBRAL_PAGO_TOTAL);
     let pct: number | undefined;
     let precioTxt = "";
     // Una etapa adicional con precio declarado NO se prorratea: KS la factura de
@@ -272,6 +357,11 @@ export function costearCuotas(
     // (regla de Pancho, 26/8/26). Las cuotas siguientes de esa misma etapa
     // quedan en cero por el tope acumulado de más abajo.
     if (costoFijado.has(k)) { pct = 1; }
+    // Le gana al pacto a propósito: si el pacto quedó cargado al precio de LISTA
+    // y el paciente pagó con descuento, prorratear dejaría un pedazo del costo
+    // KS sin cargarle a nadie —y no vienen más cobros de ese caso—. El tope
+    // acumulado de más abajo evita el doble cobro si el caso ya cargó su costo.
+    else if (pagaTodo) { pct = 1; }
     else if (cur === "ARS" && pArs) { pct = monto / pArs; precioTxt = `$${pArs.toLocaleString("es-AR")}`; }
     else if (cur === "USD" && pUsd) { pct = monto / pUsd; precioTxt = `USD ${pUsd.toLocaleString("es-AR")}`; }
     else if (cur === "ARS" && pUsd) { pct = monto / tc / pUsd; precioTxt = `USD ${pUsd.toLocaleString("es-AR")} (t/c ${tc})`; }
@@ -300,6 +390,8 @@ export function costearCuotas(
     const pctTxt = costoFijado.has(k)
       ? `etapa adicional: $${costoFijado.get(k)!.toLocaleString("es-AR")} de lista ` +
         `menos ${listaDe(k).discount_pct}%`
+      : pagaTodo
+      ? "el cobro paga el tratamiento entero: 100% del caso"
       : `${(pct * 100).toLocaleString("es-AR", { maximumFractionDigits: 1 })}% del precio ${precioTxt}`;
     // El costo va en pesos aunque el cobro haya entrado en dólares: `share` sale
     // de la lista KS, que está en pesos, y la liquidación es un solo número.

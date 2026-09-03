@@ -7,6 +7,8 @@ import { ConfirmarLiquidacion, ReabrirLiquidacion } from "@/components/compromis
 import { RecalcularBoton } from "@/components/liquidaciones/recalcular-boton";
 import { ImputarCobro, DESTINO_CAJA, DESTINO_CASA } from "@/components/liquidaciones/imputar-cobro";
 import { RevisadoCheck } from "@/components/liquidaciones/revisado-check";
+import { EditarLinea, DeshacerLinea } from "@/components/liquidaciones/editar-linea";
+import { AgregarLinea } from "@/components/liquidaciones/agregar-linea";
 import { COMISION_POR_TRATAMIENTO } from "@/lib/liquidaciones/comision-claudia";
 import { comisionClaudiaPorMes } from "@/lib/liquidaciones/comision-claudia-query";
 import { periodoDeMovimiento, type MovimientoBase } from "@/lib/liquidaciones/recalcular";
@@ -41,7 +43,7 @@ export default async function LiquidacionesPage({
   params, searchParams,
 }: {
   params: Promise<{ empresa: string }>;
-  searchParams: Promise<{ p?: string }>;
+  searchParams: Promise<{ p?: string; editar?: string }>;
 }) {
   const { empresa } = await params;
   const sp = await searchParams;
@@ -51,7 +53,7 @@ export default async function LiquidacionesPage({
 
   const { data: todas } = await supabase
     .from("professional_settlements")
-    .select("id, period, status, pct, totals, payable_id, professional:counterparties(display_name)")
+    .select("id, period, status, pct, totals, payable_id, professional_id, professional:counterparties(display_name)")
     .eq("company_id", ctx.companyId)
     .order("period", { ascending: false });
 
@@ -66,12 +68,18 @@ export default async function LiquidacionesPage({
   type Item = {
     settlement_id: string; movement_id: string; base_amount: number; ks_cost: number;
     currency: string; label: string | null;
-    movement: { occurred_on: string; counterparty: { display_name: string } | null } | null;
+    // amount/currency son los del MOVIMIENTO, no los del ítem: desde el 25/8/26
+    // el ítem se guarda siempre en pesos, así que preguntarle a él "qué dice la
+    // caja" contesta "$1.540.000" para un cobro que fue de US$ 1.000.
+    movement: {
+      occurred_on: string; amount: string | number; currency: string;
+      counterparty: { display_name: string } | null;
+    } | null;
   };
   const { data: itemsRaw } = delPeriodo.length
     ? await supabase
         .from("settlement_items")
-        .select("settlement_id, movement_id, base_amount, ks_cost, currency, label, movement:movements(occurred_on, counterparty:counterparties(display_name))")
+        .select("settlement_id, movement_id, base_amount, ks_cost, currency, label, movement:movements(occurred_on, amount, currency, counterparty:counterparties(display_name))")
         .in("settlement_id", delPeriodo.map((f) => f.id))
         .limit(2000)
     : { data: [] };
@@ -147,6 +155,54 @@ export default async function LiquidacionesPage({
     return d.destino === "casa" ? DESTINO_CASA : (d.profesionalId ?? DESTINO_CAJA);
   };
 
+  // ---- los números puestos a mano (0030) ----
+  // Viven aparte del resultado porque el resultado se reescribe entero en cada
+  // recálculo. Acá se leen para dos cosas: pintar la línea corregida y armar el
+  // panel de cambios a mano, que es por donde se vuelve atrás.
+  const { data: ovRaw, error: errorOverrides } = await supabase
+    .from("settlement_line_overrides")
+    .select("movement_id, collected_ars, ks_cost_ars, reason, snapshot, created_at")
+    .eq("company_id", ctx.companyId).eq("status", "active");
+  type Snapshot = {
+    fecha?: string; paciente?: string; doctora?: string; periodo?: string;
+    monto_caja?: number; moneda?: string;
+    cobrado_calculado?: number | null; costo_calculado?: number | null;
+  };
+  type Override = {
+    movementId: string; cobradoArs: number | null; costoKsArs: number | null;
+    motivo: string; snapshot: Snapshot; creadoEl: string;
+  };
+  const overrides = new Map<string, Override>(
+    (ovRaw ?? []).map((o) => [o.movement_id as string, {
+      movementId: o.movement_id as string,
+      cobradoArs: o.collected_ars == null ? null : Number(o.collected_ars),
+      costoKsArs: o.ks_cost_ars == null ? null : Number(o.ks_cost_ars),
+      motivo: (o.reason as string) ?? "",
+      snapshot: (o.snapshot ?? {}) as Snapshot,
+      creadoEl: o.created_at as string,
+    }])
+  );
+  const cambiosAMano = [...overrides.values()]
+    .filter((o) => (o.snapshot.periodo ?? o.snapshot.fecha?.slice(0, 7)) === periodo)
+    .sort((a, b) => (a.snapshot.fecha ?? "").localeCompare(b.snapshot.fecha ?? ""));
+
+  // El modo edición no está escondido: está APAGADO. Se prende por la URL
+  // (?editar=1) y no con un toggle de cliente, para que no quede prendido sin
+  // que se note y para que un re-render no pueda cambiarlo solo.
+  const editar = sp.editar === "1";
+  // La caja Coni lleva contabilidad separada: un cobro que se agrega desde acá
+  // es del consultorio, así que su cuenta no se ofrece.
+  const { data: cuentasRaw } = editar
+    ? await supabase.from("accounts")
+        .select("id, name, currency, separate_books").eq("company_id", ctx.companyId)
+        .eq("is_active", true).order("name")
+    : { data: [] };
+  const cuentas = (cuentasRaw ?? [])
+    .filter((c) => !c.separate_books)
+    .map((c) => ({
+      id: c.id as string, nombre: c.name as string, moneda: c.currency as string,
+    }));
+
   // Cobros del mes que NO se le liquidan a nadie: los que Pancho sacó de una
   // doctora y los que la caja nunca atribuyó. Se buscan en una ventana de ±1 mes
   // porque un cobro puede liquidar un período distinto del de su fecha (los
@@ -204,7 +260,9 @@ export default async function LiquidacionesPage({
           <p className="mt-0.5 text-[13px] text-amber-800 dark:text-amber-300/90">
             No se les pudo poner precio, así que entraron con costo $0 y a la
             doctora se le liquida el 40% del <strong>bruto</strong> en vez del neto.
-            Se arregla cargando el precio pactado del paciente.
+            Se arregla cargando el precio pactado en la ficha del paciente —el link de
+            cada nombre— y así queda bien también para las cuotas que vengan. Si el caso
+            no tiene pacto posible, el costo se pone a mano en la línea con “Editar a mano”.
           </p>
           <table className="mt-3 w-full text-[13px]">
             <tbody>
@@ -212,7 +270,13 @@ export default async function LiquidacionesPage({
                 <tr key={n} className="border-t border-amber-200/70 dark:border-amber-900/60">
                   <td className="py-1 pr-2 text-amber-700 dark:text-amber-400/80">{i.period ?? "—"}</td>
                   <td className="py-1 pr-2 text-amber-900 dark:text-amber-200">
-                    {i.detail.split(":")[0]}
+                    <a
+                      href={`/${empresa}/pacientes?q=${encodeURIComponent(i.detail.split(":")[0])}`}
+                      className="underline decoration-amber-400 underline-offset-2 hover:decoration-current"
+                      title="Abrir la ficha del paciente para cargarle el pacto"
+                    >
+                      {i.detail.split(":")[0]}
+                    </a>
                   </td>
                   <td className="py-1 pr-2 text-amber-700 dark:text-amber-400/80">
                     {i.professional === "Coni"
@@ -226,6 +290,14 @@ export default async function LiquidacionesPage({
               ))}
             </tbody>
           </table>
+        </div>
+      ) : null}
+
+      {errorOverrides ? (
+        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-[13px] text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+          No se pudieron leer los números puestos a mano ({errorOverrides.message}). Las líneas
+          corregidas se están mostrando como las calcula el sistema:{" "}
+          <strong>no confirmes ninguna liquidación hasta que esto se arregle</strong>.
         </div>
       ) : null}
 
@@ -253,7 +325,19 @@ export default async function LiquidacionesPage({
               </a>
             ))}
             {periodo ? (
-              <div className="ml-auto">
+              <div className="ml-auto flex items-center gap-1.5">
+                <a
+                  href={`/${empresa}/liquidaciones?p=${periodo}${editar ? "" : "&editar=1"}`}
+                  className={cn(
+                    "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
+                    editar
+                      ? "border-sky-400 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-300"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  )}
+                  title="Corregir a mano los números de una línea, o agregar una que la caja no tiene"
+                >
+                  {editar ? "Salir del modo edición" : "Editar a mano"}
+                </a>
                 <RecalcularBoton empresa={ctx.config.slug} periodo={periodo} />
               </div>
             ) : null}
@@ -313,6 +397,18 @@ export default async function LiquidacionesPage({
                         </span>
                       </td>
                       <td className="px-4 py-2.5 text-right">
+                        {editar && !congelada ? (
+                          <span className="mr-2 inline-block align-middle">
+                            <AgregarLinea
+                              empresa={ctx.config.slug}
+                              profesionalId={f.professional_id as string}
+                              doctora={nombre}
+                              periodo={f.period}
+                              cuentas={cuentas}
+                              hoy={todayIn(ctx.config.timezone)}
+                            />
+                          </span>
+                        ) : null}
                         <a
                           href={`/imprimir/${empresa}/liquidacion/${f.id}`}
                           target="_blank"
@@ -341,17 +437,25 @@ export default async function LiquidacionesPage({
                         ) : null}
                       </td>
                     </tr>,
-                    (itemsPorSet.get(f.id) ?? []).length > 0 ? (
+                    // También con CERO líneas cuando hay plata cobrada: son las
+                    // liquidaciones viejas que quedaron sin detalle (siete al
+                    // 2/9/26, todas pagadas). Justamente ésas son las que el
+                    // aviso de descuadre tiene que denunciar, y eran las únicas
+                    // que quedaban mudas.
+                    (itemsPorSet.get(f.id) ?? []).length > 0 || Number(ars.collected ?? 0) > 0 ? (
                       <tr key={`${f.id}-detalle`} className="border-b last:border-0">
                         <td colSpan={9} className="bg-muted/20 px-4 py-0">
                           <details className="group py-2">
                             <summary className="cursor-pointer select-none text-xs font-medium text-muted-foreground hover:text-foreground">
-                              Ver las {itemsPorSet.get(f.id)!.length} líneas de {nombre.split(" ")[0]}
+                              {(itemsPorSet.get(f.id) ?? []).length === 0
+                                ? `Sin detalle: esta liquidación no tiene ninguna línea guardada`
+                                : `Ver las ${(itemsPorSet.get(f.id) ?? []).length} líneas de ${nombre.split(" ")[0]}`}
                               {(() => {
-                                const revisadas = itemsPorSet.get(f.id)!.filter((x) => decidido.get(x.movement_id)?.revisado).length;
+                                const its = itemsPorSet.get(f.id) ?? [];
+                                const revisadas = its.filter((x) => decidido.get(x.movement_id)?.revisado).length;
                                 return revisadas ? (
                                   <span className="ml-1.5 font-normal">
-                                    · {revisadas} de {itemsPorSet.get(f.id)!.length} revisadas
+                                    · {revisadas} de {its.length} revisadas
                                   </span>
                                 ) : null;
                               })()}
@@ -368,14 +472,22 @@ export default async function LiquidacionesPage({
                                   <th className="px-2 py-1 text-right font-medium">Neto</th>
                                   <th className="px-2 py-1 font-medium">Se le liquida a</th>
                                   <th className="w-14 px-2 py-1 text-center font-medium" title="Ya la miré y está bien">Revisada</th>
+                                  {editar && !congelada ? (
+                                    <th className="w-10 px-2 py-1 text-center font-medium" title="Poner los números de esta línea a mano">A mano</th>
+                                  ) : null}
                                 </tr>
                               </thead>
                               <tbody>
-                                {itemsPorSet.get(f.id)!.map((it, i) => {
+                                {(itemsPorSet.get(f.id) ?? []).map((it) => {
                                   const pac = (it.movement?.counterparty as { display_name?: string } | null)?.display_name ?? "—";
                                   const yaRevisada = decidido.get(it.movement_id)?.revisado ?? false;
                                   return (
-                                    <tr key={i} className="border-t border-border/50">
+                                    // por movimiento y no por índice: si una
+                                    // línea se reimputa, la lista se corre un
+                                    // lugar y React reusaría el diálogo de
+                                    // edición —con sus números adentro— sobre
+                                    // otro paciente.
+                                    <tr key={it.movement_id} className="border-t border-border/50">
                                       <td className="fig px-2 py-1 text-muted-foreground">
                                         {dm(it.movement?.occurred_on)}
                                       </td>
@@ -417,10 +529,71 @@ export default async function LiquidacionesPage({
                                           />
                                         )}
                                       </td>
+                                      {editar && !congelada ? (
+                                        <td className="px-2 py-1 text-center">
+                                          {(() => {
+                                            const ov = overrides.get(it.movement_id) ?? null;
+                                            // Con override, base_amount YA es el
+                                            // número puesto a mano: lo que el
+                                            // motor calculaba está en el snapshot.
+                                            return (
+                                              <EditarLinea
+                                                key={it.movement_id}
+                                                empresa={ctx.config.slug}
+                                                movementId={it.movement_id}
+                                                paciente={pac}
+                                                cobradoCalculado={ov?.snapshot.cobrado_calculado ?? Number(it.base_amount)}
+                                                costoCalculado={ov?.snapshot.costo_calculado ?? Number(it.ks_cost)}
+                                                montoCaja={Number(it.movement?.amount ?? it.base_amount)}
+                                                moneda={it.movement?.currency ?? it.currency}
+                                                locale={locale}
+                                                override={ov}
+                                              />
+                                            );
+                                          })()}
+                                        </td>
+                                      ) : null}
                                     </tr>
                                   );
                                 })}
                               </tbody>
+                              {(() => {
+                                // El detalle nunca se sumaba contra el total de
+                                // arriba: si los dos no dan lo mismo, la doctora
+                                // recibe un PDF cuyas líneas no cierran con su
+                                // propio total. Ya pasa hoy con las
+                                // liquidaciones viejas que quedaron sin detalle.
+                                const its = itemsPorSet.get(f.id) ?? [];
+                                const subCob = its.reduce((a, x) => a + Number(x.base_amount), 0);
+                                const subKs = its.reduce((a, x) => a + Number(x.ks_cost), 0);
+                                const dif = subCob - Number(ars.collected ?? 0);
+                                return (
+                                  <tfoot>
+                                    <tr className="border-t font-medium">
+                                      <td className="px-2 py-1" colSpan={3}>
+                                        Subtotal de las {its.length} líneas
+                                      </td>
+                                      <td className="fig px-2 py-1 text-right">{formatMoney(subCob, "ARS", locale)}</td>
+                                      <td className="fig px-2 py-1 text-right text-muted-foreground">
+                                        {subKs ? `−${formatMoney(subKs, "ARS", locale)}` : "—"}
+                                      </td>
+                                      <td className="fig px-2 py-1 text-right">{formatMoney(subCob - subKs, "ARS", locale)}</td>
+                                      <td colSpan={editar && !congelada ? 3 : 2} />
+                                    </tr>
+                                    {Math.abs(dif) >= 1 ? (
+                                      <tr>
+                                        <td colSpan={editar && !congelada ? 9 : 8}
+                                          className="px-2 py-1 text-[11px] text-amber-700 dark:text-amber-400">
+                                          ⚠ El total de arriba dice {formatMoney(ars.collected ?? 0, "ARS", locale)}:
+                                          {dif < 0
+                                            ? ` faltan ${formatMoney(-dif, "ARS", locale)} de detalle`
+                                            : ` el detalle tiene ${formatMoney(dif, "ARS", locale)} de más`}.
+                                        </td>
+                                      </tr>
+                                    ) : null}
+                                  </tfoot>
+                                );
+                              })()}
                             </table>
                           </details>
                         </td>
@@ -439,6 +612,69 @@ export default async function LiquidacionesPage({
               </tfoot>
             </table>
           </div>
+
+          {cambiosAMano.length ? (
+            <div className="rounded-xl border bg-card p-4 shadow-sm">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="text-sm font-semibold">Puesto a mano — {periodo}</span>
+                <span className="text-xs text-muted-foreground">
+                  {cambiosAMano.length} línea{cambiosAMano.length === 1 ? "" : "s"} con números escritos por vos
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                El cálculo respeta estos números en cada recálculo.{" "}
+                {editar
+                  ? "“Deshacer” los saca y la línea vuelve a valer lo que calcula el sistema — no borra nada: queda anotado quién lo puso, cuándo y por qué."
+                  : "Para sacarlos, entrá en “Editar a mano”."}
+              </p>
+              <table className="mt-3 w-full text-[12px]">
+                <thead>
+                  <tr className="text-left text-[11px] text-muted-foreground">
+                    <th className="w-16 px-2 py-1 font-medium">Fecha</th>
+                    <th className="px-2 py-1 font-medium">Paciente</th>
+                    <th className="px-2 py-1 font-medium">Qué se puso a mano</th>
+                    <th className="px-2 py-1 font-medium">Por qué</th>
+                    {editar ? <th className="w-20 px-2 py-1" /> : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  {cambiosAMano.map((o) => {
+                    const pac = o.snapshot.paciente ?? "—";
+                    const de = (v?: number | null) =>
+                      v == null ? "lo calculado" : formatMoney(v, "ARS", locale);
+                    const cambios = [
+                      o.cobradoArs != null
+                        ? `cobrado: ${de(o.snapshot.cobrado_calculado)} → ${formatMoney(o.cobradoArs, "ARS", locale)}`
+                        : null,
+                      o.costoKsArs != null
+                        ? `costo KS: ${de(o.snapshot.costo_calculado)} → ${formatMoney(o.costoKsArs, "ARS", locale)}`
+                        : null,
+                    ].filter(Boolean);
+                    return (
+                      <tr key={o.movementId} className="border-t border-border/50">
+                        <td className="fig px-2 py-1 text-muted-foreground">{dm(o.snapshot.fecha)}</td>
+                        <td className="max-w-[180px] truncate px-2 py-1 font-medium">{pac}</td>
+                        <td className="px-2 py-1">{cambios.join(" · ")}</td>
+                        <td className="max-w-[240px] truncate px-2 py-1 text-muted-foreground">{o.motivo}</td>
+                        {/* Deshacer mueve plata: vive detrás del modo edición,
+                            igual que el lápiz. En modo lectura el panel se ve
+                            entero, pero no se toca. */}
+                        {editar ? (
+                          <td className="px-2 py-1 text-right">
+                            <DeshacerLinea
+                              empresa={ctx.config.slug}
+                              movementId={o.movementId}
+                              paciente={pac}
+                            />
+                          </td>
+                        ) : null}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
 
           <div className="rounded-xl border bg-card p-4 shadow-sm">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
