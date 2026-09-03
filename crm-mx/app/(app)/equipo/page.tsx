@@ -1,10 +1,19 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { guardarMetasComercial } from "@/lib/actions/team";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { fetchAllRows } from "@/lib/supabase/fetch-all";
-import { todayMX, monthStartMX } from "@/lib/dates";
+import { todayMX } from "@/lib/dates";
+import { MX_OFFSET } from "@/lib/actividad-equipo";
+import {
+  TIPOS_CONTACTO,
+  VENTANA_ATRIBUCION_DIAS,
+  contarCasosPorPersona,
+  desdeConVentana,
+  indiceDeToques,
+} from "@/lib/atribucion";
 import {
   Table,
   TableBody,
@@ -14,51 +23,62 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-export default async function EquipoPage() {
-  const supabase = await createClient();
-  const monthStartISO = monthStartMX();
-  const d30 = new Date(Date.now() - 30 * 86_400_000).toISOString();
+// Todo lo que se mide acá es del MES que se elige con ?m=YYYY-MM (antes era el
+// mes en curso y nada más, y las actividades eran una ventana móvil de 30 días
+// que en los primeros días del mes contradecía al panel de metas de abajo).
+// Excepción: opps abiertas, tareas vencidas y último ingreso son estado de hoy
+// —no existe "las opps abiertas de julio"— y se muestran igual en cualquier mes.
+
+function shiftMonth(m: string, months: number): string {
+  const [y, mo] = m.split("-").map(Number);
+  const t = y * 12 + (mo - 1) + months;
+  return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, "0")}`;
+}
+
+export default async function EquipoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ m?: string }>;
+}) {
   const today = todayMX();
+  const mesActual = today.slice(0, 7);
+  const params = await searchParams;
+  const m = /^\d{4}-\d{2}$/.test(params.m ?? "") ? params.m! : mesActual;
+  const esMesActual = m === mesActual;
+
+  // límites del mes en hora de México: con el borde en UTC, seis horas de cada
+  // fin de mes caen del lado equivocado
+  const desde = `${m}-01T00:00:00${MX_OFFSET}`;
+  const hasta = `${shiftMonth(m, 1)}-01T00:00:00${MX_OFFSET}`;
+  const period = `${m}-01`;
+
+  const supabase = await createClient();
 
   const [
     { data: profiles },
-    { data: doctors },
     { data: monthCases },
     { data: openOpps },
-    { data: acts30 },
     { data: overdueTasks },
     { data: goals },
     { data: actsMes },
+    { data: toques },
   ] = await Promise.all([
     supabase.from("profiles").select("id, nombre, rol, activo").order("nombre"),
-    // paginado: el mapa doctor→owner cruza los casos del mes. Con 6.4k doctores
-    // un select plano trae 1.000 y desinfla los casos de todo el equipo
-    fetchAllRows<{ id: string; owner_id: string | null }>((from, to) =>
-      supabase.from("doctors").select("id, owner_id").range(from, to)
-    ).then((data) => ({ data })),
     // is_demo=false en las cuatro: ai_rep_performance() (0023) las filtra y acá no
     // se filtraban. El seed reparte lo sintético entre las personas reales por
     // nombre, así que el inflado no se diluye — cae entero sobre los que se miden.
     supabase
       .from("cases")
-      .select("doctor_id")
+      .select("doctor_id, fecha_ingreso")
       .eq("is_new_case", true)
       .eq("is_demo", false)
-      .gte("fecha_ingreso", monthStartISO),
+      .gte("fecha_ingreso", desde)
+      .lt("fecha_ingreso", hasta),
     supabase
       .from("opportunities")
       .select("owner_id")
       .eq("is_demo", false)
       .not("stage", "in", "(ganada,perdida)"),
-    // actividades y tareas vencidas también se cuentan por persona en JS
-    fetchAllRows<{ created_by: string | null; type: string }>((from, to) =>
-      supabase
-        .from("activities")
-        .select("created_by, type")
-        .eq("is_demo", false)
-        .gte("occurred_at", d30)
-        .range(from, to)
-    ).then((data) => ({ data })),
     fetchAllRows<{ assigned_to: string | null }>((from, to) =>
       supabase
         .from("tasks")
@@ -71,15 +91,32 @@ export default async function EquipoPage() {
     supabase
       .from("goals")
       .select("user_id, metric, target")
-      .eq("period", monthStartISO)
+      .eq("period", period)
       .in("metric", ["paid_cases", "contactos", "videollamadas", "keepdays"]),
+    // actividades del mes: alimentan tanto la tabla de arriba como el panel de
+    // metas, para que los dos números no puedan discrepar
     fetchAllRows<{ created_by: string | null; type: string }>((from, to) =>
       supabase
         .from("activities")
         .select("created_by, type")
         .eq("is_demo", false)
-        .gte("occurred_at", monthStartISO)
+        .gte("occurred_at", desde)
+        .lt("occurred_at", hasta)
         .range(from, to)
+    ).then((data) => ({ data })),
+    // contactos para atribuir los casos del mes: arrancan 90 días ANTES del mes,
+    // porque un caso de septiembre puede venir de una visita de julio
+    fetchAllRows<{ doctor_id: string; created_by: string | null; occurred_at: string }>(
+      (from, to) =>
+        supabase
+          .from("activities")
+          .select("doctor_id, created_by, occurred_at")
+          .eq("is_demo", false)
+          .not("created_by", "is", null)
+          .in("type", TIPOS_CONTACTO as unknown as string[])
+          .gte("occurred_at", desdeConVentana(desde))
+          .lt("occurred_at", hasta)
+          .range(from, to)
     ).then((data) => ({ data })),
   ]);
 
@@ -101,7 +138,6 @@ export default async function EquipoPage() {
     myProfile?.rol ?? ""
   );
 
-  const ownerOf = new Map((doctors ?? []).map((d) => [d.id, d.owner_id]));
   const stats = new Map<
     string,
     { casos: number; opps: number; acts: number; visitas: number; keepdays: number; vencidas: number }
@@ -113,15 +149,20 @@ export default async function EquipoPage() {
     return stats.get(id)!;
   };
 
-  for (const c of monthCases ?? []) {
-    const s = ensure(ownerOf.get(c.doctor_id) ?? null);
-    if (s) s.casos++;
+  // el caso es de quien tocó al doctor, no de quien figura como owner hoy
+  const { porPersona: casosDe, sinAtribuir } = contarCasosPorPersona(
+    monthCases ?? [],
+    indiceDeToques(toques ?? [])
+  );
+  for (const [persona, n] of casosDe) {
+    const s = ensure(persona);
+    if (s) s.casos = n;
   }
   for (const o of openOpps ?? []) {
     const s = ensure(o.owner_id);
     if (s) s.opps++;
   }
-  for (const a of acts30 ?? []) {
+  for (const a of actsMes ?? []) {
     const s = ensure(a.created_by);
     if (s) {
       s.acts++;
@@ -142,7 +183,6 @@ export default async function EquipoPage() {
     (goals ?? []).map((g) => [`${g.user_id}|${g.metric}`, g.target])
   );
 
-  // reales del MES calendario para el panel de metas (la tabla de arriba usa 30d)
   const CONTACTO_TYPES = new Set([
     "llamada",
     "videollamada",
@@ -155,15 +195,21 @@ export default async function EquipoPage() {
     if (!a.created_by) continue;
     if (!mes.has(a.created_by))
       mes.set(a.created_by, { contactos: 0, videollamadas: 0, keepdays: 0 });
-    const m = mes.get(a.created_by)!;
-    if (CONTACTO_TYPES.has(a.type)) m.contactos++;
+    const c = mes.get(a.created_by)!;
+    if (CONTACTO_TYPES.has(a.type)) c.contactos++;
     // "reunion" sigue contando: era el tipo con el que se registraban las
     // videollamadas hasta que existió el tipo propio (0038)
-    if (a.type === "videollamada" || a.type === "reunion") m.videollamadas++;
-    if (a.type === "keepday") m.keepdays++;
+    if (a.type === "videollamada" || a.type === "reunion") c.videollamadas++;
+    if (a.type === "keepday") c.keepdays++;
   }
 
   const team = (profiles ?? []).filter((p) => p.activo);
+
+  const nombreMes = new Date(`${m}-15T12:00:00Z`).toLocaleDateString("es-MX", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 
   return (
     <div className="space-y-4 p-6">
@@ -171,15 +217,46 @@ export default async function EquipoPage() {
         <div>
           <h1 className="text-lg font-semibold tracking-tight">Equipo</h1>
           <p className="text-sm text-muted-foreground">
-            Mes en curso · actividades de los últimos 30 días
+            Casos, actividades y metas de <span className="capitalize">{nombreMes}</span> ·{" "}
+            <Link
+              href={
+                esMesActual
+                  ? "/equipo/actividad"
+                  : `/equipo/actividad/calendario?m=${m}`
+              }
+              className="underline underline-offset-2"
+            >
+              actividad por día →
+            </Link>
           </p>
         </div>
-        <Link
-          href="/equipo/actividad"
-          className="text-sm font-medium underline underline-offset-2"
-        >
-          Actividad por día →
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/equipo?m=${shiftMonth(m, -1)}`}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            ←
+          </Link>
+          <span className="min-w-36 text-center text-sm font-medium capitalize">
+            {nombreMes}
+          </span>
+          {m < mesActual ? (
+            <Link
+              href={`/equipo?m=${shiftMonth(m, 1)}`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              →
+            </Link>
+          ) : null}
+          {!esMesActual ? (
+            <Link
+              href="/equipo"
+              className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
+            >
+              Este mes
+            </Link>
+          ) : null}
+        </div>
       </div>
       <div className="overflow-x-auto rounded-lg border">
         <Table>
@@ -189,9 +266,9 @@ export default async function EquipoPage() {
               <TableHead className="text-right">Casos del mes</TableHead>
               <TableHead className="text-right">Objetivo</TableHead>
               <TableHead className="text-right">Opps abiertas</TableHead>
-              <TableHead className="text-right">Actividades 30d</TableHead>
-              <TableHead className="text-right">Visitas 30d</TableHead>
-              <TableHead className="text-right">KeepDays 30d</TableHead>
+              <TableHead className="text-right">Actividades</TableHead>
+              <TableHead className="text-right">Visitas</TableHead>
+              <TableHead className="text-right">KeepDays</TableHead>
               <TableHead className="text-right">Tareas vencidas</TableHead>
               {signins ? <TableHead className="text-right">Último ingreso</TableHead> : null}
             </TableRow>
@@ -244,15 +321,28 @@ export default async function EquipoPage() {
           </TableBody>
         </Table>
       </div>
+      {sinAtribuir > 0 ? (
+        <p className="text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">{sinAtribuir}</span> de los{" "}
+          {monthCases?.length ?? 0} casos del mes quedaron{" "}
+          <span className="font-medium">sin atribuir</span>: entraron sin ningún
+          contacto cargado en el CRM en los {VENTANA_ATRIBUCION_DIAS} días previos.
+          No se reparten entre el equipo — el hueco es el dato.
+        </p>
+      ) : null}
       <div className="space-y-2">
         <div>
           <h2 className="text-base font-semibold tracking-tight">
-            Metas del comercial — mes en curso
+            Metas del comercial — <span className="capitalize">{nombreMes}</span>
           </h2>
           <p className="text-sm text-muted-foreground">
             Contactos (llamada + WhatsApp + visita + videollamada) ·
             videollamadas · KeepDays · casos del mes
-            {isManager ? " — las metas se estipulan acá mismo" : ""}
+            {isManager
+              ? esMesActual
+                ? " — las metas se estipulan acá mismo"
+                : " — lo que se guarde acá queda en las metas de ese mes"
+              : ""}
           </p>
         </div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -270,6 +360,7 @@ export default async function EquipoPage() {
                 <p className="mb-3 font-medium">{p.nombre}</p>
                 <form action={guardarMetasComercial} className="space-y-2">
                   <input type="hidden" name="user_id" value={p.id} />
+                  <input type="hidden" name="period" value={period} />
                   {celdas.map((c) => {
                     const cumple = c.meta !== undefined && c.real >= c.meta;
                     return (
@@ -320,9 +411,15 @@ export default async function EquipoPage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        “Casos del mes” cuenta los casos nuevos (1ª etapa) de los doctores de los
-        que cada persona es owner. Los objetivos por persona se cargan en la tabla
-        goals (cuotas OKR: Juan 18 · Rocío 4→7 · nuevo/a 2→5).
+        “Casos del mes” son los casos nuevos (1ª etapa) del mes, y se le cuentan a
+        quien tocó a ese doctor por última vez dentro de los{" "}
+        {VENTANA_ATRIBUCION_DIAS} días anteriores al caso — llamada, videollamada,
+        WhatsApp, visita, reunión o KeepDay. No se cuentan por owner del doctor:
+        el owner es el estado de hoy y reasignar una cartera reescribía la
+        historia. Actividades, visitas y KeepDays son las del mes elegido; opps
+        abiertas, tareas vencidas y último ingreso son de hoy. Los objetivos por
+        persona se cargan en la tabla goals (cuotas OKR: Juan 18 · Rocío 4→7 ·
+        nuevo/a 2→5).
       </p>
     </div>
   );

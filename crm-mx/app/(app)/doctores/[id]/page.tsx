@@ -18,6 +18,7 @@ import {
 } from "@/components/ai/milestone-track";
 import { periskopeLink } from "@/lib/phone";
 import { Timeline, type TimelineEvent } from "@/components/doctor/timeline";
+import { TIPOS_CONTACTO } from "@/lib/atribucion";
 import { ProspectProfileCard } from "@/components/doctor/prospect-profile-card";
 import { ObservacionesCard } from "@/components/doctor/observaciones-card";
 import { TaskList } from "@/components/tasks/task-list";
@@ -174,6 +175,46 @@ export default async function DoctorPage({
       c.is_new_case &&
       Date.parse(c.fecha_ingreso) > Date.now() - 90 * 86_400_000
   ).length;
+
+  // ---------- el recibo: qué pasó con este doctor alrededor de cada primer contacto ----------
+  // El pedido de Pancho, literal: "Rocío llamó a este dr y empezó a meter más
+  // casos". Acá está la fila que lo dice o lo desmiente, con las fechas al lado
+  // para poder contarlas a mano — y con la columna que la hace honesta: el mismo
+  // antes/después del MISMO doctor un año antes, cuando nadie lo había tocado.
+  const tiposContacto = new Set<string>(TIPOS_CONTACTO);
+  const casosNuevos = cases
+    .filter((c) => c.is_new_case)
+    .map((c) => Date.parse(c.fecha_ingreso))
+    .sort((a, b) => a - b);
+  const primerContactoDe = new Map<string, number>();
+  for (const a of activities) {
+    if (!a.created_by || !tiposContacto.has(a.type)) continue;
+    const ts = Date.parse(a.occurred_at);
+    const prev = primerContactoDe.get(a.created_by);
+    if (prev === undefined || ts < prev) primerContactoDe.set(a.created_by, ts);
+  }
+  // todayMX() y no Date.now(): la regla de pureza de React lo prohíbe en render,
+  // y además el corte del día tiene que ser el de México
+  const ahoraMs = Date.parse(`${todayMX()}T23:59:59-06:00`);
+  const recibos = [...primerContactoDe.entries()]
+    .sort((x, y) => x[1] - y[1])
+    .map(([personaId, t0]) => {
+      const w = Math.min(180, (ahoraMs - t0) / 86_400_000);
+      const ancho = w * 86_400_000;
+      const entre = (a: number, b: number) =>
+        casosNuevos.filter((t) => t >= a && t < b);
+      const t0p = t0 - 365 * 86_400_000;
+      return {
+        personaId,
+        t0,
+        ventanaDias: Math.round(w),
+        completa: w >= 90,
+        antes: entre(t0 - ancho, t0),
+        despues: entre(t0, t0 + ancho),
+        antesPlacebo: entre(t0p - ancho, t0p).length,
+        despuesPlacebo: entre(t0p, t0p + ancho).length,
+      };
+    });
 
   // ---------- timeline unificada: actividades ∪ hitos de casos ∪ cambios auditados ----------
   const events: TimelineEvent[] = [];
@@ -593,6 +634,7 @@ export default async function DoctorPage({
       <Tabs defaultValue="timeline">
         <TabsList>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="historia">Historia</TabsTrigger>
           <TabsTrigger value="casos">Casos ({cases.length})</TabsTrigger>
           <TabsTrigger value="opps">
             Oportunidades ({openOpps.length})
@@ -602,6 +644,108 @@ export default async function DoctorPage({
 
         <TabsContent value="timeline" className="mt-4">
           <Timeline events={events} />
+        </TabsContent>
+
+        <TabsContent value="historia" className="mt-4 space-y-3">
+          {recibos.length === 0 ? (
+            <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+              Nadie del equipo tiene un contacto cargado con este doctor. Si manda
+              casos, los manda sin que el CRM sepa quién lo trabaja.
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Qué hizo este doctor antes y después del primer contacto de cada
+                persona. Las ventanas son simétricas y las fechas están abajo para
+                poder contarlas a mano. La columna <strong>placebo</strong> es el
+                mismo cálculo un año antes: si sube igual, lo que se ve es el
+                ciclo del doctor, no el trabajo de la persona.
+              </p>
+              {recibos.map((r) => {
+                const delta = r.despues.length - r.antes.length;
+                const deltaPlacebo = r.despuesPlacebo - r.antesPlacebo;
+                const fechas = (ts: number[]) =>
+                  ts.length
+                    ? ts
+                        .map((t) => new Date(t).toISOString().slice(0, 10))
+                        .join(" · ")
+                    : "ninguno";
+                return (
+                  <div key={r.personaId} className="rounded-lg border bg-card p-4">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <p className="font-medium">
+                        {profileName.get(r.personaId) ?? "—"}
+                        <span className="ml-2 text-sm font-normal text-muted-foreground">
+                          primer contacto{" "}
+                          {new Date(r.t0).toISOString().slice(0, 10)} · ventana ±
+                          {r.ventanaDias} días
+                        </span>
+                      </p>
+                      {r.completa ? null : (
+                        <Badge variant="outline" className="font-normal">
+                          ventana corta: todavía no se puede leer
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Antes
+                        </p>
+                        <p className="text-2xl font-semibold tabular-nums">
+                          {r.antes.length}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {fechas(r.antes)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Después
+                        </p>
+                        <p className="text-2xl font-semibold tabular-nums">
+                          {r.despues.length}
+                          <span
+                            className={
+                              "ml-2 text-sm font-normal " +
+                              (delta > 0
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : delta < 0
+                                  ? "text-red-600 dark:text-red-400"
+                                  : "text-muted-foreground")
+                            }
+                          >
+                            {delta > 0 ? `+${delta}` : delta}
+                          </span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {fechas(r.despues)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Placebo (un año antes)
+                        </p>
+                        <p className="text-2xl font-semibold tabular-nums text-muted-foreground">
+                          {r.antesPlacebo} → {r.despuesPlacebo}
+                          <span className="ml-2 text-sm font-normal">
+                            {deltaPlacebo > 0 ? `+${deltaPlacebo}` : deltaPlacebo}
+                          </span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {delta > 0 && delta > deltaPlacebo
+                            ? "el salto real supera al placebo"
+                            : delta > 0
+                              ? "el placebo sube igual o más: no distingue nada"
+                              : "sin salto que explicar"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="casos" className="mt-4">

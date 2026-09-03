@@ -11,7 +11,24 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { relativeDays, formatDate } from "@/lib/format";
 import { fetchAllRows } from "@/lib/supabase/fetch-all";
-import { monthStartMX } from "@/lib/dates";
+import {
+  TIPOS_CONTACTO,
+  VENTANA_ATRIBUCION_DIAS,
+  contarCasosPorPersona,
+  desdeConVentana,
+  indiceDeToques,
+} from "@/lib/atribucion";
+import { monthStartMX, todayMX } from "@/lib/dates";
+import {
+  ESTADO_LABEL,
+  casosPorDoctor,
+  primerToquePorPersona,
+  resumenTiers,
+  serieCadencia,
+  ultimoMesCompleto,
+  ventanaEspejo,
+  type EstadoCadencia,
+} from "@/lib/impacto";
 import {
   OPP_STAGE_LABELS,
   type DoctorCategoria,
@@ -25,6 +42,7 @@ const TABS = [
   { key: "acreditacion", label: "Acreditación y activación" },
   { key: "pipeline", label: "Pipeline" },
   { key: "actividad", label: "Actividad vs resultados" },
+  { key: "impacto", label: "Impacto" },
   { key: "calidad", label: "Calidad de datos" },
 ];
 
@@ -75,6 +93,7 @@ export default async function ReportesPage({
       {t === "acreditacion" ? <Acreditacion supabase={supabase} /> : null}
       {t === "pipeline" ? <PipelineReport supabase={supabase} /> : null}
       {t === "actividad" ? <Actividad supabase={supabase} /> : null}
+      {t === "impacto" ? <Impacto supabase={supabase} /> : null}
       {t === "calidad" ? <Calidad supabase={supabase} /> : null}
     </div>
   );
@@ -907,7 +926,7 @@ async function Actividad({ supabase }: { supabase: SB }) {
   const d90 = new Date(Date.now() - 90 * 86_400_000).toISOString();
   // las tres primeras paginadas: actividades (4.4k+), casos y el mapa de owners
   // (6.4k doctores) se cuentan en JS, así que truncarlas falsea la tabla entera
-  const [acts, cases90, doctors, { data: profiles }] = await Promise.all([
+  const [acts, cases90, toques, { data: profiles }] = await Promise.all([
     // sin is_demo=false esta tabla compara el esfuerzo REAL de cada persona contra
     // ~200 actividades sintéticas repartidas en los mismos 90 días
     fetchAllRows<{ created_by: string | null; type: string }>((from, to) =>
@@ -918,22 +937,31 @@ async function Actividad({ supabase }: { supabase: SB }) {
         .gte("occurred_at", d90)
         .range(from, to)
     ),
-    fetchAllRows<{ doctor_id: string }>((from, to) =>
+    fetchAllRows<{ doctor_id: string; fecha_ingreso: string }>((from, to) =>
       supabase
         .from("cases")
-        .select("doctor_id")
+        .select("doctor_id, fecha_ingreso")
         .eq("is_new_case", true)
         .eq("is_demo", false)
         .gte("fecha_ingreso", d90)
         .range(from, to)
     ),
-    fetchAllRows<{ id: string; owner_id: string | null }>((from, to) =>
-      supabase.from("doctors").select("id, owner_id").range(from, to)
+    // contactos desde 90 días antes de la ventana: un caso del día 1 puede venir
+    // de una visita anterior a la ventana
+    fetchAllRows<{ doctor_id: string; created_by: string | null; occurred_at: string }>(
+      (from, to) =>
+        supabase
+          .from("activities")
+          .select("doctor_id, created_by, occurred_at")
+          .eq("is_demo", false)
+          .not("created_by", "is", null)
+          .in("type", TIPOS_CONTACTO as unknown as string[])
+          .gte("occurred_at", desdeConVentana(d90))
+          .range(from, to)
     ),
     supabase.from("profiles").select("id, nombre"),
   ]);
 
-  const ownerOf = new Map((doctors ?? []).map((d) => [d.id, d.owner_id]));
   const perUser = new Map<
     string,
     { visitas: number; llamadas: number; whatsapp: number; otras: number; casos: number }
@@ -952,9 +980,15 @@ async function Actividad({ supabase }: { supabase: SB }) {
     else if (a.type === "whatsapp") s.whatsapp++;
     else s.otras++;
   }
-  for (const c of cases90 ?? []) {
-    const s = ensure(ownerOf.get(c.doctor_id) ?? null);
-    if (s) s.casos++;
+  // el caso se le cuenta a quien tocó al doctor antes de que entrara, no al
+  // owner de hoy (ver lib/atribucion.ts)
+  const { porPersona: casosDe, sinAtribuir } = contarCasosPorPersona(
+    cases90 ?? [],
+    indiceDeToques(toques ?? [])
+  );
+  for (const [persona, n] of casosDe) {
+    const s = ensure(persona);
+    if (s) s.casos = n;
   }
   const nameOf = new Map((profiles ?? []).map((p) => [p.id, p.nombre]));
 
@@ -972,7 +1006,7 @@ async function Actividad({ supabase }: { supabase: SB }) {
               <TableHead className="text-right">Llamadas</TableHead>
               <TableHead className="text-right">WhatsApp</TableHead>
               <TableHead className="text-right">Otras</TableHead>
-              <TableHead className="text-right">Casos de sus doctores</TableHead>
+              <TableHead className="text-right">Casos atribuidos</TableHead>
               <TableHead className="text-right">Casos / actividad</TableHead>
             </TableRow>
           </TableHeader>
@@ -998,7 +1032,12 @@ async function Actividad({ supabase }: { supabase: SB }) {
       </div>
       <p className="text-xs text-muted-foreground">
         No es un dashboard de vanidad: la columna que importa es la última. 200
-        llamadas sin casos valen menos que 10 visitas con 3.
+        llamadas sin casos valen menos que 10 visitas con 3. Un caso se le cuenta
+        a quien tocó a ese doctor por última vez dentro de los{" "}
+        {VENTANA_ATRIBUCION_DIAS} días previos al caso.
+        {sinAtribuir > 0
+          ? ` ${sinAtribuir} de los ${cases90.length} casos de la ventana entraron sin contacto cargado y no se le cuentan a nadie.`
+          : ""}
       </p>
     </section>
   );
@@ -1159,6 +1198,345 @@ async function Calidad({ supabase }: { supabase: SB }) {
           </ul>
         </section>
       ) : null}
+    </div>
+  );
+}
+
+/* ---------------- Impacto ---------------- */
+/**
+ * La pantalla que contesta "¿el equipo mueve la aguja?" sin mentir.
+ *
+ * No hay score por persona: con 13-35 casos nuevos por mes y ~100 doctores vivos
+ * no hay N para probar causalidad, y el antes/después crudo de Juan sube tanto
+ * en su ventana real como un año antes de haber tocado a nadie. Lo que sí se
+ * puede: el estado de la cartera contra el ritmo propio de cada doctor, y el
+ * antes/después SIEMPRE al lado de su placebo.
+ */
+async function Impacto({ supabase }: { supabase: SB }) {
+  const hoyISO = todayMX();
+  const ahora = Date.parse(`${hoyISO}T23:59:59-06:00`);
+
+  const [casos, toques] = await Promise.all([
+    fetchAllRows<{ doctor_id: string; fecha_ingreso: string }>((from, to) =>
+      supabase
+        .from("cases")
+        .select("doctor_id, fecha_ingreso")
+        .eq("is_new_case", true)
+        .eq("is_demo", false)
+        .range(from, to)
+    ),
+    fetchAllRows<{
+      doctor_id: string;
+      created_by: string | null;
+      occurred_at: string;
+      type: string;
+    }>((from, to) =>
+      supabase
+        .from("activities")
+        .select("doctor_id, created_by, occurred_at, type")
+        .eq("is_demo", false)
+        .not("created_by", "is", null)
+        .in("type", TIPOS_CONTACTO as unknown as string[])
+        .range(from, to)
+    ),
+  ]);
+  const { data: profiles } = await supabase.from("profiles").select("id, nombre");
+  const nombreDe = new Map((profiles ?? []).map((p) => [p.id, p.nombre]));
+
+  const cd = casosPorDoctor(casos);
+  const serie = serieCadencia(cd, "2025-06", ultimoMesCompleto(hoyISO));
+  const ultimo = serie[serie.length - 1];
+
+  const ultimoToque = new Map<string, number>();
+  for (const t of toques) {
+    const ts = Date.parse(t.occurred_at);
+    const prev = ultimoToque.get(t.doctor_id);
+    if (prev === undefined || ts > prev) ultimoToque.set(t.doctor_id, ts);
+  }
+  const tiers = resumenTiers(cd, ultimoToque, ahora);
+
+  const primeros = primerToquePorPersona(toques);
+  const espejos = [...primeros.entries()]
+    .map(([id, m]) => ventanaEspejo(m, id, cd, ahora))
+    .filter((e) => e.doctores > 0)
+    .sort((a, b) => b.doctores - a.doctores);
+
+  // solapamiento: dos personas que trabajan al mismo doctor no se pueden separar
+  const carteras = [...primeros.entries()].map(([id, m]) => ({ id, set: new Set(m.keys()) }));
+  const solapes: { a: string; b: string; n: number; total: number }[] = [];
+  for (let i = 0; i < carteras.length; i++)
+    for (let j = i + 1; j < carteras.length; j++) {
+      const n = [...carteras[i].set].filter((x) => carteras[j].set.has(x)).length;
+      if (n > 0)
+        solapes.push({
+          a: carteras[i].id,
+          b: carteras[j].id,
+          n,
+          total: Math.min(carteras[i].set.size, carteras[j].set.size),
+        });
+    }
+
+  const conCaso = [...cd.keys()];
+  const sinToqueNunca = conCaso.filter((d) => !ultimoToque.has(d));
+  const casosSinToque = sinToqueNunca.reduce((a, d) => a + (cd.get(d)?.length ?? 0), 0);
+  const casos180SinToque = sinToqueNunca.reduce(
+    (a, d) => a + (cd.get(d)?.filter((t) => t >= ahora - 180 * 86_400_000).length ?? 0),
+    0
+  );
+
+  const ESTADOS: EstadoCadencia[] = ["al_dia", "atrasado", "dormido", "perdido"];
+  const COLOR: Record<EstadoCadencia, string> = {
+    al_dia: "text-emerald-600 dark:text-emerald-400",
+    atrasado: "text-amber-600 dark:text-amber-400",
+    dormido: "text-orange-600 dark:text-orange-400",
+    perdido: "text-red-600 dark:text-red-400",
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* ---- 1. El reloj de la cartera ---- */}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          El reloj de la cartera
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Cada doctor se mide contra su propio ritmo: la mediana de días entre sus
+          casos. Al día = dentro de 1,2× su ritmo · atrasado = hasta 3× · dormido
+          = más de 3× · perdido = más de un año sin caso. Entran solo los doctores
+          con al menos 3 casos (dos intervalos cerrados): sin ritmo propio no hay
+          reloj que mirar. Nadie puede mover estos números cargando actividad.
+        </p>
+        {ultimo ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {ESTADOS.map((e) => (
+              <div key={e} className="rounded-lg border bg-card p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {ESTADO_LABEL[e]}
+                </p>
+                <p className={cn("text-2xl font-semibold tabular-nums", COLOR[e])}>
+                  {ultimo[e]}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  de {ultimo.elegibles} · cierre {ultimo.mes}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        <div className="overflow-x-auto rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Cierre de mes</TableHead>
+                <TableHead className="text-right">Con reloj</TableHead>
+                {ESTADOS.map((e) => (
+                  <TableHead key={e} className="text-right">
+                    {ESTADO_LABEL[e]}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {serie.map((p) => (
+                <TableRow key={p.mes}>
+                  <TableCell className="font-medium tabular-nums">{p.mes}</TableCell>
+                  <TableCell className="text-right tabular-nums text-muted-foreground">
+                    {p.elegibles}
+                  </TableCell>
+                  {ESTADOS.map((e) => (
+                    <TableCell key={e} className={cn("text-right tabular-nums", COLOR[e])}>
+                      {p[e]}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        {serie.length > 1 ? (
+          <p className="text-xs text-muted-foreground">
+            Lo que hay que mirar es la primera columna contra la segunda: los
+            doctores con reloj pasaron de {serie[0].elegibles} a {ultimo.elegibles}{" "}
+            y los “al día” de {serie[0].al_dia} a {ultimo.al_dia}. La cartera
+            creció; el stock de doctores en ritmo, no.
+          </p>
+        ) : null}
+      </section>
+
+      {/* ---- 2. Semáforo de la cartera ---- */}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Dónde está la producción
+        </h2>
+        <div className="overflow-x-auto rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Tier</TableHead>
+                <TableHead className="text-right">Doctores</TableHead>
+                <TableHead className="text-right">Casos 12m</TableHead>
+                <TableHead className="text-right">Deuda</TableHead>
+                <TableHead className="text-right">Tocados 30d</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {tiers.map((f) => (
+                <TableRow key={f.tier}>
+                  <TableCell className="font-medium">
+                    {f.tier}
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {f.tier === "A"
+                        ? "4+ casos en 12m"
+                        : f.tier === "B"
+                          ? "1 a 3 casos"
+                          : "ninguno en 12m"}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{f.doctores}</TableCell>
+                  <TableCell className="text-right tabular-nums font-medium">
+                    {f.casos12m}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums text-amber-600 dark:text-amber-400">
+                    {f.deuda}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums text-muted-foreground">
+                    {f.tocados30d}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          “Deuda” son los doctores vencidos de su propio reloj y sin caso nuevo en
+          30 días. El criterio a propósito NO mira si alguien los contactó: si lo
+          mirara, diez WhatsApp borrarían la deuda sin que entre un solo caso.
+          “Tocados 30d” va al lado, nunca adentro.
+        </p>
+      </section>
+
+      {/* ---- 3. La ventana espejo, con placebo ---- */}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          ¿El contacto mueve al doctor?
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Casos nuevos de cada doctor en la ventana anterior a su primer contacto
+          con esa persona, contra la misma ventana posterior. Al lado, la columna
+          que hace honesto al número: <strong>el mismo cálculo un año antes</strong>,
+          cuando esa persona todavía no había tocado a nadie. Si el placebo sube
+          igual que la ventana real, lo que se está midiendo es el ciclo del
+          doctor, no el trabajo de la persona.
+        </p>
+        <div className="overflow-x-auto rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Persona</TableHead>
+                <TableHead className="text-right">Doctores</TableHead>
+                <TableHead className="text-right">Antes</TableHead>
+                <TableHead className="text-right">Después</TableHead>
+                <TableHead className="text-right">Suben</TableHead>
+                <TableHead className="text-right text-muted-foreground">
+                  Placebo antes
+                </TableHead>
+                <TableHead className="text-right text-muted-foreground">
+                  Placebo después
+                </TableHead>
+                <TableHead className="text-right text-muted-foreground">
+                  Placebo suben
+                </TableHead>
+                <TableHead className="text-right">Lectura</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {espejos.map((e) => {
+                const real = e.despues - e.antes;
+                const placebo = e.despuesPlacebo - e.antesPlacebo;
+                const sobrevive = real > 0 && real > placebo;
+                return (
+                  <TableRow key={e.personaId}>
+                    <TableCell className="font-medium">
+                      {nombreDe.get(e.personaId) ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{e.doctores}</TableCell>
+                    <TableCell className="text-right tabular-nums">{e.antes}</TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">
+                      {e.despues}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{e.suben}</TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {e.antesPlacebo}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {e.despuesPlacebo}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {e.subenPlacebo}
+                    </TableCell>
+                    <TableCell className="text-right text-xs">
+                      {sobrevive ? (
+                        <span className="text-emerald-600 dark:text-emerald-400">
+                          supera al placebo
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          no supera al placebo
+                        </span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+        {solapes.length ? (
+          <p className="text-sm">
+            {solapes.map((s) => (
+              <span key={`${s.a}-${s.b}`} className="block text-amber-700 dark:text-amber-400">
+                {s.n} de los {s.total} doctores que toca{" "}
+                {nombreDe.get(s.b) ?? "—"} también los toca{" "}
+                {nombreDe.get(s.a) ?? "—"}. Las filas no se suman y no se pueden
+                separar.
+              </span>
+            ))}
+          </p>
+        ) : null}
+      </section>
+
+      {/* ---- 4. Lo que nadie explica ---- */}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Producción que nadie explica
+        </h2>
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-2xl font-semibold tabular-nums">
+            {sinToqueNunca.length}{" "}
+            <span className="text-base font-normal text-muted-foreground">
+              de {conCaso.length} doctores con casos
+            </span>
+          </p>
+          <p className="text-sm text-muted-foreground">
+            mandaron {casosSinToque} casos históricos ({casos180SinToque} en los
+            últimos 180 días) sin un solo contacto registrado de nadie. Mientras
+            este número siga así de grande, cualquier medición de impacto del
+            equipo se está haciendo sobre menos de dos tercios del negocio.
+          </p>
+        </div>
+      </section>
+
+      <p className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
+        Cómo leer esta pantalla. No hay score por persona a propósito: México
+        produce entre 13 y 35 casos nuevos por mes, y con ese volumen no se puede
+        probar que un llamado causa un caso — haría falta un orden de magnitud más
+        de doctores. La autoría de las actividades tampoco es un hecho: el 95% de
+        las de Juan y el 82% de las de Rocío las repartió un backfill el 23/8/26
+        según el TIPO de actividad (llamadas a Rocío, el resto a Juan). Además el
+        sync del intranet trae hoy una sola cuenta, así que parte de lo que hace
+        Rocío figura cargado por Juan. Este tablero sirve para decidir a quién
+        llamar y para discutir con datos. No sirve para pagar un bono.
+      </p>
     </div>
   );
 }

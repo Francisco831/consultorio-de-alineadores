@@ -11,7 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { logActivity } from "@/lib/actions/activities";
 import { searchAll, type SearchResult } from "@/lib/actions/search";
-import { ACTIVITY_TYPE_LABELS, type ActivityType } from "@/lib/types";
+import {
+  ACTIVITY_TYPE_LABELS,
+  DIAS_RETROACTIVOS_MAX,
+  type ActivityType,
+} from "@/lib/types";
 
 const selectClass =
   "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -19,6 +23,13 @@ const selectClass =
 /** YYYY-MM-DDTHH:mm local, para el default del datetime-local */
 function ahoraLocal(): string {
   const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
+
+/** Piso del selector: el server rechaza lo mismo, esto solo evita el viaje. */
+function haceDiasLocal(dias: number): string {
+  const d = new Date(Date.now() - dias * 86_400_000);
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
   return d.toISOString().slice(0, 16);
 }
@@ -160,6 +171,8 @@ export function QuickLog() {
             name="occurred_at"
             type="datetime-local"
             defaultValue={ahoraLocal()}
+            min={haceDiasLocal(DIAS_RETROACTIVOS_MAX)}
+            max={ahoraLocal()}
           />
         </div>
       </div>

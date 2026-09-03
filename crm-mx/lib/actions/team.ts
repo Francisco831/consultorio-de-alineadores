@@ -39,7 +39,11 @@ export async function guardarMetasComercial(formData: FormData) {
 
   const userId = String(formData.get("user_id") ?? "");
   if (!userId) throw new Error("Falta user_id");
-  const period = monthStartMX();
+  // /equipo se puede parar en un mes anterior: la meta se guarda en el mes que
+  // se está mirando, no siempre en el actual. Sin `period` en el form (o con
+  // basura), el mes en curso.
+  const pedido = String(formData.get("period") ?? "");
+  const period = /^\d{4}-\d{2}-01$/.test(pedido) ? pedido : monthStartMX();
 
   for (const metric of METRICAS_COMERCIAL) {
     const raw = formData.get(metric);

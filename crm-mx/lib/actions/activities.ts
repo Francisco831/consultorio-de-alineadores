@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { DIAS_RETROACTIVOS_MAX } from "@/lib/types";
 
 export async function logActivity(formData: FormData) {
   const doctorId = String(formData.get("doctor_id"));
@@ -11,7 +12,25 @@ export async function logActivity(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Sesión expirada" };
 
+  // Antigüedad y futuro: el campo "Cuándo" es un datetime-local libre, y como
+  // todas las mediciones de impacto anclan en el PRIMER contacto con un doctor
+  // (`min(occurred_at)`), una fila cargada con fecha vieja mueve el punto de
+  // partida hacia atrás y con él el "antes/después" de esa persona — sin dejar
+  // rastro, porque audit_log no versiona activities. Medido: eligiendo la fecha,
+  // el salto de Juan pasa de +15 a +148. Se acota acá y con `max` en el input.
   const occurredRaw = String(formData.get("occurred_at") ?? "").trim();
+  const ahora = Date.now();
+  if (occurredRaw) {
+    const ts = Date.parse(occurredRaw);
+    if (Number.isNaN(ts)) return { error: "La fecha no se entiende" };
+    // 5 minutos de tolerancia: el reloj del navegador no es el del servidor
+    if (ts > ahora + 5 * 60_000)
+      return { error: "No se puede cargar una actividad con fecha futura" };
+    if (ts < ahora - DIAS_RETROACTIVOS_MAX * 86_400_000)
+      return {
+        error: `No se puede cargar con más de ${DIAS_RETROACTIVOS_MAX} días de antigüedad. Si pasó antes, escribilo en el resumen.`,
+      };
+  }
   const { error } = await supabase.from("activities").insert({
     doctor_id: doctorId,
     opportunity_id: String(formData.get("opportunity_id") ?? "") || null,

@@ -332,6 +332,22 @@ export const TASK_TYPE_LABELS: Record<TaskType, string> = {
   seguimiento: "Seguimiento",
 };
 
+/**
+ * Cuántos días para atrás se puede fechar una actividad al cargarla.
+ *
+ * No es burocracia: desde el 20/8 el equipo carga el mismo día y este tope solo
+ * blinda lo que ya viene bien. La razón es que todas las mediciones de impacto
+ * anclan en el PRIMER contacto con un doctor (min(occurred_at)), así que una
+ * fila con fecha vieja corre el punto de partida hacia atrás y con él el
+ * "antes/después" de esa persona — sin dejar rastro, porque audit_log no
+ * versiona activities.
+ *
+ * Vive acá y no en lib/actions/activities.ts porque un archivo "use server"
+ * solo puede exportar funciones async. Lo usan el guard del server action y el
+ * `min` del datetime-local del panel.
+ */
+export const DIAS_RETROACTIVOS_MAX = 7;
+
 export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
   llamada: "Llamada",
   videollamada: "Videollamada",
