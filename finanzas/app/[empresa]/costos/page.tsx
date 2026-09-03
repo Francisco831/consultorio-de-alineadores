@@ -35,17 +35,35 @@ export default async function CostosPage({
   const esMexico = ctx.config.slug === "mx";
 
   if (esMexico) {
-    const [{ data: costos }, { data: meses }] = await Promise.all([
+    const [{ data: costos }, { data: meses }, { data: gastosRaw }] = await Promise.all([
       supabase.from("v_production_cost").select("*").eq("company_id", ctx.companyId).order("period"),
       supabase.from("production_months").select("period, aligners_produced, cases_shipped, notes")
         .eq("company_id", ctx.companyId).order("period"),
+      supabase.from("movements")
+        .select("occurred_on, amount, category:categories(name)")
+        .eq("company_id", ctx.companyId).eq("kind", "expense").neq("status", "void")
+        .limit(10000),
     ]);
     // La producción es la espina: se ve aunque todavía no haya gastos con los
     // que dividirla. Media respuesta cargada es mejor que una pantalla vacía.
     const costoPorPeriodo = new Map(((costos ?? []) as Produccion[]).map((c) => [c.period, c]));
-    const filas = ((meses ?? []) as ProduccionMes[]).map((m) => ({
-      ...m, costo: costoPorPeriodo.get(m.period) ?? null,
-    }));
+    // Costo PLENO: todo el gasto del mes (estructura incluida) sobre lo producido.
+    // La mercadería de reventa queda afuera: no es costo del alineador.
+    const gastoTotalMes = new Map<string, number>();
+    for (const m of gastosRaw ?? []) {
+      if ((m.category as { name?: string } | null)?.name === "Scanners para reventa") continue;
+      const p = String(m.occurred_on).slice(0, 7);
+      gastoTotalMes.set(p, (gastoTotalMes.get(p) ?? 0) + Number(m.amount));
+    }
+    const filas = ((meses ?? []) as ProduccionMes[]).map((m) => {
+      const gastoTotal = gastoTotalMes.get(m.period) ?? null;
+      return {
+        ...m, costo: costoPorPeriodo.get(m.period) ?? null,
+        gastoTotal,
+        costoPleno: gastoTotal != null && m.aligners_produced > 0
+          ? gastoTotal / m.aligners_produced : null,
+      };
+    });
     const ultimo = filas[filas.length - 1];
     const hayGastos = costoPorPeriodo.size > 0;
 
@@ -55,8 +73,9 @@ export default async function CostosPage({
           <div>
             <h1 className="text-xl font-semibold tracking-tight">{ctx.config.labelCostos}</h1>
             <p className="text-sm text-muted-foreground">
-              Cuánto cuesta de verdad un alineador: el gasto de producción del mes
-              dividido por lo que se produjo.
+              Cuánto cuesta de verdad un alineador, en dos números: el del taller
+              (gasto de producción ÷ producido) y el pleno (todo el gasto del mes
+              ÷ producido) — el pleno es el que manda para poner precios.
             </p>
           </div>
           <CargarProduccion empresa={ctx.config.slug} periodo={currentPeriodIn(ctx.config.timezone)} />
@@ -82,8 +101,12 @@ export default async function CostosPage({
               </div>
             ) : null}
             {ultimo ? (
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Tarjeta titulo="Costo por alineador" nota={ultimo.period} destacado
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <Tarjeta titulo="Costo pleno por alineador" nota={`${ultimo.period} · con estructura`} destacado
+                  valor={ultimo.costoPleno != null
+                    ? formatMoney(ultimo.costoPleno, monedaPrincipal, locale, { decimals: true })
+                    : "—"} />
+                <Tarjeta titulo="Costo de producción" nota={`${ultimo.period} · solo taller`}
                   valor={ultimo.costo?.costo_por_alineador != null
                     ? formatMoney(Number(ultimo.costo.costo_por_alineador), ultimo.costo.currency, locale, { decimals: true })
                     : "—"} />
@@ -95,7 +118,7 @@ export default async function CostosPage({
                   valor={ultimo.aligners_produced.toLocaleString(locale)} />
               </div>
             ) : null}
-            <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+            <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
               <table className="w-full text-[13px]">
                 <thead>
                   <tr className="border-b text-left text-xs text-muted-foreground">
@@ -104,7 +127,9 @@ export default async function CostosPage({
                     <th className="px-2 py-2 text-right font-medium">Casos</th>
                     <th className="px-2 py-2 text-right font-medium">Alin/caso</th>
                     <th className="px-2 py-2 text-right font-medium">Gasto producción</th>
-                    <th className="px-4 py-2 text-right font-medium">Costo unitario</th>
+                    <th className="px-2 py-2 text-right font-medium">Costo producción</th>
+                    <th className="px-2 py-2 text-right font-medium">Gasto total</th>
+                    <th className="px-4 py-2 text-right font-medium">Costo pleno</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -119,9 +144,17 @@ export default async function CostosPage({
                       <td className="fig px-2 py-2.5 text-right">
                         {f.costo ? formatMoney(Number(f.costo.gasto_produccion), f.costo.currency, locale) : "—"}
                       </td>
-                      <td className="fig px-4 py-2.5 text-right font-semibold">
+                      <td className="fig px-2 py-2.5 text-right">
                         {f.costo?.costo_por_alineador != null
                           ? formatMoney(Number(f.costo.costo_por_alineador), f.costo.currency, locale, { decimals: true })
+                          : "—"}
+                      </td>
+                      <td className="fig px-2 py-2.5 text-right text-muted-foreground">
+                        {f.gastoTotal != null ? formatMoney(f.gastoTotal, monedaPrincipal, locale) : "—"}
+                      </td>
+                      <td className="fig px-4 py-2.5 text-right font-semibold">
+                        {f.costoPleno != null
+                          ? formatMoney(f.costoPleno, monedaPrincipal, locale, { decimals: true })
                           : "—"}
                       </td>
                     </tr>
@@ -129,6 +162,11 @@ export default async function CostosPage({
                 </tbody>
               </table>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Costo pleno = todo el gasto del mes (estructura incluida, sin la
+              mercadería de reventa) dividido por los alineadores producidos. El de
+              producción mide el taller; el pleno es el piso para pensar precios.
+            </p>
           </>
         )}
       </div>
