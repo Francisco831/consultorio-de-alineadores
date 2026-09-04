@@ -111,6 +111,16 @@ export const LIFECYCLE_STYLES: Record<LifecycleStage, string> = {
   acreditado_no_activado: STYLE_AZUL,
 };
 
+/** el eje de actividad (0055) es OTRO eje que el lifecycle y se lee al lado:
+ *  verde = trae pacientes nuevos, ámbar = manda trabajo pero dejó de traerlos,
+ *  gris = no manda nada. El ámbar es el que importa: es el único estado que el
+ *  lifecycle no sabe ver. */
+export const ACTIVIDAD_STYLES: Record<string, string> = {
+  trae_nuevos: STYLE_VERDE,
+  solo_termina: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-900",
+  sin_actividad: STYLE_GRIS,
+};
+
 /** badge central del negocio: en qué universo está el doctor */
 export const ACREDITACION_STYLES = {
   si: STYLE_CELESTE,

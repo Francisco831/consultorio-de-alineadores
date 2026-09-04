@@ -404,7 +404,23 @@ export default async function DoctorPage({
             { label: "Potential", value: potential ?? "—" },
             { label: "Prioridad", value: doctor.priority_score ?? "—" },
             { label: "Casos históricos", value: doctor.new_case_count },
-            { label: "Últimos 90 días", value: cases90 },
+            // El eje de 0055: un paciente nuevo (I_1) y una etapa posterior del
+            // mismo paciente son dos cosas distintas, y el segundo número es el
+            // que hace la diferencia entre un doctor apagándose y uno muerto.
+            {
+              label: "Pacientes nuevos 90d",
+              value: doctor.actividad_90d ? doctor.nuevos_90d : cases90,
+            },
+            {
+              label: "Etapas 90d",
+              value: doctor.actividad_90d
+                ? doctor.posteriores_90d + doctor.servicio_90d
+                : "—",
+              hint:
+                doctor.actividad_90d === "solo_termina"
+                  ? "sigue mandando trabajo, no trae pacientes"
+                  : undefined,
+            },
             { label: "Opps abiertas", value: openOpps.length },
             {
               label: "Último caso",

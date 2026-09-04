@@ -488,6 +488,15 @@ export async function sincronizarNoloco(
     if (rcErr) log(`recompute_all falló (lo cubre el pg_cron nocturno): ${rcErr.message}`);
     else log("Scores recalculados ✓");
 
+    // ---------- eje de actividad de 90 días (migración 0055) ----------
+    // Va acá y no en su propio cron porque es acá donde llegan los casos: un
+    // doctor que manda su primera etapa a la mañana tiene que salir de "solo
+    // termina" en el sync siguiente, no a la noche. Un UPDATE sobre 212 filas,
+    // no compite con nada. La red igual está: crm-actividad-nightly a las 11:20.
+    const { error: actErr } = await db.rpc("recompute_actividad");
+    if (actErr) log(`recompute_actividad falló (lo cubre el cron): ${actErr.message}`);
+    else log("Eje de actividad recalculado ✓");
+
     // ---------- verificación post-escritura ----------
     const { count: i1EnDb } = await db
       .from("cases")

@@ -145,6 +145,12 @@ export interface Doctor {
   last_case_at: string | null;
   last_new_case_at: string | null;
   last_contact_at: string | null;
+  // ---- eje de actividad de 90 días (0055), al lado del lifecycle ----
+  actividad_90d: Actividad90d | null;
+  nuevos_90d: number;
+  posteriores_90d: number;
+  servicio_90d: number;
+  ultimo_caso_posterior_at: string | null;
   is_demo: boolean;
   created_at: string;
   updated_at: string;
@@ -247,6 +253,18 @@ export interface Alert {
 }
 
 // ---------- labels en español ----------
+
+/** Las dos maneras de estar activo. Un caso del CRM es una ETAPA de un
+ *  tratamiento: 'I_1' es un paciente nuevo, I_2 en adelante es el mismo
+ *  paciente avanzando. Un doctor puede estar mandando trabajo todos los meses
+ *  sin traer un solo paciente nuevo — y eso es lo que este eje separa. */
+export type Actividad90d = "trae_nuevos" | "solo_termina" | "sin_actividad";
+
+export const ACTIVIDAD_LABELS: Record<Actividad90d, string> = {
+  trae_nuevos: "Trae pacientes",
+  solo_termina: "Solo termina",
+  sin_actividad: "Sin actividad",
+};
 
 export const LIFECYCLE_LABELS: Record<LifecycleStage, string> = {
   prospecto: "Prospecto",
