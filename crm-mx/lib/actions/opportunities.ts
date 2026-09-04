@@ -42,6 +42,12 @@ export async function createOpportunity(formData: FormData) {
   const stageRaw = String(formData.get("stage") ?? "paciente_potencial");
   const stage: OppStage =
     stageRaw === "viabilidad" ? "viabilidad" : "paciente_potencial";
+  // `viability_requested_at` es lo que MARCA una viabilidad, y por eso se
+  // escribe acá: hasta hoy la columna estaba vacía en las 38 filas y el único
+  // modo de reconocerlas era adivinar por etapa y lost_reason (ver el criterio
+  // legacy en app/(app)/viabilidades/page.tsx). De acá en adelante la fecha del
+  // pedido es un dato, no una inferencia — y es el reloj del seguimiento.
+  const pedidaRaw = String(formData.get("viability_requested_at") ?? "").trim();
   const { error } = await supabase.from("opportunities").insert({
     doctor_id: doctorId,
     patient_name: String(formData.get("patient_name") ?? "").trim() || null,
@@ -49,10 +55,20 @@ export async function createOpportunity(formData: FormData) {
     amount_mxn: amountRaw ? Number(amountRaw) : null,
     expected_close_date: String(formData.get("expected_close_date") ?? "") || null,
     owner_id: user.id,
+    ...(stage === "viabilidad"
+      ? {
+          viability_requested_at: pedidaRaw
+            ? new Date(pedidaRaw).toISOString()
+            : new Date().toISOString(),
+          viability_status: "solicitada",
+        }
+      : {}),
   });
   if (error) return { error: error.message };
   revalidatePath(`/doctores/${doctorId}`);
   revalidatePath("/pipeline");
+  revalidatePath("/viabilidades");
+  revalidatePath("/seguimiento");
   return { ok: true };
 }
 

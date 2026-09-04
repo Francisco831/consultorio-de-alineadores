@@ -19,6 +19,7 @@ import {
   CalendarDays,
   BookOpen,
   Radar,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +67,16 @@ const NAV: { href: string; label: string; icon: typeof Sun; grupo?: string }[] =
       href: "/seguimiento",
       label: "Seguimiento",
       icon: Radar,
+      grupo: "Acreditados",
+    },
+    // La viabilidad es el pedido PREVIO al caso, y hasta hoy solo se podía
+    // cargar desde la ficha del doctor: entrar doctor por doctor para cargar
+    // diez seguidas. Sección propia porque tiene su propio ciclo —se pide, se
+    // contesta, y recién ahí llega (o no) el caso— y porque es de Rocío.
+    {
+      href: "/viabilidades",
+      label: "Viabilidades",
+      icon: ClipboardCheck,
       grupo: "Acreditados",
     },
 
