@@ -6,26 +6,19 @@
 import { useState, useTransition } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { setLineaPeriskope } from "@/lib/actions/team";
+import type { LineaPeriskope } from "@/lib/lineas-periskope";
 
 const selectClass =
   "h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
 
 /**
- * Las 5 líneas que existen hoy en la organización de Periskope, en orden de
- * cuántos chats tenía cada una en el export del 7/8 (939 · 352 · 323 · 284 · 8).
- * Van escritas acá porque el plan de Periskope no expone las líneas por API:
- * cuando se sume o se dé de baja una, se toca esta lista.
+ * Las líneas de la organización de Periskope llegan por prop desde la página
+ * (lib/lineas-periskope.ts las lee de PERISKOPE_LINEAS): no van escritas acá
+ * porque el repo es público. El plan de Periskope no expone las líneas por API,
+ * así que cuando se sume o se dé de baja una, se toca la variable.
  */
-const LINEAS_PERISKOPE = [
-  { phone: "5215549149356", nombre: "Ortodoncia Keep" },
-  { phone: "5215547940498", nombre: "sin nombre" },
-  { phone: "5216642962789", nombre: "Keep Smiling" },
-  { phone: "5215510685144", nombre: "Juan" },
-  { phone: "5491123740762", nombre: "Dra. Rocío Puig" },
-];
-
-function etiqueta(phone: string): string {
-  const linea = LINEAS_PERISKOPE.find((l) => l.phone === phone);
+function etiqueta(lineas: LineaPeriskope[], phone: string): string {
+  const linea = lineas.find((l) => l.phone === phone);
   return `…${phone.slice(-4)} — ${linea ? linea.nombre : "otra línea"}`;
 }
 
@@ -36,7 +29,13 @@ export interface MiembroEquipo {
   periskope_org_phone: string | null;
 }
 
-export function LineasManager({ equipo }: { equipo: MiembroEquipo[] }) {
+export function LineasManager({
+  equipo,
+  lineas,
+}: {
+  equipo: MiembroEquipo[];
+  lineas: LineaPeriskope[];
+}) {
   // El valor elegido vive acá y no en el DOM: si RLS rechaza el cambio, hay que
   // volver al anterior en vez de dejar en pantalla una línea que la base no tiene.
   const [valores, setValores] = useState<Record<string, string>>(() =>
@@ -73,7 +72,7 @@ export function LineasManager({ equipo }: { equipo: MiembroEquipo[] }) {
       {equipo.map((p) => {
         const valor = valores[p.id] ?? "";
         const desconocida =
-          valor !== "" && !LINEAS_PERISKOPE.some((l) => l.phone === valor);
+          valor !== "" && !lineas.some((l) => l.phone === valor);
         return (
           <li key={p.id} className="px-4 py-2 text-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -94,7 +93,7 @@ export function LineasManager({ equipo }: { equipo: MiembroEquipo[] }) {
                     onChange={(e) => e.currentTarget.form?.requestSubmit()}
                   >
                     <option value="">Sin línea asignada</option>
-                    {LINEAS_PERISKOPE.map((l) => (
+                    {lineas.map((l) => (
                       <option key={l.phone} value={l.phone}>
                         …{l.phone.slice(-4)} — {l.nombre}
                       </option>
@@ -102,7 +101,7 @@ export function LineasManager({ equipo }: { equipo: MiembroEquipo[] }) {
                     {/* Una línea ya cargada que no esté en la lista de arriba
                         tiene que poder verse y conservarse igual */}
                     {desconocida ? (
-                      <option value={valor}>{etiqueta(valor)}</option>
+                      <option value={valor}>{etiqueta(lineas, valor)}</option>
                     ) : null}
                   </select>
                 </form>

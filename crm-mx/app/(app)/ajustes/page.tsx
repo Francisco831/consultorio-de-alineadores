@@ -32,6 +32,7 @@ import {
   type InvitacionRow,
 } from "@/components/ajustes/allowlist-manager";
 import { LineasManager } from "@/components/ajustes/lineas-manager";
+import { lineasPeriskope } from "@/lib/lineas-periskope";
 
 const REC_STATUSES: RecommendationStatus[] = [
   "propuesta",
@@ -348,7 +349,7 @@ export default async function AjustesPage() {
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Equipo
         </h2>
-        <LineasManager equipo={team} />
+        <LineasManager equipo={team} lineas={lineasPeriskope()} />
         <p className="text-xs text-muted-foreground">
           Con qué línea atiende cada uno, el CRM te avisa si un chat pasa por la
           tuya. Lo que NO puede hacer es abrir Periskope directamente en tu

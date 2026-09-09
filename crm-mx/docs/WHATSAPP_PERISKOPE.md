@@ -175,20 +175,27 @@ Cargar o corregir la línea de una persona, desde el editor SQL de Supabase:
 
 ```sql
 -- Solo dígitos, sin @c.us. Hay un CHECK que rechaza cualquier otra cosa.
-update profiles set periskope_org_phone = '5215510685144' where nombre ilike 'juan%';
-update profiles set periskope_org_phone = '5491123740762' where nombre ilike 'roc%';
+-- (números inventados: los reales están en Ajustes → Líneas)
+update profiles set periskope_org_phone = '5215500000002' where nombre ilike 'juan%';
+update profiles set periskope_org_phone = '5491100000003' where nombre ilike 'roc%';
 select nombre, rol, periskope_org_phone from profiles order by nombre;
 ```
 
 ### Las líneas de la organización
 
+Son cinco. Los números no están en el repo, que es público: la lista con su
+nombre vive en la variable `PERISKOPE_LINEAS` (Vercel producción y `.env.local`,
+formato `teléfono=nombre;…`, ver `.env.local.example`), y de ahí sale el select
+de Ajustes → Líneas. Quién atiende cuál es `profiles.periskope_org_phone`. Acá
+van por los últimos cuatro dígitos, que es como las muestra el CRM.
+
 | Línea | Nombre en Periskope | Quién |
 |---|---|---|
-| `5215510685144` | — | **Juan** (SALES) |
-| `5491123740762` | — | **Rocío** (CLINICAL) — número argentino, atiende MX |
-| `5215549149356` | Ortodoncia Keep | sin dueño asignado |
-| `5215547940498` | — | sin dueño asignado |
-| `5216642962789` | Keep Smiling | sin dueño asignado |
+| `…5144` | — | **Juan** (SALES) |
+| `…0762` | — | **Rocío** (CLINICAL) — número argentino, atiende MX |
+| `…9356` | Ortodoncia Keep | sin dueño asignado |
+| `…0498` | — | sin dueño asignado |
+| `…2789` | Keep Smiling | sin dueño asignado |
 
 Un mismo chat puede vivir en varias líneas (el doctor le escribió a más de un
 número). De 1.487 chats: 1.167 en una sola línea, 237 en dos, 75 en tres y 8 en

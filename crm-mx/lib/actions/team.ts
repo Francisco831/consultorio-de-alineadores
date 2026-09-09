@@ -90,7 +90,7 @@ export async function setLineaPeriskope(
   const userId = String(formData.get("user_id") ?? "");
   if (!userId) return { error: "Falta a quién asignarle la línea" };
 
-  // Lo que se copia desde Periskope suele venir como "5215510685144@c.us", o
+  // Lo que se copia desde Periskope suele venir como "5215500000001@c.us", o
   // con +, espacios o guiones: nos quedamos con los dígitos.
   const crudo = String(formData.get("linea") ?? "").replace(/@c\.us$/i, "");
   const digitos = crudo.replace(/\D/g, "");
@@ -99,7 +99,7 @@ export async function setLineaPeriskope(
   // Mismo rango que el check de la 0041 (11 a 15 dígitos): validarlo acá hace
   // que el mensaje sea entendible en vez de un error de Postgres en crudo.
   const FORMATO =
-    "La línea son solo dígitos, sin más ni espacios: por ejemplo 5215510685144";
+    "La línea son solo dígitos, sin más ni espacios: por ejemplo 5215500000001";
   if (linea !== null && (linea.length < 11 || linea.length > 15)) {
     return { error: FORMATO };
   }

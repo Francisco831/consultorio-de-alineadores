@@ -39,7 +39,7 @@ export function lineaCorta(linea: string | null | undefined): string | null {
  *           mejor no decir nada que decir algo falso
  *
  * Compara por dígitos y, como red, por los últimos 10: WhatsApp escribe los
- * móviles mexicanos con y sin el "1" de más (5215510685144 vs 525510685144) y
+ * móviles mexicanos con y sin el "1" de más (5215500000001 vs 525500000001) y
  * son el mismo aparato.
  */
 export function lineaPropia(
