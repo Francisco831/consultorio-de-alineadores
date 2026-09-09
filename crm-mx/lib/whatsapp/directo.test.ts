@@ -15,7 +15,7 @@ import {
 } from "./directo";
 
 const DOCTORES = [
-  { id: "d1", nombre: "Diaz Mendoza Xilonen", phone: "+525568031739", whatsapp: "+525568031739", is_accredited: true, case_count: 7 },
+  { id: "d1", nombre: "Diaz Mendoza Xilonen", phone: "+525511223344", whatsapp: "+525511223344", is_accredited: true, case_count: 7 },
   { id: "d2", nombre: "Odontopediatra Xilonen Díaz", phone: null, whatsapp: null, is_accredited: false, case_count: 0 },
   { id: "d3", nombre: "Mejía Díaz Iván", phone: "5215512345678", whatsapp: null, is_accredited: true, case_count: 3 },
   { id: "d4", nombre: "Mejía Iván", phone: null, whatsapp: null, is_accredited: false, case_count: 0 },
@@ -34,13 +34,13 @@ function chat(over: Partial<Chat>): Chat {
 
 describe("teléfonos", () => {
   test("canonTel colapsa 521 y agrega 52 a 10 dígitos", () => {
-    assert.equal(canonTel("+52 1 55 6803 1739"), "525568031739");
-    assert.equal(canonTel("5568031739"), "525568031739");
-    assert.equal(canonTel("+525568031739"), "525568031739");
+    assert.equal(canonTel("+52 1 55 1122 3344"), "525511223344");
+    assert.equal(canonTel("5511223344"), "525511223344");
+    assert.equal(canonTel("+525511223344"), "525511223344");
     assert.equal(canonTel("abc"), null);
   });
   test("sinTelefonos tapa números antes de que viajen al modelo", () => {
-    assert.equal(sinTelefonos("llamame al +52 1 55 6803 1739 hoy"), "llamame al [tel] hoy");
+    assert.equal(sinTelefonos("llamame al +52 1 55 1122 3344 hoy"), "llamame al [tel] hoy");
     assert.equal(sinTelefonos("son 3 alineadores"), "son 3 alineadores");
   });
 });
@@ -49,7 +49,7 @@ describe("matchearDoctor", () => {
   const idx = indexarDoctores(DOCTORES);
 
   test("por teléfono del contacto (chat 1:1), con y sin el 1 móvil", () => {
-    const m = matchearDoctor(chat({ chat_id: "5215568031739@c.us", es_grupo: false, nombre: "Xilo" }), idx);
+    const m = matchearDoctor(chat({ chat_id: "5215511223344@c.us", es_grupo: false, nombre: "Xilo" }), idx);
     assert.equal(m.doctor?.id, "d1");
     assert.equal(m.via, "telefono");
   });
@@ -114,7 +114,7 @@ describe("equipo, días y transcripción", () => {
 
   test("la transcripción no lleva teléfonos y marca KS", () => {
     const t = transcripcion([
-      { id: "1", ts: "2026-09-08T18:00:00Z", from_me: false, autor: "Dra X", texto: "mi cel es 55 6803 1739" },
+      { id: "1", ts: "2026-09-08T18:00:00Z", from_me: false, autor: "Dra X", texto: "mi cel es 55 1122 3344" },
       { id: "2", ts: "2026-09-08T18:05:00Z", from_me: true, texto: "listo", tipo: "chat" },
       { id: "3", ts: "2026-09-08T18:06:00Z", from_me: false, autor: "Dra X", tipo: "image" },
     ]);
