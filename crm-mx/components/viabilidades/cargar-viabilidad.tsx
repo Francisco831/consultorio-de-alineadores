@@ -156,7 +156,7 @@ export function CargarViabilidad() {
       </div>
 
       <div className="space-y-1">
-        <label className="text-xs text-muted-foreground">Se pidió</label>
+        <label className="text-xs text-muted-foreground">Fecha de ingreso</label>
         <Input
           name="viability_requested_at"
           type="date"
