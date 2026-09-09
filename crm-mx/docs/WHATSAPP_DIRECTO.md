@@ -50,6 +50,20 @@ POST /api/sync/whatsapp  (Bearer CRON_SECRET)        app/api/sync/whatsapp/route
 - **Slack #alertas-crm**: doctores con conversación, quiénes esperan respuesta,
   tareas propuestas y chats sin ficha.
 
+## Cómo se lee WhatsApp Web (validado en la primera corrida, 8/9/2026)
+
+No se raspa la pantalla: el `data-id` de los mensajes ya no trae el JID ni la
+dirección. Se usa el módulo interno `window.require('WAWebCollections')`
+(chats, contactos y mensajes estructurados, con el teléfono real detrás de cada
+`@lid`). Lo que WhatsApp Web tiene cargado de un chat es solo lo que se abrió en
+pantalla: por eso la rutina abre cada chat de la ventana con un click real y
+recién después lee todo el Store. El JSON sale del navegador por una descarga
+(los returns de la herramienta se truncan). Snippets exactos en el skill.
+
+Dos efectos que conviene saber: abrir los chats **los marca como leídos** en
+WhatsApp, y lo anterior al 6/6/2026 no está en el navegador (queda en el
+teléfono). Primera corrida: 27 chats, 234 mensajes, 33 resúmenes, USD 0,18.
+
 ## Lo que NO hace
 
 - No manda mensajes. No crea tareas sin aprobación. No toca Periskope.
