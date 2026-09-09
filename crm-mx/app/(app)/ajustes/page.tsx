@@ -88,11 +88,12 @@ export default async function AjustesPage() {
   ] = await Promise.all([
       supabase.from("automation_rules").select("*").order("key"),
       // las DOS áreas: paid_cases es el marcador de Acreditados, accreditations
-      // el de Por acreditarse
+      // el de Por acreditarse; viability_conversion es el % objetivo del panel
+      // mensual de /viabilidades
       supabase
         .from("goals")
         .select("*")
-        .in("metric", ["paid_cases", "accreditations"])
+        .in("metric", ["paid_cases", "accreditations", "viability_conversion"])
         .is("user_id", null)
         .order("metric", { ascending: true })
         .order("period", { ascending: true }),
@@ -225,12 +226,15 @@ export default async function AjustesPage() {
                 <span className="ml-2 text-xs normal-case text-muted-foreground">
                   {g.metric === "accreditations"
                     ? "Por acreditarse"
-                    : "Acreditados"}
+                    : g.metric === "viability_conversion"
+                      ? "Viabilidades"
+                      : "Acreditados"}
                 </span>
               </span>
               <span className="font-medium tabular-nums">
-                {g.target}{" "}
-                {g.metric === "accreditations" ? "acreditaciones" : "casos"}
+                {g.metric === "viability_conversion"
+                  ? `${g.target}% de conversión`
+                  : `${g.target} ${g.metric === "accreditations" ? "acreditaciones" : "casos"}`}
               </span>
             </li>
           ))}

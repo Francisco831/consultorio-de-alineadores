@@ -13,7 +13,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CargarViabilidad } from "@/components/viabilidades/cargar-viabilidad";
+import { PanelMensual, nombreMes } from "@/components/viabilidades/panel-mensual";
 import { RegistrarViabilidad } from "@/components/seguimiento/registrar-viabilidad";
+import { todayMX } from "@/lib/dates";
 import { formatDate } from "@/lib/format";
 import { VIABILITY_STATUS_LABELS } from "@/lib/types";
 import {
@@ -28,18 +30,27 @@ import {
   type EstadoViabilidad,
   type ViabilidadFila,
 } from "@/lib/viabilidades";
+import {
+  METRICA_OBJETIVO_VIABILIDADES,
+  esDelMes,
+  mapaObjetivos,
+  resumenMensual,
+} from "@/lib/viabilidades-mensual";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 // Qué es una viabilidad, qué estado tiene y qué número del mes le toca vive en
-// lib/viabilidades.ts (con tests). Acá solo se trae y se dibuja.
+// lib/viabilidades.ts (con tests); el panel mensual de arriba, en
+// lib/viabilidades-mensual.ts (con tests). Acá solo se trae y se dibuja.
 
-type Params = { e?: string; doctor?: string; paciente?: string };
+/** `m` es un mes del panel ("YYYY-MM") y `e` un estado: los dos acotan la tabla. */
+type Params = { e?: string; m?: string; doctor?: string; paciente?: string };
 
-/** URL de la pestaña conservando lo que no cambia: tarjeta y buscador van juntos. */
+/** URL de la pestaña conservando lo que no cambia: panel y buscador van juntos. */
 function href(p: Params): string {
   const q = new URLSearchParams();
+  if (p.m) q.set("m", p.m);
   if (p.e) q.set("e", p.e);
   if (p.doctor) q.set("doctor", p.doctor);
   if (p.paciente) q.set("paciente", p.paciente);
@@ -52,20 +63,37 @@ export default async function ViabilidadesPage({
 }: {
   searchParams: Promise<Params>;
 }) {
-  const { e = "", doctor = "", paciente = "" } = await searchParams;
+  const { e = "", m = "", doctor = "", paciente = "" } = await searchParams;
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   // se traen todas y se filtra acá: la tabla entera son decenas de filas, y el
   // criterio de "qué es una viabilidad" son cuatro condiciones que en un `.or()`
   // de PostgREST se leen mucho peor de lo que se corrigen. `profiles!owner_id`
   // es obligatorio: opportunities tiene DOS FKs a profiles (owner_id y
   // viability_clinical_owner) y sin el hint PostgREST no sabe cuál embeber.
-  const { data, error } = await supabase
-    .from("opportunities")
-    .select(
-      "id, stage, patient_name, case_id, lost_reason, closed_at, created_at, stage_entered_at, viability_requested_at, viability_status, doctors(id, nombre), asesor:profiles!owner_id(nombre), cases(id_externo)"
-    )
-    .order("created_at", { ascending: false });
+  const [{ data, error }, { data: objetivosRaw }, { data: perfil }] =
+    await Promise.all([
+      supabase
+        .from("opportunities")
+        .select(
+          "id, stage, patient_name, case_id, lost_reason, closed_at, created_at, stage_entered_at, viability_requested_at, viability_status, doctors(id, nombre), asesor:profiles!owner_id(nombre), cases(id_externo)"
+        )
+        .order("created_at", { ascending: false }),
+      // el objetivo de conversión de cada mes (país), que se carga en /ajustes
+      supabase
+        .from("goals")
+        .select("period, target")
+        .eq("metric", METRICA_OBJETIVO_VIABILIDADES)
+        .is("user_id", null),
+      // solo para mostrarle el camino a Ajustes a quien puede cargar objetivos
+      supabase.from("profiles").select("rol").eq("id", user!.id).maybeSingle(),
+    ]);
+  const esManager = ["ADMIN", "COUNTRY_MANAGER", "SALES_MANAGER"].includes(
+    perfil?.rol ?? ""
+  );
 
   const universo = ((data ?? []) as unknown as ViabilidadFila[]).filter(
     esViabilidad
@@ -77,24 +105,28 @@ export default async function ViabilidadesPage({
     universo.map((o) => [o.id, estadoDe(o)] as const)
   );
 
+  // el panel mensual es de TODAS las viabilidades, como la numeración: el
+  // buscador acota la tabla, no la estadística del mes
+  const mesActual = todayMX().slice(0, 7);
+  const meses = resumenMensual(
+    universo,
+    mapaObjetivos(objetivosRaw ?? []),
+    mesActual
+  );
+
   const buscando = doctor.trim() !== "" || paciente.trim() !== "";
   const todas = universo.filter(
     (o) => coincide(o.doctors?.nombre, doctor) && coincide(o.patient_name, paciente)
   );
-  const porEstado = (x: EstadoViabilidad) =>
-    todas.filter((o) => estado.get(o.id) === x);
-  const conteo = Object.fromEntries(
-    ORDEN_ESTADOS.map((k) => [k, porEstado(k).length])
-  ) as Record<EstadoViabilidad, number>;
-
-  const cerradas = conteo.convertida + conteo.suspendida;
-  const tasa = cerradas ? Math.round((conteo.convertida / cerradas) * 100) : null;
-
+  const mes = /^\d{4}-\d{2}$/.test(m) ? m : null;
   const filtro = ORDEN_ESTADOS.includes(e as EstadoViabilidad)
     ? (e as EstadoViabilidad)
     : null;
+  const delMes = mes ? todas.filter((o) => esDelMes(o, mes)) : todas;
+  const porEstado = (x: EstadoViabilidad) =>
+    delMes.filter((o) => estado.get(o.id) === x);
   // más nueva arriba; dentro del mismo día, el número más alto arriba
-  const visibles = (filtro ? porEstado(filtro) : todas)
+  const visibles = (filtro ? porEstado(filtro) : delMes)
     .slice()
     .sort(
       (a, b) =>
@@ -112,38 +144,22 @@ export default async function ViabilidadesPage({
         </p>
       </div>
 
+      {/* El panel mensual (pedido 8/9/26) reemplaza los cuatro casilleros y la
+          tasa global: mes por mes, cuántas entraron, en qué están hoy y cuántas
+          convirtieron contra el objetivo. Cada número acota la tabla de abajo. */}
+      <PanelMensual
+        meses={meses}
+        mesActual={mesActual}
+        filtroMes={mes}
+        filtroEstado={filtro}
+        link={(mm, ee) => href({ m: mm ?? "", e: ee ?? "", doctor, paciente })}
+        verAjustes={esManager}
+      />
+
       <CargarViabilidad />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {ORDEN_ESTADOS.map((k) => (
-          <Link
-            key={k}
-            href={href({ e: filtro === k ? "" : k, doctor, paciente })}
-            className={cn(
-              "rounded-lg border p-3 transition-colors hover:bg-muted/50",
-              filtro === k && "ring-2 ring-ring"
-            )}
-          >
-            <div className="text-2xl font-semibold tabular-nums">
-              {conteo[k]}
-            </div>
-            <div className="text-sm font-medium">{ESTADOS[k].label}</div>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {ESTADOS[k].ayuda}
-            </p>
-          </Link>
-        ))}
-      </div>
-
-      {tasa != null ? (
-        <p className="text-sm text-muted-foreground">
-          De las {cerradas} viabilidades que ya se cerraron, {conteo.convertida}{" "}
-          terminaron en caso: <strong className="text-foreground">{tasa}%</strong>
-          . Las que siguen abiertas no cuentan todavía.
-        </p>
-      ) : null}
-
       <form action="/viabilidades" className="flex flex-wrap items-end gap-2">
+        {mes ? <input type="hidden" name="m" value={mes} /> : null}
         {filtro ? <input type="hidden" name="e" value={filtro} /> : null}
         <div className="space-y-1">
           <label htmlFor="b-doctor" className="text-xs text-muted-foreground">
@@ -182,13 +198,26 @@ export default async function ViabilidadesPage({
         </Button>
         {buscando ? (
           <Link
-            href={href({ e: filtro ?? "" })}
+            href={href({ m: mes ?? "", e: filtro ?? "" })}
             className="h-9 px-2 text-sm leading-9 text-muted-foreground hover:underline"
           >
             Limpiar
           </Link>
         ) : null}
       </form>
+
+      {(mes || filtro) && !error ? (
+        <p className="text-sm text-muted-foreground">
+          Mostrando {mes ? nombreMes(mes).toLowerCase() : "todos los meses"}
+          {filtro ? ` · ${ESTADOS[filtro].label}` : ""} ({visibles.length}).{" "}
+          <Link
+            href={href({ doctor, paciente })}
+            className="underline hover:text-foreground"
+          >
+            Ver todas
+          </Link>
+        </p>
+      ) : null}
 
       {error ? (
         <p className="text-sm text-destructive">
@@ -198,8 +227,8 @@ export default async function ViabilidadesPage({
         <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
           {buscando
             ? "Ninguna viabilidad coincide con la búsqueda."
-            : filtro
-              ? `Ninguna viabilidad en “${ESTADOS[filtro].label}”.`
+            : filtro || mes
+              ? `Ninguna viabilidad${mes ? ` de ${nombreMes(mes).toLowerCase()}` : ""}${filtro ? ` en “${ESTADOS[filtro].label}”` : ""}.`
               : "Todavía no hay viabilidades cargadas."}
         </div>
       ) : (

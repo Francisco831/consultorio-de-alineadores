@@ -88,4 +88,5 @@ export async function guardarObjetivo(formData: FormData): Promise<void> {
   revalidatePath("/hoy");
   revalidatePath("/prospeccion");
   revalidatePath("/dashboard");
+  revalidatePath("/viabilidades");
 }

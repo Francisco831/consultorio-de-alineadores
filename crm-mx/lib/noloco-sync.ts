@@ -200,6 +200,8 @@ export interface ResumenSync {
   adoptadas: string[];
   ambiguos: string[];
   casosUpserted: number;
+  /** viabilidades que este sync encontró ya convertidas en caso (0057); null si el rpc falló */
+  viabilidadesVinculadas: number | null;
   i1EnDb: number | null;
   recomputeError: string | null;
   monthly: Record<string, number>;
@@ -463,6 +465,14 @@ export async function sincronizarNoloco(
     }
     log(`Casos upserted: ${caseRows.length}`);
 
+    // ---------- viabilidades que ya son caso (migración 0057) ----------
+    // Va acá porque es acá donde llegan los casos: la viabilidad tiene que decir
+    // "convertida" en el mismo sync que trajo su caso, no cuando alguien se
+    // acuerde de marcarla. La red es el pg_cron horario (crm-viabilidades-vinculo).
+    const { data: vinculadas, error: vincErr } = await db.rpc("vincular_viabilidades");
+    if (vincErr) log(`vincular_viabilidades falló (lo cubre el cron horario): ${vincErr.message}`);
+    else log(`Viabilidades convertidas en caso: ${vinculadas ?? 0}`);
+
     // ---------- objetivos país (rampa H2 del OKR) ----------
     const RAMPA: Record<string, number> = {
       "2026-08-01": 24, "2026-09-01": 26, "2026-10-01": 28,
@@ -530,6 +540,7 @@ export async function sincronizarNoloco(
       adoptadas,
       ambiguos,
       casosUpserted: caseRows.length,
+      viabilidadesVinculadas: vincErr ? null : (vinculadas ?? 0),
       i1EnDb: i1EnDb ?? null,
       recomputeError: rcErr?.message ?? null,
       monthly,

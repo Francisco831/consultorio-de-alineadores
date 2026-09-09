@@ -399,6 +399,9 @@ export const BUCKET_LABELS: Record<PriorityBucket, string> = {
 export const METRICAS_OBJETIVO = {
   paid_cases: "Casos pagados (Acreditados)",
   accreditations: "Acreditaciones (Por acreditarse)",
+  // en %, no en unidades: la meta del panel mensual de /viabilidades es qué
+  // parte de las viabilidades del mes terminó en caso (pedido del 8/9/26)
+  viability_conversion: "Conversión de viabilidades (% del mes)",
 } as const;
 
 export type MetricaObjetivo = keyof typeof METRICAS_OBJETIVO;
