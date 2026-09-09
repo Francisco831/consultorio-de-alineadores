@@ -75,6 +75,43 @@ Dos efectos que conviene saber: abrir los chats **los marca como leídos** en
 WhatsApp, y lo anterior al 6/6/2026 no está en el navegador (queda en el
 teléfono). Primera corrida: 27 chats, 234 mensajes, 33 resúmenes, USD 0,18.
 
+## Backfill de historia (`solo_mensajes: true`)
+
+Para completar meses viejos —la ventana de 90 días del nivel de interacción
+(0060)— el POST acepta `solo_mensajes: true`: guarda chats y mensajes y
+recalcula el nivel, pero **no** resume días, **no** crea actividades, **no**
+propone tareas y **no** avisa a Slack (un pedido de junio propuesto como tarea
+hoy no le sirve a nadie). Tampoco toca el estado del chat (último mensaje,
+"esperando respuesta") si el último mensaje tiene más de 7 días: eso ya lo
+cubre la corrida diaria, y un mensaje de julio sin contestar es historia, no
+un pendiente de hoy. Conviene mandarlo con `leido_hasta` = el watermark que ya
+tenía la línea y con los mensajes cortados ahí, así la corrida diaria siguiente
+resume lo de hoy como siempre.
+
+Primera corrida: 9/9/2026, ventana 6/6 → 9/9 03:34Z, 64 chats, 253 mensajes
+(228 nuevos), 44 con doctor; el nivel de interacción cambió para 9 doctores.
+Lo que se aprendió leyendo tres meses desde WhatsApp Web:
+
+- La lista de mensajes está invertida (`flex-direction: column-reverse`):
+  scrollTop 0 es el final; para cargar lo anterior hay que restar
+  (`sc.scrollTop -= sc.clientHeight * 4`) sobre el único div con
+  `overflow-y: auto` dentro de `#main`, con el chat abierto por click real.
+- El límite se ve en el DOM: "Usa WhatsApp en tu teléfono para ver mensajes
+  anteriores al 6/6/2026" = llegó al principio del historial vinculado. Puede
+  estar en el DOM antes de que carguen los mensajes: esperar a que haya más de
+  1 cargado antes de creerle.
+- "Haz clic aquí para obtener mensajes anteriores de tu teléfono" = lo que
+  falta está solo en el teléfono. **No clickearlo por código**: el sync que
+  dispara bloquea el renderer y las llamadas de la extensión mueren a los 45 s.
+- Cerrar un chat descarga sus mensajes de memoria: extraer cada chat mientras
+  está abierto y acumular en `window`, no leer todo al final. Y guardar el
+  acumulado en `localStorage` antes de recargar la pestaña.
+- La carga del historial depende de que el teléfono de la línea responda: cuando
+  no responde, el chat abierto se queda con 1 mensaje y el spinner. Esta vez
+  quedaron así Sayuri Tanaka, Benjamín Navarro, Jennifer Solís, Ruth Ramos,
+  Sofía Flores, Angélica Rodríguez y los grupos creados a fin de agosto (cuyos
+  mensajes de septiembre ya estaban). Se puede repetir con el teléfono a mano.
+
 ## Lo que NO hace
 
 - No manda mensajes. No crea tareas sin aprobación. No toca Periskope.

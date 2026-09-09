@@ -13,6 +13,7 @@ import {
   tokensNombre,
   transcripcion,
   type Chat,
+  bodySchema,
 } from "./directo";
 
 const DOCTORES = [
@@ -157,5 +158,14 @@ describe("aviso a Slack", () => {
   test("sin novedades lo dice", () => {
     const texto = textoAvisoSlack({ linea: "5491123740762", leido_hasta: "2026-09-08T23:00:00Z", dry_run: false, costo_usd: 0, chats: [] });
     assert.match(texto, /Sin mensajes nuevos/);
+  });
+});
+
+describe("bodySchema: backfill", () => {
+  test("solo_mensajes es opcional y booleano", () => {
+    const base = { linea: "5491123740762", leido_hasta: "2026-09-09T03:34:12.181Z", chats: [] };
+    assert.equal(bodySchema.parse(base).solo_mensajes, undefined);
+    assert.equal(bodySchema.parse({ ...base, solo_mensajes: true }).solo_mensajes, true);
+    assert.equal(bodySchema.safeParse({ ...base, solo_mensajes: "si" }).success, false);
   });
 });

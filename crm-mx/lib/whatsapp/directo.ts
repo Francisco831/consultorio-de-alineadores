@@ -59,6 +59,11 @@ export const bodySchema = z.object({
   chats: z.array(chatSchema),
   /** Calcula y devuelve el resultado sin escribir ni llamar al modelo. */
   dry_run: z.boolean().optional(),
+  /** Backfill de historia: guarda chats y mensajes y recalcula el nivel de
+   *  interacción (0060), pero NO resume días, NO crea actividades, NO propone
+   *  tareas y NO avisa a Slack. Es para completar meses viejos sin generar
+   *  ruido: un pedido de junio propuesto como tarea hoy no le sirve a nadie. */
+  solo_mensajes: z.boolean().optional(),
 });
 
 export type Mensaje = z.infer<typeof mensajeSchema>;

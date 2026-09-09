@@ -130,6 +130,7 @@ export async function POST(req: Request) {
   }
   const body = parse.data;
   const dry = body.dry_run === true;
+  const soloMensajes = body.solo_mensajes === true;
 
   return correrCron(req, {
     source: dry ? `${SOURCE}-dry` : SOURCE,
@@ -141,6 +142,7 @@ export async function POST(req: Request) {
         linea: r.linea,
         leido_hasta: r.leido_hasta,
         dry_run: dry,
+        solo_mensajes: soloMensajes,
         chats: r.chats.length,
         con_doctor: conDoctor.length,
         esperan_respuesta: conDoctor.filter((c) => c.espera_respuesta).length,
@@ -154,7 +156,8 @@ export async function POST(req: Request) {
       return {
         rows: mensajes,
         resumen,
-        avisoSlack: dry ? undefined : textoAvisoSlack(r),
+        // el backfill no avisa: el aviso habla de "hoy" y esto es historia
+        avisoSlack: dry || soloMensajes ? undefined : textoAvisoSlack(r),
       };
     },
   });
@@ -182,6 +185,7 @@ async function ingestar(
   log: (s: string) => void
 ): Promise<ResultadoCorrida> {
   const dry = body.dry_run === true;
+  const soloMensajes = body.solo_mensajes === true;
   const linea = body.linea;
 
   // quién opera la línea → created_by de las actividades
@@ -271,8 +275,21 @@ async function ingestar(
     };
     if (!prev?.chat_name) fila.chat_name = chat.nombre;
     if (doctor && !prev?.doctor_id) fila.doctor_id = doctor.id;
-    if (nuevos.length) fila.activity_bucket = "7d";
-    if (ultimo && (!prev?.last_message_at || Date.parse(ultimo.ts) > Date.parse(prev.last_message_at))) {
+    // el bucket sale de la edad del último mensaje, no de "hubo mensajes
+    // nuevos": en la corrida diaria da lo mismo ('7d'), pero un backfill trae
+    // chats cuyo último mensaje es de junio y ésos no están "activos esta semana"
+    if (ultimo) {
+      const edadDias = (Date.now() - Date.parse(ultimo.ts)) / 86_400_000;
+      fila.activity_bucket = edadDias <= 7 ? "7d" : edadDias <= 30 ? "30d" : "mas_30d";
+    }
+    // Backfill: un mensaje de hace dos meses sin contestar no es "esperando
+    // respuesta" hoy, es historia. En solo_mensajes el estado del chat (último
+    // mensaje, pendiente) solo se toca si ese último mensaje tiene menos de
+    // 7 días —lo que la corrida diaria ya cubre—; los mensajes en sí se
+    // guardan igual, que es lo que el nivel de interacción necesita.
+    const esReciente = ultimo ? Date.now() - Date.parse(ultimo.ts) <= 7 * 86_400_000 : false;
+    if (ultimo && (!soloMensajes || esReciente)
+        && (!prev?.last_message_at || Date.parse(ultimo.ts) > Date.parse(prev.last_message_at))) {
       fila.last_message_at = new Date(ultimo.ts).toISOString();
       fila.last_message_body = (ultimo.texto ?? (ultimo.tipo && ultimo.tipo !== "chat" ? `[${ultimo.tipo}]` : null))?.slice(0, BODY_MAX) ?? null;
       // "nuestro" incluye a las otras líneas KS: si contestó Juan, no está pendiente
@@ -310,6 +327,10 @@ async function ingestar(
     }
 
     if (!doctor || !nuevos.length) continue;
+    // backfill: los mensajes ya están guardados y con eso alcanza para el
+    // nivel de interacción; resumir tres meses de días viejos costaría plata
+    // y propondría tareas sobre pedidos que ya pasaron
+    if (soloMensajes) continue;
 
     // --- actividad por día + pedidos ----------------------------------------
     for (const [dia, delDia] of agruparPorDia(nuevos)) {
