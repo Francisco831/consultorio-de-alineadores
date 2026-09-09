@@ -151,6 +151,9 @@ export interface Doctor {
   posteriores_90d: number;
   servicio_90d: number;
   ultimo_caso_posterior_at: string | null;
+  // ---- estado de la cartera (0058): la matriz Potencial × Afinidad ----
+  segmento: Segmento | null;
+  ultimo_caso_aprobado_at: string | null;
   is_demo: boolean;
   created_at: string;
   updated_at: string;
@@ -264,6 +267,36 @@ export const ACTIVIDAD_LABELS: Record<Actividad90d, string> = {
   trae_nuevos: "Trae pacientes",
   solo_termina: "Solo termina",
   sin_actividad: "Sin actividad",
+};
+
+/** El ESTADO de la cartera acreditada (migración 0058): la matriz Potencial ×
+ *  Afinidad del Plan Comercial 2026. Lo calcula la base desde el último caso
+ *  que el doctor aprobó (cases.fecha_aprobacion_video, cualquier etapa) y su
+ *  fecha de acreditación; nadie lo carga. Null en los no acreditados: la
+ *  matriz es de la cartera, y beginner exige acreditación. */
+export type Segmento = "activo" | "lapsed" | "beginner" | "inactivo";
+
+export const SEGMENTO_LABELS: Record<Segmento, string> = {
+  activo: "Activo",
+  lapsed: "Lapsed",
+  beginner: "Beginner",
+  inactivo: "Inactivo",
+};
+
+/** La acción asociada a cada casilla: qué hacer con ese doctor. Es función
+ *  fija del estado, por eso vive acá y no en una columna. */
+export const SEGMENTO_ACCION: Record<Segmento, string> = {
+  activo: "Defender",
+  lapsed: "Conquistar",
+  beginner: "Construir",
+  inactivo: "Observar",
+};
+
+export const SEGMENTO_DEFINICION: Record<Segmento, string> = {
+  activo: "Alto potencial y alta afinidad: aprobó un caso en los últimos 90 días.",
+  lapsed: "Alto potencial y baja afinidad: su último caso aprobado tiene más de 90 días.",
+  beginner: "Bajo potencial y alta afinidad: acreditado hace menos de 90 días, todavía sin caso aprobado.",
+  inactivo: "Bajo potencial y baja afinidad: sin casos aprobados desde que hay registro (12/9/2024).",
 };
 
 export const LIFECYCLE_LABELS: Record<LifecycleStage, string> = {

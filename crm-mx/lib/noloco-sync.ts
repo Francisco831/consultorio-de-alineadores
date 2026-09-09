@@ -507,6 +507,15 @@ export async function sincronizarNoloco(
     if (actErr) log(`recompute_actividad falló (lo cubre el cron): ${actErr.message}`);
     else log("Eje de actividad recalculado ✓");
 
+    // ---------- estado de la cartera (migración 0058) ----------
+    // Mismo motivo que el eje: las aprobaciones llegan con el sync. El doctor
+    // que aprobó su primer caso a la mañana pasa de beginner a activo en esta
+    // corrida, no a la noche. La red es crm-segmento-nightly a las 11:25.
+    // p_doctor explícito: con null recalcula la cartera entera.
+    const { error: segErr } = await db.rpc("recompute_segmento", { p_doctor: null });
+    if (segErr) log(`recompute_segmento falló (lo cubre el cron): ${segErr.message}`);
+    else log("Estado de la cartera recalculado ✓");
+
     // ---------- verificación post-escritura ----------
     const { count: i1EnDb } = await db
       .from("cases")

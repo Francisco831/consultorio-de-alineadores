@@ -1,4 +1,4 @@
-import type { DoctorCategoria, LifecycleStage } from "@/lib/types";
+import type { DoctorCategoria, LifecycleStage, Segmento } from "@/lib/types";
 
 const DAY_MS = 86_400_000;
 
@@ -120,6 +120,21 @@ export const ACTIVIDAD_STYLES: Record<string, string> = {
   solo_termina: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-900",
   sin_actividad: STYLE_GRIS,
 };
+
+/** el ESTADO de la cartera (0058): verde = aprobó un caso en 90 días, naranja =
+ *  aprobó pero hace más de 90 (es el que hay que conquistar), azul = recién
+ *  acreditado y en plazo, gris = nunca aprobó nada. */
+export const SEGMENTO_STYLES: Record<Segmento, string> = {
+  activo: STYLE_VERDE,
+  lapsed: STYLE_NARANJA,
+  beginner: STYLE_AZUL,
+  inactivo: STYLE_GRIS,
+};
+
+/** null = la columna todavía no se calculó: se ve en gris, no se inventa una casilla */
+export function estiloSegmento(seg: Segmento | null): string {
+  return seg ? SEGMENTO_STYLES[seg] : STYLE_GRIS;
+}
 
 /** badge central del negocio: en qué universo está el doctor */
 export const ACREDITACION_STYLES = {

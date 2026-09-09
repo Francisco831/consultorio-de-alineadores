@@ -16,18 +16,21 @@ import {
   ACTIVIDAD_STYLES,
   CATEGORIA_LABELS,
   CATEGORIA_STYLES,
-  LIFECYCLE_STYLES,
+  estiloSegmento,
   formatDate,
   healthColor,
   relativeDays,
 } from "@/lib/format";
 import {
   ACTIVIDAD_LABELS,
-  LIFECYCLE_LABELS,
+  SEGMENTO_DEFINICION,
+  SEGMENTO_LABELS,
   type Actividad90d,
   type Doctor,
-  type LifecycleStage,
+  type Segmento,
 } from "@/lib/types";
+import { explicarSegmento } from "@/lib/segmento";
+import { todayMX } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { Search, PhoneOff } from "lucide-react";
 
@@ -49,13 +52,15 @@ const SORTS: Record<string, { col: string; label: string }> = {
 // doctores por acreditarse tienen su propia lista en /prospeccion/lista, con las
 // columnas que les corresponden.
 //
-// Los tabs de acá adentro filtran por lifecycle_stage, y eso NO alcanza por sí solo:
-// lifecycle_stage es un enum de 14 etapas que atraviesa las dos áreas, así que
-// "Perdidos" sin el corte devolvía prospectos descartados mezclados con acreditados
-// que se fueron. Lo mismo "Activos", "En riesgo" y "Dormidos".
-// "sigue-instagram" no es una etapa del ciclo de vida sino un hecho del canal:
-// lo pone scripts/tag-seguidores-ig.ts desde el censo de seguidores del 20/8.
-// Por eso filtra por tag y no por lifecycle_stage.
+// Los tabs de acá adentro filtran por ESTADO: la matriz Potencial × Afinidad del
+// Plan Comercial 2026 (migración 0058), que la base calcula desde el último caso
+// que el doctor aprobó y su fecha de acreditación. Hasta el 8/9 filtraban por
+// lifecycle_stage —las catorce etapas del motor—, que nadie del equipo usaba
+// para decidir qué hacer. El lifecycle sigue debajo (score, automatizaciones,
+// /hoy); en esta pantalla ya no se muestra.
+// "sigue-instagram" no es un estado sino un hecho del canal: lo pone
+// scripts/tag-seguidores-ig.ts desde el censo de seguidores del 20/8. Por eso
+// filtra por tag y no por segmento.
 const TAG_IG = "sigue-instagram";
 
 // El EJE DE ACTIVIDAD (migración 0055) es otro eje que el lifecycle, y por eso
@@ -73,19 +78,14 @@ const ACTIVIDADES: { key: Actividad90d; label: string }[] = [
 const FILTERS: {
   key: string;
   label: string;
-  stages?: LifecycleStage[];
+  segmento?: Segmento;
   tag?: string;
 }[] = [
   { key: "todos", label: "Todos" },
-  {
-    key: "activacion",
-    label: "Activación",
-    stages: ["acreditado", "en_activacion", "activado"],
-  },
-  { key: "activos", label: "Activos", stages: ["activo", "growth", "reactivado"] },
-  { key: "riesgo", label: "En riesgo", stages: ["en_riesgo"] },
-  { key: "dormidos", label: "Dormidos", stages: ["dormido"] },
-  { key: "perdidos", label: "Perdidos", stages: ["perdido"] },
+  { key: "activos", label: "Activos", segmento: "activo" },
+  { key: "lapsed", label: "Lapsed", segmento: "lapsed" },
+  { key: "beginners", label: "Beginners", segmento: "beginner" },
+  { key: "inactivos", label: "Inactivos", segmento: "inactivo" },
   { key: "ig", label: "Te siguen en IG", tag: TAG_IG },
 ];
 
@@ -166,31 +166,42 @@ export default async function DoctoresPage({
 
   if (q) query = query.ilike("nombre", `%${q}%`);
   const filter = FILTERS.find((x) => x.key === f);
-  if (filter?.stages) query = query.in("lifecycle_stage", filter.stages);
+  if (filter?.segmento) query = query.eq("segmento", filter.segmento);
   if (filter?.tag) query = query.contains("tags", [filter.tag]);
   if (ACTIVIDADES.some((x) => x.key === a)) query = query.eq("actividad_90d", a);
 
   const { data, count, error } = await query;
 
-  // los contadores del eje son del país entero, no de la búsqueda: son el
-  // estado de la cartera acreditada y tienen que dar siempre lo mismo
-  const contarActividad = (k: Actividad90d) =>
+  // los contadores del eje y del estado son del país entero, no de la búsqueda:
+  // son la foto de la cartera acreditada y tienen que dar siempre lo mismo
+  const contar = (col: "actividad_90d" | "segmento", valor: string) =>
     supabase
       .from("doctors")
       .select("id", { count: "exact", head: true })
       .eq("is_accredited", true)
       .eq("is_demo", false)
-      .eq("actividad_90d", k);
-  const [cTrae, cSolo, cSin] = await Promise.all([
-    contarActividad("trae_nuevos"),
-    contarActividad("solo_termina"),
-    contarActividad("sin_actividad"),
+      .eq(col, valor);
+  const [cTrae, cSolo, cSin, cAct, cLap, cBeg, cIna] = await Promise.all([
+    contar("actividad_90d", "trae_nuevos"),
+    contar("actividad_90d", "solo_termina"),
+    contar("actividad_90d", "sin_actividad"),
+    contar("segmento", "activo"),
+    contar("segmento", "lapsed"),
+    contar("segmento", "beginner"),
+    contar("segmento", "inactivo"),
   ]);
   const CONTEO: Record<Actividad90d, number | null> = {
     trae_nuevos: cTrae.count,
     solo_termina: cSolo.count,
     sin_actividad: cSin.count,
   };
+  const CONTEO_ESTADO: Record<Segmento, number | null> = {
+    activo: cAct.count,
+    lapsed: cLap.count,
+    beginner: cBeg.count,
+    inactivo: cIna.count,
+  };
+  const hoy = todayMX();
   const doctors = (data ?? []) as Doctor[];
   const total = count ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -263,10 +274,16 @@ export default async function DoctoresPage({
                   variant: f === x.key ? "secondary" : "ghost",
                   size: "sm",
                 }),
-                "h-8 text-[13px]"
+                "h-8 gap-1.5 text-[13px]"
               )}
+              title={x.segmento ? SEGMENTO_DEFINICION[x.segmento] : undefined}
             >
               {x.label}
+              {x.segmento ? (
+                <span className="tabular-nums text-muted-foreground">
+                  {CONTEO_ESTADO[x.segmento] ?? "—"}
+                </span>
+              ) : null}
             </Link>
           ))}
         </div>
@@ -373,12 +390,10 @@ export default async function DoctoresPage({
                     <div className="flex flex-wrap items-center gap-1">
                       <Badge
                         variant="outline"
-                        className={cn(
-                          "font-normal",
-                          LIFECYCLE_STYLES[d.lifecycle_stage]
-                        )}
+                        className={cn("font-normal", estiloSegmento(d.segmento))}
+                        title={d.segmento ? SEGMENTO_DEFINICION[d.segmento] : undefined}
                       >
-                        {LIFECYCLE_LABELS[d.lifecycle_stage]}
+                        {d.segmento ? SEGMENTO_LABELS[d.segmento] : "Sin calcular"}
                       </Badge>
                       {d.actividad_90d === "solo_termina" ? (
                         <Badge
@@ -392,6 +407,11 @@ export default async function DoctoresPage({
                           Se apaga
                         </Badge>
                       ) : null}
+                    </div>
+                    {/* la acción asociada al estado, como dato secundario: qué
+                        hacer con este doctor y el hecho del que sale */}
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      {explicarSegmento(d, hoy)}
                     </div>
                   </TableCell>
                   <TableCell className="text-right tabular-nums">

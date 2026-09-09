@@ -27,6 +27,7 @@ import {
   CATEGORIA_LABELS,
   CATEGORIA_STYLES,
   LIFECYCLE_STYLES,
+  estiloSegmento,
   healthColor,
   relativeDays,
   formatDate,
@@ -37,6 +38,8 @@ import {
   ACTIVITY_TYPE_LABELS,
   LIFECYCLE_LABELS,
   OPP_STAGE_LABELS,
+  SEGMENTO_DEFINICION,
+  SEGMENTO_LABELS,
   type Activity,
   type Case,
   type Doctor,
@@ -45,6 +48,7 @@ import {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { todayMX } from "@/lib/dates";
+import { explicarSegmento } from "@/lib/segmento";
 import { Cake, PartyPopper } from "lucide-react";
 
 /**
@@ -266,7 +270,9 @@ export default async function DoctorPage({
       });
   }
   const AUDIT_FIELD_LABELS: Record<string, string> = {
-    lifecycle_stage: "Estado",
+    // desde 0058 "Estado" es la matriz de la cartera; el lifecycle del motor
+    // sigue en el historial con su nombre, para no leer una cosa por la otra
+    lifecycle_stage: "Ciclo de vida (motor)",
     owner_id: "Owner",
     categoria: "Categoría",
     potential_override: "Potential (ajuste manual)",
@@ -350,15 +356,36 @@ export default async function DoctorPage({
               >
                 {CATEGORIA_LABELS[doctor.categoria]}
               </Badge>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "font-normal",
-                  LIFECYCLE_STYLES[doctor.lifecycle_stage]
-                )}
-              >
-                {LIFECYCLE_LABELS[doctor.lifecycle_stage]}
-              </Badge>
+              {doctor.is_accredited ? (
+                <>
+                  {/* el ESTADO de la cartera (0058) y, al lado, la acción
+                      asociada con el hecho del que sale */}
+                  <Badge
+                    variant="outline"
+                    className={cn("font-normal", estiloSegmento(doctor.segmento))}
+                    title={
+                      doctor.segmento ? SEGMENTO_DEFINICION[doctor.segmento] : undefined
+                    }
+                  >
+                    {doctor.segmento ? SEGMENTO_LABELS[doctor.segmento] : "Sin calcular"}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {explicarSegmento(doctor, todayMX())}
+                  </span>
+                </>
+              ) : (
+                // un no acreditado no tiene estado de cartera: su etapa del
+                // journey (prospecto, contactado…) sigue siendo lo que se lee
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "font-normal",
+                    LIFECYCLE_STYLES[doctor.lifecycle_stage]
+                  )}
+                >
+                  {LIFECYCLE_LABELS[doctor.lifecycle_stage]}
+                </Badge>
+              )}
               {doctor.is_demo ? (
                 <Badge variant="outline" className="font-normal">
                   Demo

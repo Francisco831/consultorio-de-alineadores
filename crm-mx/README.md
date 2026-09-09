@@ -49,12 +49,19 @@ Next.js 16 · TypeScript · Tailwind 4 · shadcn/ui (Base UI) · Supabase (Postg
 | Pagos | Planilla Administración MX → `payments` | El KPI "pagado" de verdad. |
 | Doctores: owner, lifecycle, teléfonos, notas | El CRM | Nunca los pisa un import. |
 | Scores (health/potential/priority) | Calculados (pg_cron nightly + triggers) | Nadie los edita a mano; `potential_override` es del manager. |
+| Estado (Activo / Lapsed / Beginner / Inactivo) | Calculado: último caso aprobado + fecha de acreditación (0058) | Nadie lo carga. Es la matriz Potencial × Afinidad del Plan Comercial 2026. |
 
 ## Lo que hay que saber del motor
 
 - **Health** compara a cada doctor contra SU propio ritmo (mediana de sus últimos 8 gaps
   entre casos). Con <3 casos usa la mediana de su categoría (label "cohort"); sin casos,
   "insuficiente" — la UI siempre muestra la confianza.
+- **Estado** de la cartera (migración 0058) es la matriz Potencial × Afinidad del Plan
+  Comercial 2026: **Activo** (aprobó un caso hace ≤90 días → Defender), **Lapsed** (>90 →
+  Conquistar), **Beginner** (acreditado hace ≤90 días, sin caso aprobado → Construir),
+  **Inactivo** (sin casos aprobados → Observar). "Caso aprobado" = `fecha_aprobacion_video`,
+  el doctor aprobando la propuesta; `fecha_aprobacion` es un gate interno y no cuenta.
+  El `lifecycle_stage` del motor sigue existiendo debajo (score, automatizaciones, /hoy).
 - **Priority** es explicable: cada señal guarda su razón en español con números reales
   (`priority_reasons`), y la pantalla Hoy agrupa por bucket (Crítico/Alto impacto/…).
 - **Automatizaciones** (8 reglas, tabla `automation_rules`): umbrales editables en Ajustes.
@@ -69,7 +76,8 @@ lib/actions/        server actions (todas las escrituras)
 lib/supabase/       clients server/browser
 lib/ai/             capa multi-agente (ver docs/AI_ARCHITECTURE.md)
 supabase/migrations 0001 enums · 0002 tablas · 0003 triggers+audit · 0004 RLS · 0005 scores ·
-                    0006 automatizaciones · … · 0027 permisos de funciones · 0028 ledger
+                    0006 automatizaciones · … · 0027 permisos de funciones · 0028 ledger ·
+                    0055 eje de actividad · 0058 estado de la cartera
 supabase/rollbacks/ el rollback de cada migración que tiene uno. NO son migraciones:
                     vivían mezclados y una corrida sin argumentos los aplicaba.
 scripts/            db-migrate (runner) · security-checks (8 chequeos) · create-users ·
