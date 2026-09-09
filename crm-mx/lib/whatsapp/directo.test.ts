@@ -6,6 +6,7 @@ import {
   diaLocal,
   esDelEquipo,
   indexarDoctores,
+  lineasKS,
   matchearDoctor,
   sinTelefonos,
   textoAvisoSlack,
@@ -93,10 +94,19 @@ describe("matchearDoctor", () => {
 });
 
 describe("equipo, días y transcripción", () => {
-  test("un mensaje de la línea de Juan cuenta como nuestro", () => {
-    assert.equal(esDelEquipo({ id: "x", ts: "2026-09-08T20:00:00Z", from_me: false, autor: "+52 1 55 1068 5144", autor_tel: "+52 1 55 1068 5144" }), true);
-    assert.equal(esDelEquipo({ id: "x", ts: "2026-09-08T20:00:00Z", from_me: false, autor: "Xilonen Diaz Mendoza" }), false);
-    assert.equal(esDelEquipo({ id: "x", ts: "2026-09-08T20:00:00Z", from_me: true }), true);
+  test("las líneas KS salen de WA_LINEAS_KS, en cualquier formato y separador", () => {
+    assert.deepEqual(lineasKS("+52 1 55 0000 0001, 5491100000002; 5500000003"), ["525500000001", "5491100000002", "525500000003"]);
+    assert.deepEqual(lineasKS(undefined), []);
+    assert.deepEqual(lineasKS(" , "), []);
+  });
+
+  test("un mensaje de otra línea KS cuenta como nuestro", () => {
+    const lineas = lineasKS("+52 1 55 0000 0001");
+    assert.equal(esDelEquipo({ id: "x", ts: "2026-09-08T20:00:00Z", from_me: false, autor: "+52 1 55 0000 0001", autor_tel: "+52 1 55 0000 0001" }, lineas), true);
+    assert.equal(esDelEquipo({ id: "x", ts: "2026-09-08T20:00:00Z", from_me: false, autor: "Xilonen Diaz Mendoza" }, lineas), false);
+    assert.equal(esDelEquipo({ id: "x", ts: "2026-09-08T20:00:00Z", from_me: true }, []), true);
+    // sin la variable, la misma línea ya no es "nuestra": solo from_me y nombres agendados
+    assert.equal(esDelEquipo({ id: "x", ts: "2026-09-08T20:00:00Z", from_me: false, autor: "+52 1 55 0000 0001", autor_tel: "+52 1 55 0000 0001" }, []), false);
   });
 
   test("el día es el de México: las 02:00Z del 9 siguen siendo el 8", () => {

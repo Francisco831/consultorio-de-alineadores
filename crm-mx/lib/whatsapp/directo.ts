@@ -245,17 +245,19 @@ export function matchearDoctor(chat: Chat, idx: IndiceDoctores): MatchDoctor {
 // Equipo: qué mensajes son "nuestros"
 // ---------------------------------------------------------------------------
 
-/** Las líneas de la organización (docs/WHATSAPP_PERISKOPE.md). Un mensaje de
- *  Juan en un grupo cuenta como respondido por KeepSmiling. */
-export const LINEAS_KS = [
-  "5215510685144", // Juan
-  "5491123740762", // Rocío
-  "5215549149356", // Ortodoncia Keep
-  "5215547940498",
-  "5216642962789", // Keep Smiling
-];
+/** Las líneas de la organización, leídas de WA_LINEAS_KS: teléfonos separados
+ *  por coma, en cualquier formato (se canonizan). Un mensaje de Juan en un grupo
+ *  cuenta como respondido por KeepSmiling. No viven en el código porque el repo
+ *  es público. Sin la variable, "nuestros" son solo los from_me y los nombres
+ *  agendados de esDelEquipo. */
+export function lineasKS(valor: string | undefined = process.env.WA_LINEAS_KS): string[] {
+  return (valor ?? "")
+    .split(/[,;]+/)
+    .map((t) => canonTel(t))
+    .filter((t): t is string => t !== null);
+}
 
-export function esDelEquipo(m: Mensaje, lineas: string[] = LINEAS_KS): boolean {
+export function esDelEquipo(m: Mensaje, lineas: string[] = lineasKS()): boolean {
   if (m.from_me) return true;
   const c = cola10(m.autor_tel);
   if (c && lineas.some((l) => cola10(l) === c)) return true;

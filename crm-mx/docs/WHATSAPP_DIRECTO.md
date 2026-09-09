@@ -29,7 +29,10 @@ POST /api/sync/whatsapp  (Bearer CRON_SECRET)        app/api/sync/whatsapp/route
   acentos). Si dos fichas empatan, **no se adivina**: queda sin vínculo y el
   aviso lo lista como "2+ fichas posibles".
 - **"Nuestro"** incluye a las otras líneas de KS: si en el grupo contestó Juan,
-  el chat no queda pendiente.
+  el chat no queda pendiente. Esas líneas se leen de `WA_LINEAS_KS` (teléfonos
+  separados por coma, en Vercel y en `.env.local`); no están en el código porque
+  el repo es público. Sin la variable solo cuentan los `from_me` y los nombres
+  con que WhatsApp muestra a las líneas agendadas.
 - **Resumen** (`lib/whatsapp/resumen.ts`): una llamada al modelo por (chat, día),
   salida validada con zod. Al modelo no le llegan teléfonos ni nombre del chat;
   los pacientes se nombran como "una paciente". Modelo: `WA_AI_MODEL` o, si no
