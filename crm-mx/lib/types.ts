@@ -154,6 +154,13 @@ export interface Doctor {
   // ---- estado de la cartera (0058): la matriz Potencial × Afinidad ----
   segmento: Segmento | null;
   ultimo_caso_aprobado_at: string | null;
+  // ---- nivel de interacción con soporte (0060), independiente del estado ----
+  interaccion: Interaccion | null;
+  wa_del_doctor: number;
+  wa_nuestros: number;
+  wa_dias: number;
+  contactos_registrados: number;
+  ultimo_wa_at: string | null;
   is_demo: boolean;
   created_at: string;
   updated_at: string;
@@ -297,6 +304,25 @@ export const SEGMENTO_DEFINICION: Record<Segmento, string> = {
   lapsed: "Alto potencial y baja afinidad: su último caso aprobado tiene más de 90 días.",
   beginner: "Bajo potencial y alta afinidad: acreditado hace menos de 90 días, todavía sin caso aprobado.",
   inactivo: "Bajo potencial y baja afinidad: sin casos aprobados desde que hay registro (12/9/2024).",
+};
+
+/** El NIVEL DE INTERACCIÓN con soporte (migración 0060): el otro eje de la
+ *  lista, independiente del estado. Mide si además de mandar casos hay
+ *  conversación persona a persona con la línea de soporte, sobre una ventana
+ *  de días y con umbrales que el equipo edita en /ajustes (lib/interaccion.ts).
+ *  Lo calcula la base en doctors.interaccion; null en los no acreditados. */
+export type Interaccion = "real" | "puntual" | "sin_contacto";
+
+export const INTERACCION_LABELS: Record<Interaccion, string> = {
+  real: "Real",
+  puntual: "Puntual",
+  sin_contacto: "Sin contacto",
+};
+
+export const INTERACCION_DEFINICION: Record<Interaccion, string> = {
+  real: "Conversación persona a persona con soporte: mensajes de ida y vuelta por la línea de soporte que llegan a los mínimos, o un contacto registrado (llamada, videollamada, reunión, visita, KeepDay).",
+  puntual: "Hubo algún mensaje o contacto en la ventana, pero por debajo de lo que el equipo definió como conversación real.",
+  sin_contacto: "Ni un mensaje por la línea de soporte ni un contacto registrado en la ventana.",
 };
 
 export const LIFECYCLE_LABELS: Record<LifecycleStage, string> = {

@@ -1,4 +1,4 @@
-import type { DoctorCategoria, LifecycleStage, Segmento } from "@/lib/types";
+import type { DoctorCategoria, Interaccion, LifecycleStage, Segmento } from "@/lib/types";
 
 const DAY_MS = 86_400_000;
 
@@ -134,6 +134,20 @@ export const SEGMENTO_STYLES: Record<Segmento, string> = {
 /** null = la columna todavía no se calculó: se ve en gris, no se inventa una casilla */
 export function estiloSegmento(seg: Segmento | null): string {
   return seg ? SEGMENTO_STYLES[seg] : STYLE_GRIS;
+}
+
+/** el NIVEL DE INTERACCIÓN con soporte (0060), al lado del estado: verde =
+ *  conversación real, ámbar = algún contacto por debajo del umbral, rojo =
+ *  nada en la ventana. El rojo es el que hay que encontrar: es el doctor con
+ *  el que no se habla, mande casos o no. */
+export const INTERACCION_STYLES: Record<Interaccion, string> = {
+  real: STYLE_VERDE,
+  puntual: ACTIVIDAD_STYLES.solo_termina,
+  sin_contacto: STYLE_ROJO,
+};
+
+export function estiloInteraccion(i: Interaccion | null): string {
+  return i ? INTERACCION_STYLES[i] : STYLE_GRIS;
 }
 
 /** badge central del negocio: en qué universo está el doctor */

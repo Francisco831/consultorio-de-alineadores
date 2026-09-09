@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { METRICAS_OBJETIVO, type MetricaObjetivo } from "@/lib/types";
+import { INTERACCION_RULE_KEY, leerParamsInteraccion } from "@/lib/interaccion";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 async function managerClient(): Promise<SupabaseClient | null> {
@@ -89,4 +90,42 @@ export async function guardarObjetivo(formData: FormData): Promise<void> {
   revalidatePath("/prospeccion");
   revalidatePath("/dashboard");
   revalidatePath("/viabilidades");
+}
+
+/**
+ * Los umbrales del nivel de interacción con soporte (migración 0060): qué
+ * cuenta como conversación real. Viven en automation_rules.params
+ * (key interaccion_soporte) y los lee recompute_interaccion(). Guardar
+ * recalcula a toda la cartera: los umbrales nuevos valen desde ya, no desde
+ * la corrida de la noche.
+ */
+export async function guardarInteraccion(formData: FormData): Promise<void> {
+  const supabase = await managerClient();
+  if (!supabase) return;
+  // misma lectura que hace la base: lo que no es número toma el default, lo
+  // que se pasa de rango se recorta, la línea se queda con los dígitos y un
+  // formulario sin ningún tipo marcado significa "los contactos no cuentan"
+  const params = leerParamsInteraccion({
+    dias: formData.get("dias"),
+    linea: formData.get("linea"),
+    min_del_doctor: formData.get("min_del_doctor"),
+    min_nuestros: formData.get("min_nuestros"),
+    min_dias: formData.get("min_dias"),
+    min_contactos: formData.get("min_contactos"),
+    tipos_contacto: formData.getAll("tipos_contacto"),
+  });
+  const { error } = await supabase
+    .from("automation_rules")
+    .update({ params })
+    .eq("key", INTERACCION_RULE_KEY);
+  if (error) {
+    console.error("guardarInteraccion:", error.message);
+    return;
+  }
+  const { error: errRecalc } = await supabase.rpc("recompute_interaccion", {
+    p_doctor: null,
+  });
+  if (errRecalc) console.error("recompute_interaccion:", errRecalc.message);
+  revalidatePath("/ajustes");
+  revalidatePath("/doctores");
 }

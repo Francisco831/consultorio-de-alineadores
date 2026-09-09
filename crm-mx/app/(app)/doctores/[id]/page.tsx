@@ -27,6 +27,7 @@ import {
   CATEGORIA_LABELS,
   CATEGORIA_STYLES,
   LIFECYCLE_STYLES,
+  estiloInteraccion,
   estiloSegmento,
   healthColor,
   relativeDays,
@@ -36,6 +37,8 @@ import {
 } from "@/lib/format";
 import {
   ACTIVITY_TYPE_LABELS,
+  INTERACCION_DEFINICION,
+  INTERACCION_LABELS,
   LIFECYCLE_LABELS,
   OPP_STAGE_LABELS,
   SEGMENTO_DEFINICION,
@@ -49,6 +52,13 @@ import {
 import { cn } from "@/lib/utils";
 import { todayMX } from "@/lib/dates";
 import { explicarSegmento } from "@/lib/segmento";
+import {
+  INTERACCION_RULE_KEY,
+  explicarInteraccion,
+  leerParamsInteraccion,
+  lineaCorta,
+  sugerenciaCruce,
+} from "@/lib/interaccion";
 import { Cake, PartyPopper } from "lucide-react";
 
 /**
@@ -114,6 +124,7 @@ export default async function DoctorPage({
     { data: contactsRaw },
     { data: profilesRaw },
     { data: waChatsRaw },
+    { data: reglaInteraccion },
     { data: authData },
   ] = await Promise.all([
     supabase
@@ -152,6 +163,13 @@ export default async function DoctorPage({
         "id, periskope_chat_id, chat_name, phone, unanswered, activity_bucket, lineas, asignado"
       )
       .eq("doctor_id", id),
+    // los umbrales del nivel de interacción (0060): para explicar los números
+    // con la ventana y la línea reales; sin fila, los valores iniciales
+    supabase
+      .from("automation_rules")
+      .select("params")
+      .eq("key", INTERACCION_RULE_KEY)
+      .maybeSingle(),
     // quién está mirando la ficha: decide qué notas del timeline llevan el
     // botón de corregir. Va adentro del Promise.all para no sumar un viaje en
     // serie a una página que ya hace ocho.
@@ -163,6 +181,7 @@ export default async function DoctorPage({
   const opps = (oppsRaw ?? []) as Opportunity[];
   const tasks = (tasksRaw ?? []) as Task[];
   const activities = (activitiesRaw ?? []) as Activity[];
+  const paramsInteraccion = leerParamsInteraccion(reglaInteraccion?.params);
   const profileName = new Map(
     ((profilesRaw ?? []) as { id: string; nombre: string }[]).map((p) => [
       p.id,
@@ -372,6 +391,24 @@ export default async function DoctorPage({
                   <span className="text-xs text-muted-foreground">
                     {explicarSegmento(doctor, todayMX())}
                   </span>
+                  {/* el NIVEL DE INTERACCIÓN con soporte (0060), el otro eje,
+                      y al lado la sugerencia que sale de cruzarlo con el estado */}
+                  <Badge
+                    variant="outline"
+                    className={cn("font-normal", estiloInteraccion(doctor.interaccion))}
+                    title={
+                      doctor.interaccion
+                        ? INTERACCION_DEFINICION[doctor.interaccion]
+                        : undefined
+                    }
+                  >
+                    {doctor.interaccion
+                      ? `Soporte: ${INTERACCION_LABELS[doctor.interaccion]}`
+                      : "Soporte: sin calcular"}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {sugerenciaCruce(doctor.segmento, doctor.interaccion)}
+                  </span>
                 </>
               ) : (
                 // un no acreditado no tiene estado de cartera: su etapa del
@@ -536,6 +573,14 @@ export default async function DoctorPage({
               ))}
             </ul>
           )}
+          {doctor.is_accredited ? (
+            // los números de los que sale el nivel de interacción (0060); la
+            // línea y la ventana son las de los umbrales de /ajustes
+            <p className="mt-2 text-xs text-muted-foreground">
+              Con soporte ({lineaCorta(paramsInteraccion.linea)}):{" "}
+              {explicarInteraccion(doctor, paramsInteraccion, todayMX())}
+            </p>
+          ) : null}
         </div>
 
         {/* ---------- redes y fechas ----------

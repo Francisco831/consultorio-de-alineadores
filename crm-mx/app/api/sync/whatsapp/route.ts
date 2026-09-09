@@ -384,6 +384,17 @@ async function ingestar(
   }
 
   log(`chats ${resultado.chats.length}, resúmenes ${resumenes}, IA USD ${resultado.costo_usd.toFixed(2)}`);
+
+  // ---------- nivel de interacción con soporte (migración 0060) ----------
+  // Los mensajes recién guardados mueven el nivel de los doctores de estos
+  // chats. wa_messages no tiene trigger (entran de a cientos por corrida), así
+  // que se recalcula acá, una vez, la cartera entera. La red es
+  // crm-interaccion-nightly a las 11:28 UTC.
+  if (!dry) {
+    const { error: intErr } = await db.rpc("recompute_interaccion", { p_doctor: null });
+    if (intErr) log(`recompute_interaccion falló (lo cubre el cron): ${intErr.message}`);
+    else log("Nivel de interacción con soporte recalculado ✓");
+  }
   return resultado;
 }
 

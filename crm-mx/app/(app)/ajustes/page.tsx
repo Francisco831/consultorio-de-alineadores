@@ -16,9 +16,15 @@ import {
   purgarDemo,
   toggleRegla,
   guardarObjetivo,
+  guardarInteraccion,
 } from "@/lib/actions/admin";
 import { formatDate } from "@/lib/format";
-import { METRICAS_OBJETIVO } from "@/lib/types";
+import { ACTIVITY_TYPE_LABELS, METRICAS_OBJETIVO, type ActivityType } from "@/lib/types";
+import {
+  INTERACCION_RULE_KEY,
+  leerParamsInteraccion,
+  lineaCorta,
+} from "@/lib/interaccion";
 import { AgentBadge } from "@/components/ai/agent-badge";
 import { BRAIN_VERSION } from "@/lib/ai/brain";
 import { AI_MODEL, aiConfigured } from "@/lib/ai/db";
@@ -107,7 +113,18 @@ export default async function AjustesPage() {
         .order("active", { ascending: false })
         .order("email"),
     ]);
-  const rules = (rulesRaw ?? []) as Rule[];
+  const rulesTodas = (rulesRaw ?? []) as Rule[];
+  // La regla del nivel de interacción (0060) no es una automatización: no crea
+  // alertas ni tareas, guarda los umbrales de "qué es conversación real".
+  // Tiene su propia sección más abajo y no va en la lista de Activar/Apagar.
+  const reglaInteraccion =
+    rulesTodas.find((r) => r.key === INTERACCION_RULE_KEY) ?? null;
+  const rules = rulesTodas.filter((r) => r.key !== INTERACCION_RULE_KEY);
+  const paramsInteraccion = leerParamsInteraccion(reglaInteraccion?.params);
+  // 'nota' no es un contacto (es enriquecimiento importado): no se ofrece
+  const tiposContacto = (Object.keys(ACTIVITY_TYPE_LABELS) as ActivityType[]).filter(
+    (t) => t !== "nota"
+  );
   const goals = (goalsRaw ?? []) as {
     id: string;
     period: string;
@@ -295,6 +312,155 @@ export default async function AjustesPage() {
             </Button>
           </form>
         ) : null}
+      </section>
+
+      {/* ---------- interacción con soporte (0060) ---------- */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Interacción con soporte
+        </h2>
+        <p className="text-xs text-muted-foreground">
+          Qué cuenta como conversación real con la línea de soporte, para el nivel
+          que se lee en Doctores al lado del estado. Un acreditado es <b>Real</b> si
+          en la ventana tiene al menos {paramsInteraccion.min_del_doctor} mensajes
+          del doctor y {paramsInteraccion.min_nuestros} nuestros en{" "}
+          {paramsInteraccion.min_dias} días distintos
+          {paramsInteraccion.min_contactos > 0
+            ? `, o ${paramsInteraccion.min_contactos} contacto${paramsInteraccion.min_contactos === 1 ? "" : "s"} registrado${paramsInteraccion.min_contactos === 1 ? "" : "s"}`
+            : " (los contactos registrados no alcanzan solos)"}
+          ; <b>Puntual</b> si hubo algo por debajo de eso; <b>Sin contacto</b> si no
+          hubo nada. Guardar recalcula a toda la cartera en el acto.
+        </p>
+        {!reglaInteraccion ? (
+          <p className="text-sm text-muted-foreground">
+            Falta aplicar la migración 0060: la regla todavía no existe.
+          </p>
+        ) : isManager ? (
+          <form action={guardarInteraccion} className="space-y-3">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="space-y-1">
+                <label htmlFor="int-dias" className="text-xs text-muted-foreground">
+                  Ventana (días)
+                </label>
+                <Input
+                  id="int-dias"
+                  name="dias"
+                  type="number"
+                  min="1"
+                  max="3650"
+                  defaultValue={paramsInteraccion.dias}
+                  className="w-24"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="int-doctor" className="text-xs text-muted-foreground">
+                  Mín. del doctor
+                </label>
+                <Input
+                  id="int-doctor"
+                  name="min_del_doctor"
+                  type="number"
+                  min="0"
+                  defaultValue={paramsInteraccion.min_del_doctor}
+                  className="w-24"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="int-nuestros" className="text-xs text-muted-foreground">
+                  Mín. nuestros
+                </label>
+                <Input
+                  id="int-nuestros"
+                  name="min_nuestros"
+                  type="number"
+                  min="0"
+                  defaultValue={paramsInteraccion.min_nuestros}
+                  className="w-24"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="int-dias-min" className="text-xs text-muted-foreground">
+                  Mín. días distintos
+                </label>
+                <Input
+                  id="int-dias-min"
+                  name="min_dias"
+                  type="number"
+                  min="0"
+                  defaultValue={paramsInteraccion.min_dias}
+                  className="w-28"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="int-contactos" className="text-xs text-muted-foreground">
+                  Contactos que alcanzan solos (0 = no)
+                </label>
+                <Input
+                  id="int-contactos"
+                  name="min_contactos"
+                  type="number"
+                  min="0"
+                  defaultValue={paramsInteraccion.min_contactos}
+                  className="w-24"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="int-linea" className="text-xs text-muted-foreground">
+                  Línea de soporte (solo dígitos; vacío = todas)
+                </label>
+                <Input
+                  id="int-linea"
+                  name="linea"
+                  type="text"
+                  inputMode="numeric"
+                  defaultValue={paramsInteraccion.linea ?? ""}
+                  placeholder="5491123740762"
+                  className="w-44"
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <span className="text-xs text-muted-foreground">
+                Contactos registrados que cuentan:
+              </span>
+              {tiposContacto.map((t) => (
+                <label key={t} className="flex items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    name="tipos_contacto"
+                    value={t}
+                    defaultChecked={paramsInteraccion.tipos_contacto.includes(t)}
+                  />
+                  {ACTIVITY_TYPE_LABELS[t]}
+                </label>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground/70">
+              Revisión clínica queda desmarcada a propósito: es un pedido de
+              modificación sobre un caso, o sea transaccional. WhatsApp también: los
+              mensajes de la línea ya se cuentan uno por uno.
+            </p>
+            <Button type="submit" variant="outline">
+              Guardar y recalcular
+            </Button>
+          </form>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Ventana {paramsInteraccion.dias} días · línea{" "}
+            {lineaCorta(paramsInteraccion.linea)} · mínimos {paramsInteraccion.min_del_doctor}{" "}
+            del doctor, {paramsInteraccion.min_nuestros} nuestros, {paramsInteraccion.min_dias}{" "}
+            días · contactos que cuentan:{" "}
+            {paramsInteraccion.tipos_contacto.length
+              ? paramsInteraccion.tipos_contacto.map((t) => ACTIVITY_TYPE_LABELS[t]).join(", ")
+              : "ninguno"}
+            . Los cambia un manager.
+          </p>
+        )}
       </section>
 
       {/* ---------- automatizaciones ---------- */}

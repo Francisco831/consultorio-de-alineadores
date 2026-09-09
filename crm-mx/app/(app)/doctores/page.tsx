@@ -16,6 +16,7 @@ import {
   ACTIVIDAD_STYLES,
   CATEGORIA_LABELS,
   CATEGORIA_STYLES,
+  estiloInteraccion,
   estiloSegmento,
   formatDate,
   healthColor,
@@ -23,13 +24,22 @@ import {
 } from "@/lib/format";
 import {
   ACTIVIDAD_LABELS,
+  INTERACCION_DEFINICION,
+  INTERACCION_LABELS,
   SEGMENTO_DEFINICION,
   SEGMENTO_LABELS,
   type Actividad90d,
   type Doctor,
+  type Interaccion,
   type Segmento,
 } from "@/lib/types";
 import { explicarSegmento } from "@/lib/segmento";
+import {
+  INTERACCION_RULE_KEY,
+  explicarInteraccion,
+  leerParamsInteraccion,
+  sugerenciaCruce,
+} from "@/lib/interaccion";
 import { todayMX } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { Search, PhoneOff } from "lucide-react";
@@ -75,6 +85,19 @@ const ACTIVIDADES: { key: Actividad90d; label: string }[] = [
   { key: "sin_actividad", label: ACTIVIDAD_LABELS.sin_actividad },
 ];
 
+// El NIVEL DE INTERACCIÓN con soporte (migración 0060) es el tercer eje, y
+// tampoco reemplaza a nadie: el estado dice si el doctor manda casos; éste,
+// si además hay conversación persona a persona con la línea de soporte o el
+// vínculo es solo transaccional. Del cruce de los dos sale la sugerencia que
+// se lee debajo del badge (lib/interaccion.ts). Los umbrales —qué es
+// "conversación real"— los edita el equipo en /ajustes; acá solo se leen para
+// explicar los números con la ventana real.
+const INTERACCIONES: { key: Interaccion; label: string }[] = [
+  { key: "real", label: INTERACCION_LABELS.real },
+  { key: "puntual", label: INTERACCION_LABELS.puntual },
+  { key: "sin_contacto", label: INTERACCION_LABELS.sin_contacto },
+];
+
 const FILTERS: {
   key: string;
   label: string;
@@ -96,6 +119,7 @@ function SortableHead({
   q,
   f,
   a,
+  i,
   sort,
   dir,
 }: {
@@ -105,6 +129,7 @@ function SortableHead({
   q: string;
   f: string;
   a: string;
+  i: string;
   sort: string;
   dir?: string;
 }) {
@@ -115,6 +140,7 @@ function SortableHead({
     ...(q ? { q } : {}),
     ...(f !== "todos" ? { f } : {}),
     ...(a ? { a } : {}),
+    ...(i ? { i } : {}),
     ...(k !== "prioridad" || nextDir ? { sort: k } : {}),
     ...(nextDir ? { dir: nextDir } : {}),
   });
@@ -141,12 +167,13 @@ export default async function DoctoresPage({
     q?: string;
     f?: string;
     a?: string;
+    i?: string;
     p?: string;
     sort?: string;
     dir?: string;
   }>;
 }) {
-  const { q = "", f = "todos", a = "", p = "1", sort = "prioridad", dir } =
+  const { q = "", f = "todos", a = "", i = "", p = "1", sort = "prioridad", dir } =
     await searchParams;
   const page = Math.max(1, parseInt(p) || 1);
   const supabase = await createClient();
@@ -169,27 +196,39 @@ export default async function DoctoresPage({
   if (filter?.segmento) query = query.eq("segmento", filter.segmento);
   if (filter?.tag) query = query.contains("tags", [filter.tag]);
   if (ACTIVIDADES.some((x) => x.key === a)) query = query.eq("actividad_90d", a);
+  if (INTERACCIONES.some((x) => x.key === i)) query = query.eq("interaccion", i);
 
   const { data, count, error } = await query;
 
   // los contadores del eje y del estado son del país entero, no de la búsqueda:
   // son la foto de la cartera acreditada y tienen que dar siempre lo mismo
-  const contar = (col: "actividad_90d" | "segmento", valor: string) =>
+  const contar = (col: "actividad_90d" | "segmento" | "interaccion", valor: string) =>
     supabase
       .from("doctors")
       .select("id", { count: "exact", head: true })
       .eq("is_accredited", true)
       .eq("is_demo", false)
       .eq(col, valor);
-  const [cTrae, cSolo, cSin, cAct, cLap, cBeg, cIna] = await Promise.all([
-    contar("actividad_90d", "trae_nuevos"),
-    contar("actividad_90d", "solo_termina"),
-    contar("actividad_90d", "sin_actividad"),
-    contar("segmento", "activo"),
-    contar("segmento", "lapsed"),
-    contar("segmento", "beginner"),
-    contar("segmento", "inactivo"),
-  ]);
+  const [cTrae, cSolo, cSin, cAct, cLap, cBeg, cIna, cReal, cPun, cSinC, regla] =
+    await Promise.all([
+      contar("actividad_90d", "trae_nuevos"),
+      contar("actividad_90d", "solo_termina"),
+      contar("actividad_90d", "sin_actividad"),
+      contar("segmento", "activo"),
+      contar("segmento", "lapsed"),
+      contar("segmento", "beginner"),
+      contar("segmento", "inactivo"),
+      contar("interaccion", "real"),
+      contar("interaccion", "puntual"),
+      contar("interaccion", "sin_contacto"),
+      // los umbrales del nivel (0060): acá solo para decir con qué ventana y
+      // qué línea se midió; si la fila no está, se leen los valores iniciales
+      supabase
+        .from("automation_rules")
+        .select("params")
+        .eq("key", INTERACCION_RULE_KEY)
+        .maybeSingle(),
+    ]);
   const CONTEO: Record<Actividad90d, number | null> = {
     trae_nuevos: cTrae.count,
     solo_termina: cSolo.count,
@@ -201,6 +240,12 @@ export default async function DoctoresPage({
     beginner: cBeg.count,
     inactivo: cIna.count,
   };
+  const CONTEO_INTERACCION: Record<Interaccion, number | null> = {
+    real: cReal.count,
+    puntual: cPun.count,
+    sin_contacto: cSinC.count,
+  };
+  const paramsInteraccion = leerParamsInteraccion(regla.data?.params);
   const hoy = todayMX();
   const doctors = (data ?? []) as Doctor[];
   const total = count ?? 0;
@@ -230,6 +275,7 @@ export default async function DoctoresPage({
             href={`/doctores?${new URLSearchParams({
               ...(q ? { q } : {}),
               ...(f !== "todos" ? { f } : {}),
+              ...(i ? { i } : {}),
               ...(a === x.key ? {} : { a: x.key }),
             })}`}
             className={cn(
@@ -248,6 +294,36 @@ export default async function DoctoresPage({
         ))}
       </div>
 
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="mr-1 text-[13px] text-muted-foreground">
+          Interacción con soporte ({paramsInteraccion.dias} días):
+        </span>
+        {INTERACCIONES.map((x) => (
+          <Link
+            key={x.key}
+            href={`/doctores?${new URLSearchParams({
+              ...(q ? { q } : {}),
+              ...(f !== "todos" ? { f } : {}),
+              ...(a ? { a } : {}),
+              ...(i === x.key ? {} : { i: x.key }),
+            })}`}
+            className={cn(
+              buttonVariants({
+                variant: i === x.key ? "secondary" : "ghost",
+                size: "sm",
+              }),
+              "h-8 gap-1.5 text-[13px]"
+            )}
+            title={INTERACCION_DEFINICION[x.key]}
+          >
+            {x.label}
+            <span className="tabular-nums text-muted-foreground">
+              {CONTEO_INTERACCION[x.key] ?? "—"}
+            </span>
+          </Link>
+        ))}
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
         <form className="relative" action="/doctores">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -259,6 +335,7 @@ export default async function DoctoresPage({
           />
           {f !== "todos" ? <input type="hidden" name="f" value={f} /> : null}
           {a ? <input type="hidden" name="a" value={a} /> : null}
+          {i ? <input type="hidden" name="i" value={i} /> : null}
         </form>
         <div className="flex gap-1">
           {FILTERS.map((x) => (
@@ -268,6 +345,7 @@ export default async function DoctoresPage({
                 ...(q ? { q } : {}),
                 ...(x.key !== "todos" ? { f: x.key } : {}),
                 ...(a ? { a } : {}),
+                ...(i ? { i } : {}),
               })}`}
               className={cn(
                 buttonVariants({
@@ -312,27 +390,28 @@ export default async function DoctoresPage({
                 <TableHead>Acreditación</TableHead>
                 <TableHead>Categoría</TableHead>
                 <TableHead>Estado</TableHead>
-                <SortableHead k="casos" label="Casos" right {...{ q, f, a, sort, dir }} />
+                <TableHead>Interacción</TableHead>
+                <SortableHead k="casos" label="Casos" right {...{ q, f, a, i, sort, dir }} />
                 <SortableHead
                   k="nuevos"
                   label="Nuevos 90d"
                   right
-                  {...{ q, f, a, sort, dir }}
+                  {...{ q, f, a, i, sort, dir }}
                 />
                 <SortableHead
                   k="etapas"
                   label="Etapas 90d"
                   right
-                  {...{ q, f, a, sort, dir }}
+                  {...{ q, f, a, i, sort, dir }}
                 />
-                <SortableHead k="ultimo" label="Último caso" {...{ q, f, a, sort, dir }} />
-                <SortableHead k="ritmo" label="Ritmo" {...{ q, f, a, sort, dir }} />
-                <SortableHead k="health" label="Health" right {...{ q, f, a, sort, dir }} />
+                <SortableHead k="ultimo" label="Último caso" {...{ q, f, a, i, sort, dir }} />
+                <SortableHead k="ritmo" label="Ritmo" {...{ q, f, a, i, sort, dir }} />
+                <SortableHead k="health" label="Health" right {...{ q, f, a, i, sort, dir }} />
                 <SortableHead
                   k="prioridad"
                   label="Prioridad"
                   right
-                  {...{ q, f, a, sort, dir }}
+                  {...{ q, f, a, i, sort, dir }}
                 />
               </TableRow>
             </TableHeader>
@@ -414,6 +493,25 @@ export default async function DoctoresPage({
                       {explicarSegmento(d, hoy)}
                     </div>
                   </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={cn("font-normal", estiloInteraccion(d.interaccion))}
+                      title={
+                        d.interaccion
+                          ? `${INTERACCION_DEFINICION[d.interaccion]}\n${explicarInteraccion(d, paramsInteraccion, hoy)}`
+                          : undefined
+                      }
+                    >
+                      {d.interaccion ? INTERACCION_LABELS[d.interaccion] : "Sin calcular"}
+                    </Badge>
+                    {/* la sugerencia sale del CRUCE estado × interacción: qué
+                        hacer con este doctor y por qué (lib/interaccion.ts).
+                        Los números del nivel están en el tooltip del badge. */}
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      {sugerenciaCruce(d.segmento, d.interaccion)}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {d.new_case_count}
                   </TableCell>
@@ -473,6 +571,7 @@ export default async function DoctoresPage({
                   ...(q ? { q } : {}),
                   ...(f !== "todos" ? { f } : {}),
                   ...(a ? { a } : {}),
+                  ...(i ? { i } : {}),
                   // el orden elegido viaja con la página: sin esto la página 2
                   // vuelve al orden por defecto y no continúa a la página 1
                   ...(sort !== "prioridad" ? { sort } : {}),
@@ -490,6 +589,7 @@ export default async function DoctoresPage({
                   ...(q ? { q } : {}),
                   ...(f !== "todos" ? { f } : {}),
                   ...(a ? { a } : {}),
+                  ...(i ? { i } : {}),
                   ...(sort !== "prioridad" ? { sort } : {}),
                   ...(dir ? { dir } : {}),
                   p: String(page + 1),

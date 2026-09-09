@@ -52,6 +52,14 @@ POST /api/sync/whatsapp  (Bearer CRON_SECRET)        app/api/sync/whatsapp/route
   propuestas de tarea en el panel de IA.
 - **Slack #alertas-crm**: doctores con conversación, quiénes esperan respuesta,
   tareas propuestas y chats sin ficha.
+- **Lista de doctores y ficha** (migración 0060): el **nivel de interacción con
+  soporte** —Real / Puntual / Sin contacto— sale de estos mensajes (los de la
+  línea, por doctor, en una ventana de días) más los contactos registrados
+  (llamada, videollamada, reunión, visita, KeepDay), y se lee al lado del
+  estado con una sugerencia según el cruce. Los umbrales se editan en
+  `/ajustes`; cada corrida de este sync recalcula la cartera. Ojo: en la base
+  no hay mensajes anteriores al 1/9/2026, y WhatsApp Web guarda desde el
+  6/6/2026 — una corrida con ese watermark completa la ventana de 90 días.
 
 ## Cómo se lee WhatsApp Web (validado en la primera corrida, 8/9/2026)
 
