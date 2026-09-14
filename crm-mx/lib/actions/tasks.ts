@@ -77,7 +77,8 @@ export async function completeTask(formData: FormData) {
       type: String(formData.get("next_type") ?? "seguimiento"),
       title: nextTitle,
       due_date: String(formData.get("next_due_date") ?? "") || null,
-      assigned_to: user.id,
+      // "para quién": si el formulario no lo manda, queda para el que la creó
+      assigned_to: String(formData.get("next_assigned_to") ?? "") || user.id,
       created_by: user.id,
     });
     if (error) return { error: error.message };
@@ -99,6 +100,44 @@ export async function cancelTask(formData: FormData) {
   if (error) return { error: error.message };
   if (!task)
     return { error: "No se pudo cancelar: sin permisos de edición o ya no existe" };
+  revalidateTaskPaths(task.doctor_id);
+  return { ok: true };
+}
+
+/**
+ * Cambiar de dueño una tarea ("tomar" la de otro, o pasarle una a Rocío).
+ *
+ * Pedido de Juan y Rocío (11/9): las tareas de la gira quedaron a nombre de
+ * uno y las hizo el otro, y no había forma de moverlas. La base ya lo
+ * permitía (tasks_guard, 0052) y desde 0061 lo audita; esto es solo la
+ * puerta. No hay candado de autor a propósito: son dos personas y las
+ * tareas son del equipo. Si algún día hace falta, el lugar es un guard en
+ * la base, no acá.
+ */
+export async function reassignTask(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Sesión expirada" };
+
+  const taskId = String(formData.get("task_id"));
+  const assignedTo = String(formData.get("assigned_to") ?? "").trim();
+  if (!assignedTo) return { error: "Elegí a quién pasarle la tarea" };
+
+  const { data: task, error } = await supabase
+    .from("tasks")
+    .update({ assigned_to: assignedTo })
+    .eq("id", taskId)
+    .select("doctor_id")
+    .maybeSingle();
+  if (error) {
+    // FK a profiles: un id que no es de una persona del equipo
+    if (error.code === "23503") return { error: "Esa persona no está en el equipo" };
+    return { error: error.message };
+  }
+  if (!task)
+    return { error: "No se pudo reasignar: sin permisos de edición o ya no existe" };
   revalidateTaskPaths(task.doctor_id);
   return { ok: true };
 }

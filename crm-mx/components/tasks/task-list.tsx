@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { completeTask, cancelTask } from "@/lib/actions/tasks";
+import { completeTask, cancelTask, reassignTask } from "@/lib/actions/tasks";
 import { TASK_TYPE_LABELS, type Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -28,16 +28,49 @@ export function TaskList({
   doctorName,
   emptyMessage,
   showDoctor,
+  profiles,
+  currentUserId = null,
 }: {
   tasks: Task[];
   profileName: Record<string, string>;
   doctorName?: Record<string, string>;
   emptyMessage: string;
   showDoctor?: boolean;
+  /**
+   * El equipo activo. Si viene, el nombre del dueño de cada tarea es un
+   * <select>: cambiarlo la pasa de mano (pedido de Juan y Rocío, 11/9: las
+   * tareas de la gira quedaron a nombre de uno y las hizo el otro). Sin esto
+   * se muestra el nombre y listo.
+   */
+  profiles?: { id: string; nombre: string }[];
+  currentUserId?: string | null;
 }) {
   const [completing, setCompleting] = useState<Task | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // el dueño elegido mientras la reasignación viaja al server: sin esto el
+  // <select> vuelve al valor viejo hasta que la página se revalida
+  const [reasignada, setReasignada] = useState<Record<string, string>>({});
+
+  function reasignar(t: Task, id: string) {
+    if (!id || id === t.assigned_to) return;
+    setError(null);
+    setReasignada((m) => ({ ...m, [t.id]: id }));
+    const fd = new FormData();
+    fd.set("task_id", t.id);
+    fd.set("assigned_to", id);
+    startTransition(async () => {
+      const res = await reassignTask(fd);
+      if (res?.error) {
+        setError(res.error);
+        setReasignada((m) => {
+          const n = { ...m };
+          delete n[t.id];
+          return n;
+        });
+      }
+    });
+  }
 
   const open = tasks.filter((t) => t.status === "pendiente");
   const done = tasks.filter((t) => t.status !== "pendiente");
@@ -100,9 +133,34 @@ export function TaskList({
                           ? "Hoy"
                           : t.due_date
                       : "Sin fecha"}
-                    {t.assigned_to && profileName[t.assigned_to]
-                      ? ` · ${profileName[t.assigned_to]}`
-                      : null}
+                    {profiles && profiles.length > 0 ? (
+                      <>
+                        <span aria-hidden> · </span>
+                        <select
+                          value={reasignada[t.id] ?? t.assigned_to ?? ""}
+                          onChange={(e) => reasignar(t, e.target.value)}
+                          disabled={pending}
+                          aria-label="De quién es la tarea"
+                          title="Cambiar de quién es la tarea"
+                          className="h-5 cursor-pointer rounded border border-transparent bg-transparent pr-1 text-xs hover:border-input"
+                        >
+                          {!t.assigned_to ? <option value="">nadie</option> : null}
+                          {t.assigned_to && !profiles.some((p) => p.id === t.assigned_to) ? (
+                            <option value={t.assigned_to}>
+                              {profileName[t.assigned_to] ?? "otra persona"}
+                            </option>
+                          ) : null}
+                          {profiles.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.nombre}
+                              {p.id === currentUserId ? " (yo)" : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    ) : t.assigned_to && profileName[t.assigned_to] ? (
+                      ` · ${profileName[t.assigned_to]}`
+                    ) : null}
                   </div>
                 </div>
                 <Button
@@ -214,6 +272,21 @@ export function TaskList({
                   </select>
                   <Input name="next_due_date" type="date" aria-label="Fecha" />
                 </div>
+                {profiles && profiles.length > 0 ? (
+                  <select
+                    name="next_assigned_to"
+                    className={selectClass}
+                    defaultValue={currentUserId ?? ""}
+                    aria-label="Para quién es la próxima tarea"
+                  >
+                    {profiles.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        Para {p.nombre}
+                        {p.id === currentUserId ? " (yo)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
               </div>
             </div>
             {error ? <p className="text-sm text-destructive">{error}</p> : null}

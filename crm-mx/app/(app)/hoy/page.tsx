@@ -180,7 +180,7 @@ export default async function HoyPage({
       .lte("due_date", todayISO)
       .order("due_date", { ascending: true })
       .limit(8),
-    supabase.from("profiles").select("id, nombre"),
+    supabase.from("profiles").select("id, nombre, activo"),
     supabase
       .from("wa_conversations")
       .select(
@@ -232,6 +232,9 @@ export default async function HoyPage({
   const forecast = fc?.forecast_casos_nuevos ?? closed;
   const gap = fc?.gap_vs_objetivo ?? null;
 
+  const equipo = ((profilesRaw ?? []) as { id: string; nombre: string; activo: boolean }[])
+    .filter((p) => p.activo)
+    .map(({ id, nombre }) => ({ id, nombre }));
   const profileName = new Map(
     ((profilesRaw ?? []) as { id: string; nombre: string }[]).map((p) => [
       p.id,
@@ -506,6 +509,8 @@ export default async function HoyPage({
             <TaskList
               tasks={myTasks}
               profileName={Object.fromEntries(profileName)}
+              profiles={equipo}
+              currentUserId={user!.id}
               emptyMessage="Nada vencido ni para hoy. Excelente."
             />
           </div>

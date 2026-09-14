@@ -25,6 +25,7 @@ import {
   Settings,
   Search,
   Target,
+  StickyNote,
 } from "lucide-react";
 
 const PAGES = [
@@ -43,6 +44,7 @@ const KIND_ICON = {
   doctor: Stethoscope,
   caso: FolderOpen,
   oportunidad: Target,
+  nota: StickyNote,
 } as const;
 
 export function CommandPalette() {
@@ -90,16 +92,49 @@ export function CommandPalette() {
     router.push(href);
   }
 
+  // las fichas (doctor, caso, oportunidad) arriba; lo escrito por el equipo
+  // (actividades, observaciones, tareas) en su propio grupo, porque el título
+  // ahí es el pedazo de texto donde aparece lo buscado, no un nombre
+  const fichas = results.filter((r) => r.kind !== "nota");
+  const notas = results.filter((r) => r.kind === "nota");
+  function item(r: SearchResult) {
+    const Icon = KIND_ICON[r.kind];
+    return (
+      <CommandItem
+        key={`${r.kind}-${r.id}`}
+        value={`${r.title} ${r.subtitle ?? ""} ${r.id}`}
+        onSelect={() => go(r.href)}
+      >
+        <Icon className="mr-2 h-4 w-4 shrink-0" />
+        {r.kind === "nota" ? (
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate">{r.title}</span>
+            {r.subtitle ? (
+              <span className="truncate text-xs text-muted-foreground">{r.subtitle}</span>
+            ) : null}
+          </span>
+        ) : (
+          <>
+            <span>{r.title}</span>
+            {r.subtitle ? (
+              <span className="ml-2 text-muted-foreground">{r.subtitle}</span>
+            ) : null}
+          </>
+        )}
+      </CommandItem>
+    );
+  }
+
   return (
     <CommandDialog
       open={open}
       onOpenChange={setOpen}
       title="Buscar"
-      description="Buscar doctores, casos y oportunidades"
+      description="Buscar doctores, casos, oportunidades y lo escrito en notas y tareas"
     >
       <Command shouldFilter={query.trim().length < 2}>
       <CommandInput
-        placeholder="Buscar doctor, paciente, caso… (Cmd+K)"
+        placeholder="Buscar doctor, paciente, caso, nota… (Cmd+K)"
         value={query}
         onValueChange={onQueryChange}
       />
@@ -107,26 +142,12 @@ export function CommandPalette() {
         <CommandEmpty>
           {searching ? "Buscando…" : "Sin resultados."}
         </CommandEmpty>
-        {results.length > 0 ? (
-          <CommandGroup heading="Resultados">
-            {results.map((r) => {
-              const Icon = KIND_ICON[r.kind];
-              return (
-                <CommandItem
-                  key={`${r.kind}-${r.id}`}
-                  value={`${r.title} ${r.subtitle ?? ""} ${r.id}`}
-                  onSelect={() => go(r.href)}
-                >
-                  <Icon className="mr-2 h-4 w-4" />
-                  <span>{r.title}</span>
-                  {r.subtitle ? (
-                    <span className="ml-2 text-muted-foreground">
-                      {r.subtitle}
-                    </span>
-                  ) : null}
-                </CommandItem>
-              );
-            })}
+        {fichas.length > 0 ? (
+          <CommandGroup heading="Resultados">{fichas.map(item)}</CommandGroup>
+        ) : null}
+        {notas.length > 0 ? (
+          <CommandGroup heading="En notas, observaciones y tareas">
+            {notas.map(item)}
           </CommandGroup>
         ) : null}
         {results.length > 0 ? <CommandSeparator /> : null}

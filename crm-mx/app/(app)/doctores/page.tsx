@@ -41,6 +41,8 @@ import {
   sugerenciaCruce,
 } from "@/lib/interaccion";
 import { todayMX } from "@/lib/dates";
+import { normalizarEtiqueta } from "@/lib/etiquetas";
+import { FiltroEtiqueta } from "@/components/doctores/filtro-etiqueta";
 import { cn } from "@/lib/utils";
 import { Search, PhoneOff } from "lucide-react";
 
@@ -120,6 +122,7 @@ function SortableHead({
   f,
   a,
   i,
+  tag,
   sort,
   dir,
 }: {
@@ -130,6 +133,7 @@ function SortableHead({
   f: string;
   a: string;
   i: string;
+  tag: string;
   sort: string;
   dir?: string;
 }) {
@@ -141,6 +145,7 @@ function SortableHead({
     ...(f !== "todos" ? { f } : {}),
     ...(a ? { a } : {}),
     ...(i ? { i } : {}),
+    ...(tag ? { tag } : {}),
     ...(k !== "prioridad" || nextDir ? { sort: k } : {}),
     ...(nextDir ? { dir: nextDir } : {}),
   });
@@ -168,13 +173,24 @@ export default async function DoctoresPage({
     f?: string;
     a?: string;
     i?: string;
+    tag?: string;
     p?: string;
     sort?: string;
     dir?: string;
   }>;
 }) {
-  const { q = "", f = "todos", a = "", i = "", p = "1", sort = "prioridad", dir } =
-    await searchParams;
+  const {
+    q = "",
+    f = "todos",
+    a = "",
+    i = "",
+    tag: tagRaw = "",
+    p = "1",
+    sort = "prioridad",
+    dir,
+  } = await searchParams;
+  // normalizada como al guardarla: "Summit 2026" en la URL filtra "summit-2026"
+  const tag = normalizarEtiqueta(tagRaw);
   const page = Math.max(1, parseInt(p) || 1);
   const supabase = await createClient();
 
@@ -195,6 +211,7 @@ export default async function DoctoresPage({
   const filter = FILTERS.find((x) => x.key === f);
   if (filter?.segmento) query = query.eq("segmento", filter.segmento);
   if (filter?.tag) query = query.contains("tags", [filter.tag]);
+  if (tag) query = query.contains("tags", [tag]);
   if (ACTIVIDADES.some((x) => x.key === a)) query = query.eq("actividad_90d", a);
   if (INTERACCIONES.some((x) => x.key === i)) query = query.eq("interaccion", i);
 
@@ -209,7 +226,7 @@ export default async function DoctoresPage({
       .eq("is_accredited", true)
       .eq("is_demo", false)
       .eq(col, valor);
-  const [cTrae, cSolo, cSin, cAct, cLap, cBeg, cIna, cReal, cPun, cSinC, regla] =
+  const [cTrae, cSolo, cSin, cAct, cLap, cBeg, cIna, cReal, cPun, cSinC, regla, etiquetasRaw] =
     await Promise.all([
       contar("actividad_90d", "trae_nuevos"),
       contar("actividad_90d", "solo_termina"),
@@ -228,7 +245,11 @@ export default async function DoctoresPage({
         .select("params")
         .eq("key", INTERACCION_RULE_KEY)
         .maybeSingle(),
+      // las etiquetas en uso en la cartera acreditada, con cuántos tiene cada
+      // una (0061). Si la función no está, el filtro queda vacío y la página anda.
+      supabase.rpc("tags_en_uso", { p_acreditados: true }),
     ]);
+  const etiquetas = (etiquetasRaw.data ?? []) as { tag: string; n: number }[];
   const CONTEO: Record<Actividad90d, number | null> = {
     trae_nuevos: cTrae.count,
     solo_termina: cSolo.count,
@@ -276,6 +297,7 @@ export default async function DoctoresPage({
               ...(q ? { q } : {}),
               ...(f !== "todos" ? { f } : {}),
               ...(i ? { i } : {}),
+              ...(tag ? { tag } : {}),
               ...(a === x.key ? {} : { a: x.key }),
             })}`}
             className={cn(
@@ -305,6 +327,7 @@ export default async function DoctoresPage({
               ...(q ? { q } : {}),
               ...(f !== "todos" ? { f } : {}),
               ...(a ? { a } : {}),
+              ...(tag ? { tag } : {}),
               ...(i === x.key ? {} : { i: x.key }),
             })}`}
             className={cn(
@@ -336,7 +359,21 @@ export default async function DoctoresPage({
           {f !== "todos" ? <input type="hidden" name="f" value={f} /> : null}
           {a ? <input type="hidden" name="a" value={a} /> : null}
           {i ? <input type="hidden" name="i" value={i} /> : null}
+          {tag ? <input type="hidden" name="tag" value={tag} /> : null}
         </form>
+        <FiltroEtiqueta
+          base="/doctores"
+          actual={tag}
+          etiquetas={etiquetas}
+          params={{
+            ...(q ? { q } : {}),
+            ...(f !== "todos" ? { f } : {}),
+            ...(a ? { a } : {}),
+            ...(i ? { i } : {}),
+            ...(sort !== "prioridad" ? { sort } : {}),
+            ...(dir ? { dir } : {}),
+          }}
+        />
         <div className="flex gap-1">
           {FILTERS.map((x) => (
             <Link
@@ -346,6 +383,7 @@ export default async function DoctoresPage({
                 ...(x.key !== "todos" ? { f: x.key } : {}),
                 ...(a ? { a } : {}),
                 ...(i ? { i } : {}),
+                ...(tag ? { tag } : {}),
               })}`}
               className={cn(
                 buttonVariants({
@@ -373,7 +411,9 @@ export default async function DoctoresPage({
         </p>
       ) : doctors.length === 0 ? (
         <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-          {q && f !== "todos"
+          {tag
+            ? `Ningún doctor acreditado tiene la etiqueta “${tag}”${q ? ` y coincide con “${q}”` : ""}.`
+            : q && f !== "todos"
             ? `Ningún doctor de “${FILTERS.find((x) => x.key === f)?.label}” coincide con “${q}”.`
             : q
               ? `No hay doctores que coincidan con “${q}”.`
@@ -391,27 +431,27 @@ export default async function DoctoresPage({
                 <TableHead>Categoría</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Interacción</TableHead>
-                <SortableHead k="casos" label="Casos" right {...{ q, f, a, i, sort, dir }} />
+                <SortableHead k="casos" label="Casos" right {...{ q, f, a, i, tag, sort, dir }} />
                 <SortableHead
                   k="nuevos"
                   label="Nuevos 90d"
                   right
-                  {...{ q, f, a, i, sort, dir }}
+                  {...{ q, f, a, i, tag, sort, dir }}
                 />
                 <SortableHead
                   k="etapas"
                   label="Etapas 90d"
                   right
-                  {...{ q, f, a, i, sort, dir }}
+                  {...{ q, f, a, i, tag, sort, dir }}
                 />
-                <SortableHead k="ultimo" label="Último caso" {...{ q, f, a, i, sort, dir }} />
-                <SortableHead k="ritmo" label="Ritmo" {...{ q, f, a, i, sort, dir }} />
-                <SortableHead k="health" label="Health" right {...{ q, f, a, i, sort, dir }} />
+                <SortableHead k="ultimo" label="Último caso" {...{ q, f, a, i, tag, sort, dir }} />
+                <SortableHead k="ritmo" label="Ritmo" {...{ q, f, a, i, tag, sort, dir }} />
+                <SortableHead k="health" label="Health" right {...{ q, f, a, i, tag, sort, dir }} />
                 <SortableHead
                   k="prioridad"
                   label="Prioridad"
                   right
-                  {...{ q, f, a, i, sort, dir }}
+                  {...{ q, f, a, i, tag, sort, dir }}
                 />
               </TableRow>
             </TableHeader>
@@ -572,6 +612,7 @@ export default async function DoctoresPage({
                   ...(f !== "todos" ? { f } : {}),
                   ...(a ? { a } : {}),
                   ...(i ? { i } : {}),
+                  ...(tag ? { tag } : {}),
                   // el orden elegido viaja con la página: sin esto la página 2
                   // vuelve al orden por defecto y no continúa a la página 1
                   ...(sort !== "prioridad" ? { sort } : {}),
@@ -590,6 +631,7 @@ export default async function DoctoresPage({
                   ...(f !== "todos" ? { f } : {}),
                   ...(a ? { a } : {}),
                   ...(i ? { i } : {}),
+                  ...(tag ? { tag } : {}),
                   ...(sort !== "prioridad" ? { sort } : {}),
                   ...(dir ? { dir } : {}),
                   p: String(page + 1),

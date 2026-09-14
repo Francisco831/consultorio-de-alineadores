@@ -21,6 +21,8 @@ import { Timeline, type TimelineEvent } from "@/components/doctor/timeline";
 import { TIPOS_CONTACTO } from "@/lib/atribucion";
 import { ProspectProfileCard } from "@/components/doctor/prospect-profile-card";
 import { ObservacionesCard } from "@/components/doctor/observaciones-card";
+import { EtiquetasCard } from "@/components/doctor/etiquetas-card";
+import { esEtiquetaDelSistema } from "@/lib/etiquetas";
 import { TaskList } from "@/components/tasks/task-list";
 import {
   ACREDITACION_STYLES,
@@ -156,7 +158,7 @@ export default async function DoctorPage({
       .order("created_at", { ascending: false })
       .limit(100),
     supabase.from("contacts").select("*").eq("doctor_id", id),
-    supabase.from("profiles").select("id, nombre"),
+    supabase.from("profiles").select("id, nombre, activo"),
     supabase
       .from("wa_conversations")
       .select(
@@ -177,11 +179,21 @@ export default async function DoctorPage({
   ]);
 
   const userId = authData?.user?.id ?? null;
+  // las etiquetas que ya usa el equipo, para sugerirlas y no inventar variantes
+  // (tags_en_uso, 0061). Si la función no está, la ficha anda igual sin sugerencias.
+  const { data: tagsEnUso } = await supabase.rpc("tags_en_uso", { p_acreditados: null });
+  const sugerenciasEtiquetas = ((tagsEnUso ?? []) as { tag: string; n: number }[])
+    .map((t) => t.tag)
+    .filter((t) => !esEtiquetaDelSistema(t));
   const cases = (casesRaw ?? []) as Case[];
   const opps = (oppsRaw ?? []) as Opportunity[];
   const tasks = (tasksRaw ?? []) as Task[];
   const activities = (activitiesRaw ?? []) as Activity[];
   const paramsInteraccion = leerParamsInteraccion(reglaInteraccion?.params);
+  // el equipo activo: para el "para quién" de las tareas
+  const equipo = ((profilesRaw ?? []) as { id: string; nombre: string; activo: boolean }[])
+    .filter((p) => p.activo)
+    .map(({ id, nombre }) => ({ id, nombre }));
   const profileName = new Map(
     ((profilesRaw ?? []) as { id: string; nombre: string }[]).map((p) => [
       p.id,
@@ -448,6 +460,8 @@ export default async function DoctorPage({
           <QuickActions
             doctor={doctor}
             periskopeChatId={(waChatsRaw ?? [])[0]?.periskope_chat_id ?? null}
+            profiles={equipo}
+            currentUserId={userId}
           />
         </div>
 
@@ -714,6 +728,26 @@ export default async function DoctorPage({
           />
         </div>
 
+        {/* ---------- etiquetas: para armar listas ("van al Summit", "interesados en X") ----------
+            El texto libre de arriba se BUSCA (Cmd+K); la etiqueta se FILTRA en la
+            lista de doctores. Pedido del grupo México, 11/9. */}
+        <div className="space-y-2">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Etiquetas
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Para armar listas: tocá una y ves quiénes más la tienen.
+            </p>
+          </div>
+          <EtiquetasCard
+            doctorId={doctor.id}
+            tags={doctor.tags ?? []}
+            sugerencias={sugerenciasEtiquetas}
+            acreditado={doctor.is_accredited}
+          />
+        </div>
+
         {/* ---------- inteligencia comercial (AI + motor de reglas) ---------- */}
         <DoctorAIPanel doctorId={doctor.id} />
       </div>
@@ -937,6 +971,8 @@ export default async function DoctorPage({
           <TaskList
             tasks={tasks}
             profileName={Object.fromEntries(profileName)}
+            profiles={equipo}
+            currentUserId={userId}
             emptyMessage="Sin tareas para este doctor. Creá una desde las acciones rápidas."
           />
         </TabsContent>

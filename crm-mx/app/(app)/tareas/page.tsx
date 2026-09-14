@@ -27,7 +27,7 @@ export default async function TareasPage({
   const [{ data: tasksRaw }, { data: profilesRaw }, { data: doctorsRaw }] =
     await Promise.all([
       query,
-      supabase.from("profiles").select("id, nombre"),
+      supabase.from("profiles").select("id, nombre, activo"),
       // is_accredited viaja en el mapa que ya se consultaba: cero consultas extra,
       // y es lo que permite partir la lista en las dos áreas
       supabase.from("doctors").select("id, nombre, is_accredited"),
@@ -40,6 +40,9 @@ export default async function TareasPage({
       p.nombre,
     ])
   );
+  const equipo = ((profilesRaw ?? []) as { id: string; nombre: string; activo: boolean }[])
+    .filter((p) => p.activo)
+    .map(({ id, nombre }) => ({ id, nombre }));
   const doctores = (doctorsRaw ?? []) as {
     id: string;
     nombre: string;
@@ -120,6 +123,8 @@ export default async function TareasPage({
                 tasks={sec.tareas}
                 profileName={profileName}
                 doctorName={doctorName}
+                profiles={equipo}
+                currentUserId={user?.id ?? null}
                 showDoctor
                 emptyMessage=""
               />

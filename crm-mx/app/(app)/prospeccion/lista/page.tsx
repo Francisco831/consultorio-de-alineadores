@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Search, PhoneOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { normalizarEtiqueta } from "@/lib/etiquetas";
+import { FiltroEtiqueta } from "@/components/doctores/filtro-etiqueta";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -64,9 +66,11 @@ const TAG_IG_ORTO = "ig:ortodoncista";
 export default async function ProspeccionListaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; f?: string; p?: string }>;
+  searchParams: Promise<{ q?: string; f?: string; tag?: string; p?: string }>;
 }) {
-  const { q = "", f = "todos", p = "1" } = await searchParams;
+  const { q = "", f = "todos", tag: tagRaw = "", p = "1" } = await searchParams;
+  // normalizada como al guardarla: "Summit 2026" en la URL filtra "summit-2026"
+  const tag = normalizarEtiqueta(tagRaw);
   const page = Math.max(1, parseInt(p) || 1);
   const supabase = await createClient();
 
@@ -83,8 +87,13 @@ export default async function ProspeccionListaPage({
   if (f === "ig-orto") query = query.contains("tags", [TAG_IG, TAG_IG_ORTO]);
   else if (f !== "todos" && (ETAPAS as string[]).includes(f))
     query = query.eq("acquisition_stage", f);
+  if (tag) query = query.contains("tags", [tag]);
 
   const { data, count, error } = await query;
+  // etiquetas en uso entre los que están por acreditarse (0061); sin la
+  // función el filtro queda vacío y la página anda
+  const { data: etiquetasRaw } = await supabase.rpc("tags_en_uso", { p_acreditados: false });
+  const etiquetas = (etiquetasRaw ?? []) as { tag: string; n: number }[];
   const doctores = (data ?? []) as Doctor[];
   const total = count ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -93,6 +102,7 @@ export default async function ProspeccionListaPage({
     `/prospeccion/lista?${new URLSearchParams({
       ...(q ? { q } : {}),
       ...(f !== "todos" ? { f } : {}),
+      ...(tag ? { tag } : {}),
       ...extra,
     })}`;
 
@@ -118,10 +128,18 @@ export default async function ProspeccionListaPage({
             className="h-9 w-64 pl-8"
           />
           {f !== "todos" ? <input type="hidden" name="f" value={f} /> : null}
+          {tag ? <input type="hidden" name="tag" value={tag} /> : null}
         </form>
+        <FiltroEtiqueta
+          base="/prospeccion/lista"
+          actual={tag}
+          etiquetas={etiquetas}
+          params={{ ...(q ? { q } : {}), ...(f !== "todos" ? { f } : {}) }}
+        />
         <Link
           href={`/prospeccion/lista?${new URLSearchParams({
             ...(q ? { q } : {}),
+            ...(tag ? { tag } : {}),
             f: "ig-orto",
           })}`}
           className={cn(
@@ -141,6 +159,7 @@ export default async function ProspeccionListaPage({
                 key={x.key}
                 href={`/prospeccion/lista?${new URLSearchParams({
                   ...(q ? { q } : {}),
+                  ...(tag ? { tag } : {}),
                   ...(x.key !== "todos" ? { f: x.key } : {}),
                 })}`}
                 className={cn(
@@ -164,7 +183,9 @@ export default async function ProspeccionListaPage({
         </p>
       ) : doctores.length === 0 ? (
         <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-          {q
+          {tag
+            ? `Ningún doctor por acreditarse tiene la etiqueta “${tag}”${q ? ` y coincide con “${q}”` : ""}.`
+            : q
             ? `Ningún doctor por acreditarse coincide con “${q}”.`
             : "No hay doctores en esta etapa."}
         </div>

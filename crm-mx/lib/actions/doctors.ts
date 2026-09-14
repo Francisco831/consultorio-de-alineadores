@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { esEtiquetaDelSistema, normalizarEtiqueta } from "@/lib/etiquetas";
 
 export async function updateDoctorContact(formData: FormData) {
   const id = String(formData.get("id"));
@@ -131,4 +132,70 @@ export async function updateDoctorObservaciones(formData: FormData) {
   revalidatePath("/hoy");
   revalidatePath("/panel");
   return { ok: true };
+}
+
+/**
+ * Etiquetas del doctor (doctors.tags), cargadas a mano desde la ficha.
+ *
+ * Pedido del grupo México (11/9): listas como "los que van al Summit" o
+ * "interesados en X" sin revisar ficha por ficha. El texto libre se BUSCA
+ * (buscador global); la etiqueta se FILTRA y se cuenta (/doctores?tag=…). Las
+ * dos acciones normalizan (lib/etiquetas.ts) para que "Summit 2026" y
+ * "summit-2026" sean la misma lista, y devuelven la lista resultante para que
+ * la ficha muestre lo que quedó guardado, no lo que se tipeó.
+ *
+ * Las etiquetas del sistema (fuente:, competidor:, sigue-instagram…) las ponen
+ * los imports y el censo de Instagram: desde acá no se crean ni se borran.
+ */
+async function guardarEtiquetas(
+  id: string,
+  cambiar: (actuales: string[]) => string[]
+): Promise<{ error: string } | { ok: true; tags: string[] }> {
+  const supabase = await createClient();
+  const { data: doc, error: leer } = await supabase
+    .from("doctors")
+    .select("tags")
+    .eq("id", id)
+    .maybeSingle();
+  if (leer) return { error: leer.message };
+  if (!doc) return { error: "No se encontró la ficha" };
+  const nuevas = cambiar(((doc as { tags: string[] | null }).tags ?? []).slice());
+  const { data, error } = await supabase
+    .from("doctors")
+    .update({ tags: nuevas })
+    .eq("id", id)
+    .select("tags");
+  if (error) {
+    // el check de formato de la base (0061): no debería pasar porque acá se
+    // normaliza, pero si pasa que se entienda
+    if (error.code === "23514")
+      return { error: "La etiqueta tiene un formato que la base no acepta" };
+    return { error: error.message };
+  }
+  if (!data?.length)
+    return { error: "No se pudo guardar: tu rol no tiene permisos de edición" };
+  revalidatePath(`/doctores/${id}`);
+  revalidatePath("/doctores");
+  revalidatePath("/prospeccion/lista");
+  return { ok: true, tags: (data[0] as { tags: string[] }).tags ?? [] };
+}
+
+export async function agregarEtiqueta(formData: FormData) {
+  const id = String(formData.get("id"));
+  const tag = normalizarEtiqueta(String(formData.get("tag") ?? ""));
+  if (!tag) return { error: "Escribí una etiqueta: letras, números y guiones" };
+  if (esEtiquetaDelSistema(tag))
+    return { error: "Ese prefijo lo usa el sistema (imports y censo): elegí otro nombre" };
+  return guardarEtiquetas(id, (actuales) =>
+    actuales.includes(tag) ? actuales : [...actuales, tag]
+  );
+}
+
+export async function quitarEtiqueta(formData: FormData) {
+  const id = String(formData.get("id"));
+  const tag = String(formData.get("tag") ?? "").trim();
+  if (!tag) return { error: "Falta la etiqueta" };
+  if (esEtiquetaDelSistema(tag))
+    return { error: "Esa etiqueta la pone el sistema y no se borra desde la ficha" };
+  return guardarEtiquetas(id, (actuales) => actuales.filter((t) => t !== tag));
 }

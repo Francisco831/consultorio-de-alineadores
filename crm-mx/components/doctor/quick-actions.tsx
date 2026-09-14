@@ -65,9 +65,14 @@ const ETAPAS_ADQUISICION = (
 export function QuickActions({
   doctor,
   periskopeChatId,
+  profiles = [],
+  currentUserId = null,
 }: {
   doctor: Doctor;
   periskopeChatId?: string | null;
+  /** el equipo activo, para el "para quién" de la tarea nueva (pedido de Juan y Rocío, 11/9) */
+  profiles?: { id: string; nombre: string }[];
+  currentUserId?: string | null;
 }) {
   const [open, setOpenRaw] = useState<DialogKind>(null);
   // La zona es función del estado, así que elegir el estado la completa sola.
@@ -273,6 +278,27 @@ export function QuickActions({
                 <Input id="qa-task-due" name="due_date" type="date" />
               </div>
             </div>
+            {/* hasta el 14/9 toda tarea quedaba para quien la creaba: Juan no
+                podía dejarle "responder la viabilidad" a Rocío ni ella "mandar
+                el precio" a Juan. Por defecto sigue siendo para uno mismo. */}
+            {profiles.length > 0 ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="qa-task-assigned">Para quién</Label>
+                <select
+                  id="qa-task-assigned"
+                  name="assigned_to"
+                  className={selectClass}
+                  defaultValue={currentUserId ?? ""}
+                >
+                  {profiles.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre}
+                      {p.id === currentUserId ? " (yo)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <DialogFooter>
               <Button type="submit" disabled={pending}>
