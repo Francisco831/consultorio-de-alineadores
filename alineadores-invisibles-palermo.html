@@ -859,24 +859,33 @@ document.querySelectorAll('.metric-number[data-target]').forEach(el=>countObs.ob
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('a[href*="wa.me"]').forEach(function(link) {
-    link.addEventListener('click', function() {
-      gtag('event', 'generate_lead', {
-        event_category: 'contacto',
-        event_label: 'whatsapp',
-        value: 1
+  // Ubicación del botón dentro de la página, para saber cuál convierte
+  function ubicacion(link) {
+    if (link.classList.contains('wa-float')) return 'flotante';
+    if (link.closest('.topbar')) return 'barra_superior';
+    var c = link.closest('nav, header, footer, article, section');
+    if (!c) return 'otro';
+    if (c.tagName === 'NAV') return 'menu';
+    if (c.tagName === 'FOOTER') return 'footer';
+    if (c.tagName === 'ARTICLE') return 'articulo';
+    if (c.id) return c.id;
+    var clases = Array.prototype.filter.call(c.classList, function(k) { return k !== 'section'; });
+    return clases[0] || 'contenido';
+  }
+  function registrar(selector, etiqueta) {
+    document.querySelectorAll(selector).forEach(function(link) {
+      link.addEventListener('click', function() {
+        gtag('event', 'generate_lead', {
+          event_category: 'contacto',
+          event_label: etiqueta,
+          button_location: ubicacion(link),
+          value: 1
+        });
       });
     });
-  });
-  document.querySelectorAll('a[href*="calendico.com"]').forEach(function(link) {
-    link.addEventListener('click', function() {
-      gtag('event', 'generate_lead', {
-        event_category: 'contacto',
-        event_label: 'calendico_turno',
-        value: 1
-      });
-    });
-  });
+  }
+  registrar('a[href*="wa.me"]', 'whatsapp');
+  registrar('a[href*="calendico.com"]', 'calendico_turno');
 });
 </script>
 </body>
